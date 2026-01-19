@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 // ContentView is kept for supporting views
 // The root screen is now WorkoutListView
@@ -22,6 +23,7 @@ struct WorkoutDetailView: View {
     @State private var showingSaveAsTemplate = false
     @State private var isEditingWorkoutName = false
     @State private var workoutNameText = ""
+    @State private var showingEndSummary = false
     @FocusState private var workoutNameFocused: Bool
     
     var body: some View {
@@ -170,7 +172,7 @@ struct WorkoutDetailView: View {
                                 Image(systemName: "calendar")
                                     .font(.system(.caption, weight: .medium))
                                     .foregroundStyle(.secondary)
-                                Text("Date & Time")
+                Text("Date & Time")
                                     .font(.system(.caption, weight: .medium))
                                     .foregroundStyle(.secondary)
                             }
@@ -202,7 +204,7 @@ struct WorkoutDetailView: View {
             
             // End Workout Section (only show when workout is active)
             if workout.isActive {
-                Section {
+            Section {
                     Button {
                         showingEndWorkoutConfirmation = true
                     } label: {
@@ -267,19 +269,23 @@ struct WorkoutDetailView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 } else {
-                    ForEach(workout.exercises) { exercise in
+                    // Show exercises in reverse order (newest at top)
+                    ForEach(Array(workout.exercises.reversed().enumerated()), id: \.element.id) { index, exercise in
                         NavigationLink {
                             ExerciseEditView(exercise: exercise, workout: workout)
                         } label: {
                             ExerciseRowView(
                                 exercise: exercise,
                                 currentWorkout: workout,
-                                modelContext: modelContext
+                                modelContext: modelContext,
+                                isActive: workout.isActive && index == 0
                             )
                         }
                     }
                     .onDelete { indexSet in
-                        for index in indexSet {
+                        // Map reversed indices back to original indices
+                        let originalIndices = indexSet.map { workout.exercises.count - 1 - $0 }
+                        for index in originalIndices {
                             workout.removeExercise(id: workout.exercises[index].id)
                         }
                         saveWorkout()
@@ -322,12 +328,12 @@ struct WorkoutDetailView: View {
                 Text("Exercises")
                     .font(.system(.caption, weight: .medium))
                     if !workout.exercises.isEmpty {
-                        Spacer()
+                    Spacer()
                         Text("\(workout.exercises.count)")
                             .font(.system(.caption, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                        .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
+                .padding(.vertical, 2)
                             .background(
                                 Capsule()
                                     .fill(Color(.systemGray5))
@@ -358,20 +364,11 @@ struct WorkoutDetailView: View {
         }
         .navigationTitle("Workout Details")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Add Exercise", isPresented: $showingAddExercise) {
-            TextField("Exercise Name", text: $exerciseName)
-            Button("Add") {
-                if !exerciseName.trimmingCharacters(in: .whitespaces).isEmpty {
-                    workout.addExercise(name: exerciseName.trimmingCharacters(in: .whitespaces))
-                    exerciseName = ""
-                    saveWorkout()
-                }
+        .sheet(isPresented: $showingAddExercise) {
+            ExerciseSearchView { selectedName in
+                addExerciseWithMemory(name: selectedName)
+                saveWorkout()
             }
-            Button("Cancel", role: .cancel) {
-                exerciseName = ""
-            }
-        } message: {
-            Text("Enter the name of the exercise")
         }
         .onChange(of: workout.date) {
             saveWorkout()
@@ -395,6 +392,16 @@ struct WorkoutDetailView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text("This workout has been saved as a template. You can use it to start future workouts.")
+        }
+        .sheet(isPresented: $showingEndSummary) {
+            WorkoutEndSummaryView(summary: workout.summary) {
+                showingEndSummary = false
+                dismiss()
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.black)
+            .interactiveDismissDisabled()
         }
     }
     
@@ -428,14 +435,95 @@ struct WorkoutDetailView: View {
         }
     }
     
+    private func addExerciseWithMemory(name: String) {
+        let exercise = Exercise(name: name)
+        let normalizedName = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Look for exercise memory
+        let descriptor = FetchDescriptor<ExerciseMemory>()
+        
+        do {
+            let memories = try modelContext.fetch(descriptor)
+            
+            // Find matching exercise memory
+            if let memory = memories.first(where: { $0.normalizedName == normalizedName }) {
+                // Auto-create sets from memory
+                for _ in 0..<memory.lastSets {
+                    let set = WorkoutSet(reps: memory.lastReps, weight: memory.lastWeight)
+                    exercise.sets.append(set)
+                }
+                // Mark as auto-filled
+                exercise.isAutoFilled = true
+            } else {
+                // Create new exercise memory immediately so it appears in search
+                let newMemory = ExerciseMemory(
+                    name: name,
+                    lastReps: 10,
+                    lastWeight: 0,
+                    lastSets: 1
+                )
+                modelContext.insert(newMemory)
+                try modelContext.save()
+            }
+        } catch {
+            print("Error with exercise memory: \(error)")
+        }
+        
+        workout.exercises.append(exercise)
+    }
+    
     private func endWorkout() {
+        // Success haptic
+        let notification = UINotificationFeedbackGenerator()
+        notification.notificationOccurred(.success)
+        
         workout.endTime = Date()
+        
+        // Save exercise memory for each exercise
+        saveExerciseMemory()
         
         do {
             try modelContext.save()
-            dismiss()
+            // Show summary instead of immediate dismiss
+            showingEndSummary = true
         } catch {
             print("Error ending workout: \(error)")
+        }
+    }
+    
+    private func saveExerciseMemory() {
+        for exercise in workout.exercises {
+            guard !exercise.sets.isEmpty else { continue }
+            
+            // Get the last set's values as the "memory"
+            let lastSet = exercise.sets.last!
+            let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Try to find existing memory
+            let descriptor = FetchDescriptor<ExerciseMemory>(
+                predicate: #Predicate { $0.name.localizedStandardContains(normalizedName) }
+            )
+            
+            do {
+                let existingMemories = try modelContext.fetch(descriptor)
+                
+                // Find exact match
+                if let memory = existingMemories.first(where: { $0.normalizedName == normalizedName }) {
+                    // Update existing
+                    memory.update(reps: lastSet.reps, weight: lastSet.weight, sets: exercise.sets.count)
+                } else {
+                    // Create new
+                    let newMemory = ExerciseMemory(
+                        name: exercise.name,
+                        lastReps: lastSet.reps,
+                        lastWeight: lastSet.weight,
+                        lastSets: exercise.sets.count
+                    )
+                    modelContext.insert(newMemory)
+                }
+            } catch {
+                print("Error fetching exercise memory: \(error)")
+            }
         }
     }
     
@@ -489,18 +577,18 @@ struct TemplateEditView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
+            Section {
                     HStack(spacing: 12) {
                         Text(templateWorkout.name.isEmpty ? "Template Name" : templateWorkout.name)
                             .font(.system(.title2, weight: .semibold))
                             .foregroundStyle(templateWorkout.name.isEmpty ? .secondary : .primary)
-                        Spacer()
+                    Spacer()
                         Button {
                             editedName = templateWorkout.name
                             showingEditName = true
                         } label: {
                             Image(systemName: "pencil")
-                                .font(.system(.body, weight: .medium))
+                        .font(.system(.body, weight: .medium))
                         }
                         .tint(.blue)
                     }
@@ -510,53 +598,53 @@ struct TemplateEditView: View {
                         .font(.system(.caption, weight: .medium))
                         .foregroundStyle(.secondary)
                         .textCase(nil)
-                }
-                
-                Section {
+            }
+            
+            Section {
                     if templateWorkout.exercises.isEmpty {
                         Text("Add your first exercise to start logging")
-                            .font(.system(.subheadline, weight: .regular))
-                            .foregroundStyle(.secondary)
-                            .padding(.vertical, 8)
-                    } else {
+                        .font(.system(.subheadline, weight: .regular))
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 8)
+                } else {
                         ForEach(templateWorkout.exercises) { exercise in
-                            NavigationLink {
+                        NavigationLink {
                                 ExerciseEditView(exercise: exercise, workout: templateWorkout)
-                            } label: {
+                        } label: {
                                 ExerciseRowView(
                                     exercise: exercise,
                                     currentWorkout: templateWorkout,
                                     modelContext: modelContext
                                 )
-                            }
                         }
-                        .onDelete { indexSet in
-                            for index in indexSet {
+                    }
+                    .onDelete { indexSet in
+                        for index in indexSet {
                                 templateWorkout.removeExercise(id: templateWorkout.exercises[index].id)
-                            }
-                            autoSaveTemplate()
                         }
+                            autoSaveTemplate()
                     }
-                    
-                    Button {
-                        showingAddExercise = true
-                    } label: {
-                        Label("Add Exercise", systemImage: "plus.circle")
-                            .font(.system(.body, weight: .medium))
-                    }
-                    .tint(.blue)
-                } header: {
-                    Text("Exercises")
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .textCase(nil)
                 }
+                
+                Button {
+                    showingAddExercise = true
+                } label: {
+                    Label("Add Exercise", systemImage: "plus.circle")
+                        .font(.system(.body, weight: .medium))
+                }
+                .tint(.blue)
+            } header: {
+                Text("Exercises")
+                    .font(.system(.caption, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .textCase(nil)
             }
-            .listStyle(.insetGrouped)
+        }
+        .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color(.systemBackground))
             .navigationTitle(template == nil ? "New Template" : "Edit Template")
-            .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -574,21 +662,21 @@ struct TemplateEditView: View {
                     .disabled(templateWorkout.name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .alert("Add Exercise", isPresented: $showingAddExercise) {
-                TextField("Exercise Name", text: $exerciseName)
-                Button("Add") {
-                    if !exerciseName.trimmingCharacters(in: .whitespaces).isEmpty {
+        .alert("Add Exercise", isPresented: $showingAddExercise) {
+            TextField("Exercise Name", text: $exerciseName)
+            Button("Add") {
+                if !exerciseName.trimmingCharacters(in: .whitespaces).isEmpty {
                         templateWorkout.addExercise(name: exerciseName.trimmingCharacters(in: .whitespaces))
-                        exerciseName = ""
-                        autoSaveTemplate()
-                    }
-                }
-                Button("Cancel", role: .cancel) {
                     exerciseName = ""
+                        autoSaveTemplate()
                 }
-            } message: {
-                Text("Enter the name of the exercise")
             }
+            Button("Cancel", role: .cancel) {
+                exerciseName = ""
+            }
+        } message: {
+            Text("Enter the name of the exercise")
+        }
             .alert("Edit Template Name", isPresented: $showingEditName) {
                 TextField("Template Name", text: $editedName)
             Button("Save") {
@@ -667,10 +755,169 @@ struct TemplateEditView: View {
     }
 }
 
+// MARK: - Exercise Search View
+struct ExerciseSearchView: View {
+    let onSelect: (String) -> Void
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
+    
+    // Fetch all exercise memories
+    @Query(sort: \ExerciseMemory.lastUpdated, order: .reverse) private var exerciseMemories: [ExerciseMemory]
+    
+    // Filtered results based on search
+    private var filteredExercises: [ExerciseMemory] {
+        if searchText.isEmpty {
+            return exerciseMemories
+        }
+        let query = searchText.lowercased().trimmingCharacters(in: .whitespaces)
+        return exerciseMemories.filter { 
+            $0.name.lowercased().contains(query)
+        }
+    }
+    
+    // Check if exact match exists
+    private var exactMatchExists: Bool {
+        let query = searchText.lowercased().trimmingCharacters(in: .whitespaces)
+        return exerciseMemories.contains { $0.normalizedName == query }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Search field
+                HStack(spacing: 12) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    
+                    TextField("Search or add exercise", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .focused($isSearchFocused)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                                selectExercise(searchText.trimmingCharacters(in: .whitespaces))
+                            }
+                        }
+                    
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.black.opacity(0.6))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                
+                // Results list
+                List {
+                    // Show "Add new" option if no exact match
+                    if !searchText.trimmingCharacters(in: .whitespaces).isEmpty && !exactMatchExists {
+                        Button {
+                            selectExercise(searchText.trimmingCharacters(in: .whitespaces))
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundStyle(.blue)
+                                Text("Add \"\(searchText.trimmingCharacters(in: .whitespaces))\"")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text("New")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .listRowBackground(Color.black.opacity(0.6))
+                    }
+                    
+                    // Saved exercises
+                    if !filteredExercises.isEmpty {
+                        Section {
+                            ForEach(filteredExercises, id: \.name) { memory in
+                                Button {
+                                    selectExercise(memory.name)
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(memory.name)
+                                                .foregroundStyle(.primary)
+                                            Text("\(memory.lastSets) sets · \(memory.lastReps) reps · \(String(format: "%.0f", memory.lastWeight)) lbs")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .listRowBackground(Color.black.opacity(0.6))
+                            }
+                        } header: {
+                            if exerciseMemories.isEmpty {
+                                EmptyView()
+                            } else {
+                                Text("Your Exercises")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .textCase(nil)
+                            }
+                        }
+                    }
+                    
+                    // Empty state
+                    if filteredExercises.isEmpty && searchText.isEmpty {
+                        Text("Start typing to search or add a new exercise")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                            .listRowBackground(Color.clear)
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+            }
+            .background(Color.black)
+            .navigationTitle("Add Exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationBackground(Color.black)
+        .onAppear {
+            isSearchFocused = true
+        }
+    }
+    
+    private func selectExercise(_ name: String) {
+        onSelect(name)
+        dismiss()
+    }
+}
+
 struct ExerciseRowView: View {
     let exercise: Exercise
     let currentWorkout: Workout
     let modelContext: ModelContext
+    var isActive: Bool = false
     
     // Normalize exercise name for comparison (lowercase, trimmed)
     private var normalizedName: String {
@@ -742,22 +989,38 @@ struct ExerciseRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    // Active indicator
+                    if isActive {
+                        Circle()
+                            .fill(Color.blue)
+                            .frame(width: 6, height: 6)
+                    }
+                    
             Text(exercise.name)
                 .font(.system(.headline, weight: .semibold))
-                .foregroundStyle(.primary)
+                        .foregroundStyle(isActive ? .primary : .secondary)
+                    
+                    // Subtle indicator for auto-filled data
+                    if exercise.isAutoFilled {
+                        Text("· from last workout")
+                            .font(.system(.caption2, weight: .regular))
+                            .foregroundStyle(.secondary.opacity(0.7))
+                    }
+                }
                 
                 // Progress comparison (inline under exercise name)
                 if let message = progressMessage {
                     Text(message)
                         .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isActive ? .secondary : .tertiary)
                 }
             }
             
             if exercise.sets.isEmpty {
                 Text("No sets added")
                     .font(.system(.subheadline, weight: .regular))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isActive ? .secondary : .tertiary)
                     .padding(.top, 2)
             } else {
                 VStack(alignment: .leading, spacing: 6) {
@@ -765,10 +1028,11 @@ struct ExerciseRowView: View {
                         HStack {
                             Text("\(set.reps) reps")
                                 .font(.system(.subheadline, weight: .regular))
+                                .foregroundStyle(isActive ? .primary : .secondary)
                             Spacer()
                             Text("\(String(format: "%.1f", set.weight)) lbs")
                                 .font(.system(.subheadline, weight: .regular))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(isActive ? .secondary : .tertiary)
                         }
                     }
                 }
@@ -778,12 +1042,13 @@ struct ExerciseRowView: View {
             HStack {
                 Text("Total: \(exercise.totalReps) reps")
                     .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isActive ? .secondary : .tertiary)
                 Spacer()
             }
             .padding(.top, 4)
         }
         .padding(.vertical, 8)
+        .opacity(isActive ? 1.0 : 0.7)
     }
 }
 
@@ -1057,6 +1322,9 @@ struct ExerciseEditView: View {
     @State private var exerciseNameText = ""
     @FocusState private var focusedField: AddSetField?
     @FocusState private var exerciseNameFocused: Bool
+    @State private var isNoteExpanded = false
+    @State private var noteText = ""
+    @FocusState private var noteFocused: Bool
     
     enum AddSetField {
         case reps, weight
@@ -1108,6 +1376,72 @@ struct ExerciseEditView: View {
                     .font(.system(.caption, weight: .medium))
                     .foregroundStyle(.secondary)
                     .textCase(nil)
+            }
+            
+            // Note section - collapsed by default
+            Section {
+                if isNoteExpanded {
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("Add a note (e.g., grip width, tempo)", text: $noteText, axis: .vertical)
+                            .font(.system(.subheadline))
+                            .foregroundStyle(.primary)
+                            .focused($noteFocused)
+                            .lineLimit(3...6)
+                            .textFieldStyle(.plain)
+                            .onChange(of: noteFocused) { oldValue, newValue in
+                                if !newValue {
+                                    saveNote()
+                                }
+                            }
+                            .onSubmit {
+                                saveNote()
+                            }
+                        
+                        HStack {
+                            Text("Persists across workouts")
+                                .font(.caption2)
+                        .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Done") {
+                                saveNote()
+                                isNoteExpanded = false
+                            }
+                            .font(.caption)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } else {
+                        Button {
+                        isNoteExpanded = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            noteFocused = true
+                        }
+                        } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: noteText.isEmpty ? "note.text.badge.plus" : "note.text")
+                                .font(.system(.subheadline))
+                                .foregroundStyle(noteText.isEmpty ? Color.secondary : Color.blue)
+                            
+                            if noteText.isEmpty {
+                                Text("Add note")
+                                    .font(.system(.subheadline))
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text(noteText)
+                                    .font(.system(.subheadline))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        }
+                        .buttonStyle(.plain)
+                }
             }
             
             Section {
@@ -1175,26 +1509,47 @@ struct ExerciseEditView: View {
                         }
                     )
                 } else {
+                    HStack(spacing: 16) {
+                        // Add Set button (opens inline form)
                 Button {
-                        // Inherit from previous set if workout is active and sets exist
-                        if workout.isActive, let lastSet = exercise.sets.last {
-                            newSetReps = lastSet.reps
-                            newSetWeight = lastSet.weight
-                        } else {
-                            // Default values when no previous set or workout is not active
-                            newSetReps = 10
-                            newSetWeight = 135.0
-                        }
-                        isAddingSet = true
-                        // Small delay to ensure view is rendered before focusing
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            focusedField = .reps
-                        }
+                            // Inherit from previous set if workout is active and sets exist
+                            if workout.isActive, let lastSet = exercise.sets.last {
+                                newSetReps = lastSet.reps
+                                newSetWeight = lastSet.weight
+                            } else {
+                                newSetReps = 10
+                                newSetWeight = 135.0
+                            }
+                            isAddingSet = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                focusedField = .reps
+                            }
                 } label: {
                     Label("Add Set", systemImage: "plus.circle")
                         .font(.system(.body, weight: .medium))
                 }
+                        .buttonStyle(.borderless)
                 .tint(.blue)
+                        
+                        // Quick Repeat button (one-tap duplicate of last set)
+                        if let lastSet = exercise.sets.last {
+                            Button {
+                                // Haptic feedback
+                                let impact = UIImpactFeedbackGenerator(style: .light)
+                                impact.impactOccurred()
+                                
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    exercise.addSet(reps: lastSet.reps, weight: lastSet.weight)
+                                }
+                                saveChanges()
+                            } label: {
+                                Label("Repeat", systemImage: "arrow.counterclockwise")
+                                    .font(.system(.body, weight: .medium))
+                            }
+                            .buttonStyle(.borderless)
+                            .tint(.secondary)
+                        }
+                    }
                 }
             } header: {
                 Text("Sets")
@@ -1246,6 +1601,7 @@ struct ExerciseEditView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             exerciseNameText = exercise.name
+            loadNote()
         }
         .onChange(of: exercise.name) { oldValue, newValue in
             if !isEditingExerciseName {
@@ -1281,6 +1637,40 @@ struct ExerciseEditView: View {
             try modelContext.save()
         } catch {
             print("Error saving exercise: \(error)")
+        }
+    }
+    
+    private func loadNote() {
+        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespaces)
+        let descriptor = FetchDescriptor<ExerciseMemory>()
+        
+        do {
+            let memories = try modelContext.fetch(descriptor)
+            if let memory = memories.first(where: { $0.normalizedName == normalizedName }) {
+                noteText = memory.note ?? ""
+            }
+        } catch {
+            print("Error loading note: \(error)")
+        }
+    }
+    
+    private func saveNote() {
+        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespaces)
+        let descriptor = FetchDescriptor<ExerciseMemory>()
+        
+        do {
+            let memories = try modelContext.fetch(descriptor)
+            if let memory = memories.first(where: { $0.normalizedName == normalizedName }) {
+                memory.updateNote(noteText)
+            try modelContext.save()
+            } else if !noteText.isEmpty {
+                // Create new memory with note
+                let newMemory = ExerciseMemory(name: exercise.name, note: noteText)
+                modelContext.insert(newMemory)
+                try modelContext.save()
+            }
+        } catch {
+            print("Error saving note: \(error)")
         }
     }
 }
@@ -1479,6 +1869,10 @@ struct InlineSetRowView: View {
     }
     
     private func showMicroFeedback() {
+        // Light haptic on set update
+        let impact = UIImpactFeedbackGenerator(style: .soft)
+        impact.impactOccurred()
+        
         feedbackMessage = feedbackMessages.randomElement() ?? "Set logged"
         withAnimation(.easeOut(duration: 0.25)) {
             showFeedback = true
@@ -1673,6 +2067,10 @@ struct InlineAddSetView: View {
     }
     
     private func saveAndContinue() {
+        // Light haptic on set save
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        impact.impactOccurred()
+        
         // Validate and save
         if let repsValue = Int(repsText), repsValue > 0 && repsValue <= 1000 {
             reps = repsValue
@@ -2013,6 +2411,108 @@ struct EditSetView: View {
         isEditingReps = false
         isEditingWeight = false
         focusedField = nil
+    }
+}
+
+// MARK: - Workout End Summary View
+
+/// Clean, closure-focused summary shown after ending a workout
+struct WorkoutEndSummaryView: View {
+    let summary: WorkoutSummary
+    let onDismiss: () -> Void
+    
+    @State private var affirmation = "Nice work"
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+            
+            cardContent
+                .padding(.horizontal, 32)
+                .padding(.vertical, 24)
+                .frame(maxWidth: .infinity)
+                .background(cardBackground)
+                .padding(.horizontal, 16)
+            
+            Spacer()
+        }
+        .onAppear {
+            let options = ["Nice work", "Well done", "Great session", "Solid effort", "Keep it up"]
+            affirmation = options.randomElement() ?? "Nice work"
+        }
+    }
+    
+    private var cardContent: some View {
+        VStack(spacing: 32) {
+            affirmationText
+            durationStat
+            secondaryStats
+            dismissButton
+        }
+    }
+    
+    private var affirmationText: some View {
+        Text(affirmation)
+            .font(.system(.title2, weight: .semibold))
+            .foregroundStyle(.primary)
+    }
+    
+    private var durationStat: some View {
+        VStack(spacing: 8) {
+            Text(summary.formattedDuration)
+                .font(.system(size: 56, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            
+            Text("workout time")
+                .font(.system(.subheadline, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+    }
+    
+    private var secondaryStats: some View {
+        HStack(spacing: 40) {
+            statItem(value: "\(summary.totalExercises)", label: "exercises")
+            
+            Rectangle()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: 1, height: 40)
+            
+            statItem(value: "\(summary.totalSets)", label: "sets")
+        }
+        .padding(.top, 8)
+    }
+    
+    private func statItem(value: String, label: String) -> some View {
+        VStack(spacing: 6) {
+            Text(value)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.system(.caption, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+    }
+    
+    private var dismissButton: some View {
+        Button(action: onDismiss) {
+            Text("Done")
+                .font(.system(.body, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.blue)
+                .cornerRadius(12)
+        }
+        .padding(.top, 16)
+    }
+    
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 24)
+            .fill(Color.black.opacity(0.8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+            )
     }
 }
 

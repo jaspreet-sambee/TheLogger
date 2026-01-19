@@ -15,7 +15,8 @@ struct TheLoggerApp: App {
         let schema = Schema([
             Workout.self,
             Exercise.self,
-            WorkoutSet.self
+            WorkoutSet.self,
+            ExerciseMemory.self
         ])
         let modelConfiguration = ModelConfiguration(
             schema: schema,

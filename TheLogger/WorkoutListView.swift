@@ -258,7 +258,7 @@ struct WorkoutListView: View {
                 if activeWorkout == nil {
                     Section {
                         Button {
-                            showingWorkoutSelector = true
+                            if templates.isEmpty { startWorkoutFromTemplate(template: nil) } else { showingWorkoutSelector = true }
                         } label: {
                             HStack(spacing: 14) {
                                 ZStack {
@@ -1285,5 +1285,5 @@ struct HistoryWorkoutRowView: View {
 
 #Preview {
     WorkoutListView()
-        .modelContainer(for: [Workout.self, Exercise.self, WorkoutSet.self], inMemory: true)
+        .modelContainer(for: [Workout.self, Exercise.self, WorkoutSet.self, ExerciseMemory.self], inMemory: true)
 }

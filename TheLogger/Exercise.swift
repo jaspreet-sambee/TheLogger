@@ -14,6 +14,9 @@ final class Exercise: Identifiable {
     var name: String
     @Relationship(deleteRule: .cascade) var sets: [WorkoutSet]
     
+    /// Indicates if sets were auto-filled from exercise memory (transient, not persisted)
+    @Transient var isAutoFilled: Bool = false
+    
     init(id: UUID = UUID(), name: String, sets: [WorkoutSet] = []) {
         self.id = id
         self.name = name
