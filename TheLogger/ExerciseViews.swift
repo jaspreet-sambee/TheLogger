@@ -459,12 +459,13 @@ struct ExerciseEditView: View {
                             // Check for PR
                             checkForPR(weight: newSetWeight, reps: newSetReps)
                             // Offer rest option (only for active workouts)
-                            if workout.isActive {
+                            // For supersets, only offer rest after the last exercise in the group
+                            if workout.isActive && workout.isLastInSuperset(exercise) {
                                 let restDuration = Self.suggestedRestDuration(for: exercise.name)
                                 RestTimerManager.shared.offerRest(for: exercise.id, duration: restDuration, autoStart: autoStartRestTimer)
                                 newSetReps = newSetReps  // Keep same as last added
                                 newSetWeight = newSetWeight
-                            } else {
+                            } else if !workout.isActive {
                                 newSetReps = 10
                                 newSetWeight = 135.0
                             }
@@ -526,7 +527,8 @@ struct ExerciseEditView: View {
                                 checkForPR(weight: lastSet.weight, reps: lastSet.reps)
 
                                 // Offer rest option (only for active workouts)
-                                if workout.isActive {
+                                // For supersets, only offer rest after the last exercise in the group
+                                if workout.isActive && workout.isLastInSuperset(exercise) {
                                     let restDuration = Self.suggestedRestDuration(for: exercise.name)
                                     RestTimerManager.shared.offerRest(for: exercise.id, duration: restDuration, autoStart: autoStartRestTimer)
                                 }

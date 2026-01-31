@@ -441,26 +441,41 @@ struct WorkoutDetailView: View {
     }
 
     private var exercisesList: some View {
-        ForEach(Array(workout.exercises.reversed().enumerated()), id: \.element.id) { index, exercise in
-            NavigationLink {
-                ExerciseEditView(exercise: exercise, workout: workout, namespace: exerciseTransition)
-            } label: {
-                ExerciseCard(
-                    exercise: exercise,
-                    workout: workout,
-                    namespace: exerciseTransition,
-                    isActive: workout.isActive && index == 0
-                )
+        let displayItems = workout.exercisesGroupedForDisplay.reversed()
+        return ForEach(Array(displayItems.enumerated()), id: \.element.id) { index, item in
+            Group {
+                switch item {
+                case .standalone(let exercise):
+                    NavigationLink {
+                        ExerciseEditView(exercise: exercise, workout: workout, namespace: exerciseTransition)
+                    } label: {
+                        ExerciseCard(
+                            exercise: exercise,
+                            workout: workout,
+                            namespace: exerciseTransition,
+                            isActive: workout.isActive && index == 0
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        exerciseContextMenu(for: exercise)
+                    }
+
+                case .superset(let groupId, let exercises):
+                    SupersetGroupCard(
+                        groupId: groupId,
+                        exercises: exercises,
+                        workout: workout,
+                        namespace: exerciseTransition,
+                        isActive: workout.isActive && index == 0,
+                        onBreakSuperset: {
+                            workout.breakSuperset(groupId: groupId)
+                            saveWorkout()
+                        }
+                    )
+                }
             }
-            .buttonStyle(.plain)
             .staggeredAppear(index: index, maxStagger: 5)
-        }
-        .onMove { source, destination in
-            let reversedExercises = workout.exercises.reversed()
-            var reordered = Array(reversedExercises)
-            reordered.move(fromOffsets: source, toOffset: destination)
-            workout.exercises = reordered.reversed()
-            saveWorkout()
         }
         .onDelete { indexSet in
             // Store indices and show confirmation
@@ -470,6 +485,40 @@ struct WorkoutDetailView: View {
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+    }
+
+    @ViewBuilder
+    private func exerciseContextMenu(for exercise: Exercise) -> some View {
+        if workout.isActive {
+            // Superset options
+            let otherExercises = workout.exercises.filter { $0.id != exercise.id && !$0.isInSuperset }
+
+            if !otherExercises.isEmpty {
+                Menu {
+                    ForEach(otherExercises) { other in
+                        Button {
+                            workout.createSuperset(from: [exercise.id, other.id])
+                            saveWorkout()
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        } label: {
+                            Label(other.name, systemImage: "link")
+                        }
+                    }
+                } label: {
+                    Label("Create Superset With...", systemImage: "link.badge.plus")
+                }
+            }
+
+            // If exercise is in superset, show option to remove
+            if exercise.isInSuperset {
+                Button {
+                    workout.removeFromSuperset(exerciseId: exercise.id)
+                    saveWorkout()
+                } label: {
+                    Label("Remove from Superset", systemImage: "link.badge.minus")
+                }
+            }
+        }
     }
 
     private var exercisesSectionHeader: some View {
@@ -719,6 +768,193 @@ struct WorkoutDetailView: View {
             }
         }
     }
+
+    // MARK: - Superset Group Card
+struct SupersetGroupCard: View {
+    let groupId: UUID
+    let exercises: [Exercise]
+    let workout: Workout
+    let namespace: Namespace.ID
+    var isActive: Bool = false
+    var onBreakSuperset: () -> Void
+
+    private var groupLabel: String {
+        switch exercises.count {
+        case 2: return "SUPERSET"
+        case 3: return "TRI-SET"
+        default: return "GIANT SET"
+        }
+    }
+
+    private var totalSets: Int {
+        exercises.reduce(0) { $0 + $1.sets.count }
+    }
+
+    private var totalReps: Int {
+        exercises.reduce(0) { $0 + $1.totalReps }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            headerView
+            exercisesListView
+        }
+        .background(cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .contextMenu {
+            Button {
+                onBreakSuperset()
+            } label: {
+                Label("Break Apart Superset", systemImage: "link.badge.minus")
+            }
+        }
+    }
+
+    private var headerView: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "link")
+                .font(.system(.caption, weight: .bold))
+                .foregroundStyle(.purple)
+            Text(groupLabel)
+                .font(.system(.caption, weight: .bold))
+                .foregroundStyle(.purple)
+            Spacer()
+            Text("\(totalSets) sets · \(totalReps) reps")
+                .font(.system(.caption2, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.purple.opacity(0.08))
+    }
+
+    private var exercisesListView: some View {
+        ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+            exerciseRowWithConnector(exercise: exercise, index: index)
+        }
+    }
+
+    @ViewBuilder
+    private func exerciseRowWithConnector(exercise: Exercise, index: Int) -> some View {
+        VStack(spacing: 0) {
+            NavigationLink {
+                ExerciseEditView(exercise: exercise, workout: workout, namespace: namespace)
+            } label: {
+                SupersetExerciseRow(
+                    exercise: exercise,
+                    position: index + 1,
+                    total: exercises.count,
+                    isActive: isActive && index == 0
+                )
+            }
+            .buttonStyle(.plain)
+
+            if index < exercises.count - 1 {
+                connectorView
+            }
+        }
+    }
+
+    private var connectorView: some View {
+        HStack(spacing: 8) {
+            Rectangle()
+                .fill(Color.purple.opacity(0.3))
+                .frame(width: 2, height: 16)
+                .padding(.leading, 20)
+
+            Image(systemName: "arrow.down")
+                .font(.system(.caption2, weight: .medium))
+                .foregroundStyle(.purple.opacity(0.5))
+
+            Spacer()
+        }
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 14)
+            .fill(Color.black.opacity(0.4))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isActive ? Color.purple.opacity(0.04) : Color.white.opacity(0.02))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(isActive ? Color.purple.opacity(0.2) : Color.purple.opacity(0.12), lineWidth: 1)
+            )
+    }
+}
+
+struct SupersetExerciseRow: View {
+    let exercise: Exercise
+    let position: Int
+    let total: Int
+    var isActive: Bool = false
+
+    private var setsSummary: String {
+        if exercise.sets.isEmpty { return "No sets" }
+        let count = exercise.sets.count
+        let reps = exercise.totalReps
+        return "\(count) \(count == 1 ? "set" : "sets") · \(reps) reps"
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Position indicator
+            ZStack {
+                Circle()
+                    .fill(isActive ? Color.purple.opacity(0.2) : Color.white.opacity(0.06))
+                    .frame(width: 28, height: 28)
+                Text("\(position)")
+                    .font(.system(.caption, weight: .bold))
+                    .foregroundStyle(isActive ? .purple : .secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(exercise.name)
+                        .font(.system(.subheadline, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    if isActive {
+                        Text("Current")
+                            .font(.system(.caption2, weight: .medium))
+                            .foregroundStyle(.purple)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(Color.purple.opacity(0.12))
+                            )
+                    }
+                }
+
+                Text(setsSummary)
+                    .font(.system(.caption, weight: .regular))
+                    .foregroundStyle(.tertiary)
+            }
+
+            Spacer()
+
+            // Sets count badge
+            if !exercise.sets.isEmpty {
+                Text("\(exercise.sets.count)")
+                    .font(.system(.caption2, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20, height: 20)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.06))
+                    )
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+}
 
     private func saveAsTemplate() {
         // Check if a template with this name already exists

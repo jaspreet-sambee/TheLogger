@@ -212,10 +212,112 @@ final class Workout: Identifiable {
     func removeExercise(id: UUID) {
         exercises.removeAll { $0.id == id }
     }
-    
+
     /// Get exercise by ID
     func getExercise(id: UUID) -> Exercise? {
         exercises.first { $0.id == id }
+    }
+
+    // MARK: - Superset Management
+
+    /// Create a superset from multiple exercises
+    /// - Parameter exerciseIds: IDs of exercises to group (order matters)
+    func createSuperset(from exerciseIds: [UUID]) {
+        guard exerciseIds.count >= 2 else { return }
+
+        let groupId = UUID()
+        for (index, exerciseId) in exerciseIds.enumerated() {
+            if let exercise = exercises.first(where: { $0.id == exerciseId }) {
+                exercise.supersetGroupId = groupId
+                exercise.supersetOrder = index
+            }
+        }
+    }
+
+    /// Break apart a superset, making all exercises standalone
+    /// - Parameter groupId: The superset group ID to dissolve
+    func breakSuperset(groupId: UUID) {
+        for exercise in exercises where exercise.supersetGroupId == groupId {
+            exercise.supersetGroupId = nil
+            exercise.supersetOrder = 0
+        }
+    }
+
+    /// Add an exercise to an existing superset
+    /// - Parameters:
+    ///   - exerciseId: ID of exercise to add
+    ///   - groupId: The superset group to join
+    func addToSuperset(exerciseId: UUID, groupId: UUID) {
+        guard let exercise = exercises.first(where: { $0.id == exerciseId }) else { return }
+
+        // Find current max order in the group
+        let maxOrder = exercises
+            .filter { $0.supersetGroupId == groupId }
+            .map(\.supersetOrder)
+            .max() ?? -1
+
+        exercise.supersetGroupId = groupId
+        exercise.supersetOrder = maxOrder + 1
+    }
+
+    /// Remove an exercise from its superset (make it standalone)
+    /// If only one exercise remains in the superset, it's also made standalone
+    func removeFromSuperset(exerciseId: UUID) {
+        guard let exercise = exercises.first(where: { $0.id == exerciseId }),
+              let groupId = exercise.supersetGroupId else { return }
+
+        exercise.supersetGroupId = nil
+        exercise.supersetOrder = 0
+
+        // Check if only one exercise remains in the group
+        let remaining = exercises.filter { $0.supersetGroupId == groupId }
+        if remaining.count == 1 {
+            remaining.first?.supersetGroupId = nil
+            remaining.first?.supersetOrder = 0
+        }
+    }
+
+    /// Get exercises in a superset, ordered by their position
+    func exercisesInSuperset(groupId: UUID) -> [Exercise] {
+        exercises
+            .filter { $0.supersetGroupId == groupId }
+            .sorted { $0.supersetOrder < $1.supersetOrder }
+    }
+
+    /// Get all unique superset group IDs
+    var supersetGroupIds: [UUID] {
+        Array(Set(exercises.compactMap(\.supersetGroupId)))
+    }
+
+    /// Get exercises grouped for display (standalone + superset groups)
+    /// Returns items in order: standalone exercises appear in their original position,
+    /// superset groups appear at the position of their first exercise
+    var exercisesGroupedForDisplay: [ExerciseDisplayItem] {
+        var result: [ExerciseDisplayItem] = []
+        var processedGroupIds: Set<UUID> = []
+
+        for (index, exercise) in exercises.enumerated() {
+            if let groupId = exercise.supersetGroupId {
+                // Part of a superset - only process once per group
+                if !processedGroupIds.contains(groupId) {
+                    processedGroupIds.insert(groupId)
+                    let groupExercises = exercisesInSuperset(groupId: groupId)
+                    result.append(.superset(id: groupId, exercises: groupExercises))
+                }
+            } else {
+                // Standalone exercise
+                result.append(.standalone(exercise))
+            }
+        }
+
+        return result
+    }
+
+    /// Check if an exercise is the last one in its superset
+    func isLastInSuperset(_ exercise: Exercise) -> Bool {
+        guard let groupId = exercise.supersetGroupId else { return true }
+        let group = exercisesInSuperset(groupId: groupId)
+        return group.last?.id == exercise.id
     }
     
     /// Get total number of exercises
@@ -263,6 +365,55 @@ final class Workout: Identifiable {
     /// Computed summary of workout stats (available after workout ends)
     var summary: WorkoutSummary {
         WorkoutSummary(workout: self)
+    }
+}
+
+// MARK: - Superset Display Model
+
+/// Represents an item in the exercise list for display purposes
+enum ExerciseDisplayItem: Identifiable {
+    case standalone(Exercise)
+    case superset(id: UUID, exercises: [Exercise])
+
+    var id: UUID {
+        switch self {
+        case .standalone(let exercise):
+            return exercise.id
+        case .superset(let id, _):
+            return id
+        }
+    }
+
+    /// Whether this is a superset group
+    var isSuperset: Bool {
+        if case .superset = self { return true }
+        return false
+    }
+
+    /// Get all exercises (1 for standalone, multiple for superset)
+    var allExercises: [Exercise] {
+        switch self {
+        case .standalone(let exercise):
+            return [exercise]
+        case .superset(_, let exercises):
+            return exercises
+        }
+    }
+
+    /// Display name for the group
+    var displayName: String {
+        switch self {
+        case .standalone(let exercise):
+            return exercise.name
+        case .superset(_, let exercises):
+            if exercises.count == 2 {
+                return "Superset"
+            } else if exercises.count == 3 {
+                return "Tri-set"
+            } else {
+                return "Giant Set"
+            }
+        }
     }
 }
 
