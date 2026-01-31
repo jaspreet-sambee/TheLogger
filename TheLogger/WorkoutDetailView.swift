@@ -29,6 +29,8 @@ struct WorkoutDetailView: View {
     @State private var emptyExercisesAppeared = false
     @State private var showingDeleteExerciseConfirmation = false
     @State private var pendingDeleteIndices: IndexSet = []
+    @State private var elapsedTime: TimeInterval = 0
+    @State private var timerTask: Task<Void, Never>? = nil
 
     // Get recently used exercises (top 5, preserving order from @Query sort)
     private var recentlyUsedExercises: [String] {
@@ -63,6 +65,10 @@ struct WorkoutDetailView: View {
             }
             .onAppear {
                 workoutNameText = workout.name
+                startTimer()
+            }
+            .onDisappear {
+                stopTimer()
             }
             .alert("End Workout", isPresented: $showingEndWorkoutConfirmation) {
                 Button("Cancel", role: .cancel) { }
@@ -105,9 +111,9 @@ struct WorkoutDetailView: View {
         List {
             workoutInfoSection
             summarySection
-            endWorkoutSection
-            saveAsTemplateSection
             exercisesSection
+            saveAsTemplateSection
+            endWorkoutSection
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -177,7 +183,7 @@ struct WorkoutDetailView: View {
                 dateTimeRow
             }
             .padding(.vertical, 8)
-            .listRowBackground(workoutInfoBackground)
+            .listRowBackground(cardBackground(variant: workout.isActive ? .active : .neutral))
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         } header: {
@@ -250,14 +256,23 @@ struct WorkoutDetailView: View {
 
     private var dateTimeRow: some View {
         Group {
-            if workout.isActive, let startTime = workout.startTime {
-                HStack(spacing: 6) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(.caption2, weight: .medium))
-                        .foregroundStyle(.blue)
-                    Text("Started \(startTime, style: .relative)")
-                        .font(.system(.caption, weight: .regular))
-                        .foregroundStyle(.secondary)
+            if workout.isActive, let _ = workout.startTime {
+                HStack(spacing: 8) {
+                    // Live elapsed timer
+                    HStack(spacing: 6) {
+                        Image(systemName: "timer")
+                            .font(.system(.caption, weight: .semibold))
+                            .foregroundStyle(.blue)
+                        Text(formatElapsedTime(elapsedTime))
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.blue.opacity(0.12))
+                    )
                 }
             } else {
                 HStack(spacing: 6) {
@@ -272,21 +287,52 @@ struct WorkoutDetailView: View {
         }
     }
 
-    private var workoutInfoBackground: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(Color.black.opacity(0.6))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.blue.opacity(0.25), lineWidth: 1)
-            )
+    private func formatElapsedTime(_ interval: TimeInterval) -> String {
+        let hours = Int(interval) / 3600
+        let minutes = (Int(interval) % 3600) / 60
+        let seconds = Int(interval) % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
     }
 
-    private var summaryBackground: some View {
+    private func startTimer() {
+        guard workout.isActive, let startTime = workout.startTime else { return }
+
+        // Calculate initial elapsed time
+        elapsedTime = Date().timeIntervalSince(startTime)
+
+        // Start updating every second
+        timerTask = Task {
+            while !Task.isCancelled && workout.isActive {
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                if let start = workout.startTime {
+                    await MainActor.run {
+                        elapsedTime = Date().timeIntervalSince(start)
+                    }
+                }
+            }
+        }
+    }
+
+    private func stopTimer() {
+        timerTask?.cancel()
+        timerTask = nil
+    }
+
+    private func cardBackground(variant: CardVariant) -> some View {
         RoundedRectangle(cornerRadius: 12)
-            .fill(Color.black.opacity(0.6))
+            .fill(Color.black.opacity(0.5))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                    .fill(variant.backgroundColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(variant.borderColor, lineWidth: 1)
             )
     }
 
@@ -299,7 +345,7 @@ struct WorkoutDetailView: View {
                 }
             }
             .padding(.vertical, 8)
-            .listRowBackground(summaryBackground)
+            .listRowBackground(cardBackground(variant: .stats))
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         } header: {
@@ -342,14 +388,7 @@ struct WorkoutDetailView: View {
         .padding(.vertical, 32)
         .opacity(emptyExercisesAppeared ? 1 : 0)
         .animation(.easeOut(duration: 0.4), value: emptyExercisesAppeared)
-        .listRowBackground(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
-                )
-        )
+        .listRowBackground(cardBackground(variant: .neutral))
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
         .onAppear {
@@ -469,50 +508,50 @@ struct WorkoutDetailView: View {
     }
 
     private var summaryStatsRow: some View {
-        HStack(alignment: .center, spacing: 20) {
-            // Progress ring (shows when there are sets)
-            if workout.totalSets > 0 {
-                WorkoutProgressRing(
-                    completedSets: workout.totalSets,
-                    totalSets: max(workout.totalSets, workout.exercises.count * 3) // Estimate 3 sets per exercise
-                )
-                .padding(.trailing, 4)
-            }
+        HStack(spacing: 12) {
+            // Exercises stat pill
+            statPill(
+                value: "\(workout.exerciseCount)",
+                label: "Exercises",
+                icon: "figure.strengthtraining.traditional"
+            )
 
-            VStack(alignment: .leading, spacing: 12) {
-                exercisesStat
-                setsStat
-            }
+            // Sets stat pill
+            statPill(
+                value: "\(workout.totalSets)",
+                label: "Sets",
+                icon: "checkmark.circle"
+            )
+
             Spacer()
         }
     }
 
-    private var exercisesStat: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "figure.strengthtraining.traditional")
-                .font(.system(.caption, weight: .medium))
-                .foregroundStyle(.green)
-            Text("\(workout.exerciseCount)")
-                .font(.system(.headline, weight: .bold))
-                .foregroundStyle(.primary)
-            Text("exercises")
-                .font(.system(.caption, weight: .medium))
+    private func statPill(value: String, label: String, icon: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(.body, weight: .medium))
                 .foregroundStyle(.secondary)
-        }
-    }
 
-    private var setsStat: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "list.bullet")
-                .font(.system(.caption, weight: .medium))
-                .foregroundStyle(.orange)
-            Text("\(workout.totalSets)")
-                .font(.system(.headline, weight: .bold))
-                .foregroundStyle(.primary)
-            Text("sets")
-                .font(.system(.caption, weight: .medium))
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(label)
+                    .font(.system(.caption2, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                )
+        )
     }
 
     private var datePickerRow: some View {
@@ -579,6 +618,10 @@ struct WorkoutDetailView: View {
     }
 
     private func addExerciseWithMemory(name: String) {
+        // Haptic feedback on add
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+
         let exercise = Exercise(name: name)
         let normalizedName = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
 

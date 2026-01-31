@@ -63,9 +63,9 @@ struct ExerciseRowView: View {
     private var progressMessage: String? {
         guard let previous = previousExercise, !exercise.sets.isEmpty else { return nil }
 
-        // Exclude warmup sets from comparison
-        let currentWorkingSets = exercise.sets.filter { !$0.isWarmup }
-        let previousWorkingSets = previous.sets.filter { !$0.isWarmup }
+        // Only compare PR-eligible sets (excludes warmup)
+        let currentWorkingSets = exercise.sets.filter { $0.type.countsForPR }
+        let previousWorkingSets = previous.sets.filter { $0.type.countsForPR }
 
         guard !currentWorkingSets.isEmpty, !previousWorkingSets.isEmpty else { return nil }
 
@@ -121,21 +121,24 @@ struct ExerciseRowView: View {
                             .foregroundStyle(.secondary.opacity(0.7))
                     }
 
-                    // Warmup sets indicator
-                    if exercise.sets.contains(where: { $0.isWarmup }) {
-                        HStack(spacing: 2) {
-                            Image(systemName: "flame.fill")
-                                .font(.system(.caption2, weight: .medium))
-                            Text("\(exercise.sets.filter { $0.isWarmup }.count)")
-                                .font(.system(.caption2, weight: .semibold))
+                    // Set type badges (show non-working types)
+                    ForEach(SetType.allCases.filter { $0 != .working }, id: \.self) { type in
+                        let count = exercise.sets.filter { $0.type == type }.count
+                        if count > 0 {
+                            HStack(spacing: 2) {
+                                Image(systemName: type.icon)
+                                    .font(.system(.caption2, weight: .medium))
+                                Text("\(count)")
+                                    .font(.system(.caption2, weight: .semibold))
+                            }
+                            .foregroundStyle(type.color.opacity(0.9))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(type.color.opacity(0.12))
+                            )
                         }
-                        .foregroundStyle(.orange.opacity(0.8))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(Color.orange.opacity(0.15))
-                        )
                     }
                 }
 
@@ -208,34 +211,77 @@ struct ExerciseCard: View {
         return "\(count) \(count == 1 ? "set" : "sets") · \(total) reps"
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                if isActive {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 6, height: 6)
-                }
-                Text(exercise.name)
-                    .font(.system(.headline, weight: .semibold))
-                    .foregroundStyle(isActive ? .primary : .secondary)
-                    .matchedGeometryEffect(id: "title-\(exercise.id)", in: namespace)
-                Spacer(minLength: 0)
-            }
-            Text(setsSummary)
-                .font(.system(.subheadline, weight: .regular))
-                .foregroundStyle(.secondary)
+    // Determine accent color based on exercise type
+    private var accentColor: Color {
+        let name = exercise.name.lowercased()
+        // Compound exercises (warm tones)
+        let compounds = ["squat", "deadlift", "bench", "press", "row", "pull-up", "pullup", "chin-up", "dip"]
+        if compounds.contains(where: { name.contains($0) }) {
+            return Color.orange.opacity(0.7)
         }
-        .padding(.vertical, 14)
-        .padding(.horizontal, 16)
+        // Default (neutral)
+        return Color.white.opacity(0.3)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Left accent bar
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isActive ? Color.blue : accentColor)
+                .frame(width: 3)
+                .padding(.vertical, 8)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Text(exercise.name)
+                        .font(.system(.headline, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .matchedGeometryEffect(id: "title-\(exercise.id)", in: namespace)
+                    Spacer(minLength: 0)
+
+                    if isActive {
+                        Text("Current")
+                            .font(.system(.caption2, weight: .medium))
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(Color.blue.opacity(0.12))
+                            )
+                    }
+
+                    // Sets count badge
+                    if !exercise.sets.isEmpty {
+                        Text("\(exercise.sets.count)")
+                            .font(.system(.caption, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24, height: 24)
+                            .background(
+                                Circle()
+                                    .fill(Color.white.opacity(0.06))
+                            )
+                    }
+                }
+
+                Text(setsSummary)
+                    .font(.system(.subheadline, weight: .regular))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 14)
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-                .shadow(color: Color.primary.opacity(0.06), radius: 8, x: 0, y: 2)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.black.opacity(0.4))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(isActive ? Color.blue.opacity(0.06) : Color.white.opacity(0.02))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(isActive ? Color.blue.opacity(0.15) : Color.white.opacity(0.06), lineWidth: 1)
                 )
                 .matchedGeometryEffect(id: "card-\(exercise.id)", in: namespace)
         )

@@ -137,25 +137,33 @@ struct InlineSetRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Set number indicator with type toggle
-            Button {
-                set.type = set.isWarmup ? .working : .warmup
-                onUpdate(set.reps, set.weight)
-                if set.type == .working { runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: set.type) }
+            // Set type picker menu
+            Menu {
+                ForEach(SetType.allCases, id: \.self) { type in
+                    Button {
+                        set.type = type
+                        onUpdate(set.reps, set.weight)
+                        if type.countsForPR {
+                            runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: type)
+                        }
+                    } label: {
+                        Label(type.rawValue, systemImage: type.icon)
+                    }
+                }
             } label: {
                 ZStack {
                     Circle()
-                        .fill(set.isWarmup ? Color.orange.opacity(0.2) : Color(.systemGray5))
+                        .fill(set.type.color.opacity(0.15))
                         .frame(width: 32, height: 32)
 
-                    if set.isWarmup {
-                        Image(systemName: "flame.fill")
-                            .font(.system(.caption2, weight: .semibold))
-                            .foregroundStyle(.orange)
-                    } else {
+                    if set.type == .working {
                         Text("\(setNumber)")
                             .font(.system(.caption, weight: .semibold))
                             .foregroundStyle(.secondary)
+                    } else {
+                        Image(systemName: set.type.icon)
+                            .font(.system(.caption2, weight: .semibold))
+                            .foregroundStyle(set.type.color)
                     }
                 }
             }
@@ -180,7 +188,7 @@ struct InlineSetRowView: View {
                 } else {
                     Text("\(set.reps)")
                         .font(.system(.body, weight: .semibold))
-                        .foregroundStyle(set.isWarmup ? .secondary : .primary)
+                        .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             startEditingReps()
@@ -284,7 +292,7 @@ struct InlineSetRowView: View {
                 } else {
                     Text("\(String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight)))")
                         .font(.system(.body, weight: .semibold))
-                        .foregroundStyle(set.isWarmup ? .secondary : .primary)
+                        .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             startEditingWeight()
@@ -299,9 +307,9 @@ struct InlineSetRowView: View {
         .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(set.isWarmup
-                      ? Color.orange.opacity(isEditingReps || isEditingWeight ? 0.15 : 0.08)
-                      : Color(.systemGray6).opacity(isEditingReps || isEditingWeight ? 0.8 : 0.5))
+                .fill(set.type == .working
+                      ? Color(.systemGray6).opacity(isEditingReps || isEditingWeight ? 0.8 : 0.5)
+                      : set.type.color.opacity(isEditingReps || isEditingWeight ? 0.15 : 0.08))
                 .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isEditingReps || isEditingWeight)
         )
         .overlay(alignment: .bottomLeading) {
