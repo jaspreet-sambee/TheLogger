@@ -25,8 +25,14 @@ final class Exercise: Identifiable {
     
     /// Add a new set to this exercise
     func addSet(reps: Int, weight: Double) {
-        let newSet = WorkoutSet(reps: reps, weight: weight)
+        let nextOrder = (sets.map(\.sortOrder).max() ?? -1) + 1
+        let newSet = WorkoutSet(reps: reps, weight: weight, sortOrder: nextOrder)
         sets.append(newSet)
+    }
+    
+    /// Sets in stable display order (SwiftData relationship order is not guaranteed)
+    var setsByOrder: [WorkoutSet] {
+        sets.sorted { $0.sortOrder < $1.sortOrder }
     }
     
     /// Remove a set by ID

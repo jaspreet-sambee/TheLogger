@@ -16,7 +16,8 @@ struct TheLoggerApp: App {
             Workout.self,
             Exercise.self,
             WorkoutSet.self,
-            ExerciseMemory.self
+            ExerciseMemory.self,
+            PersonalRecord.self
         ])
         let modelConfiguration = ModelConfiguration(
             schema: schema,
@@ -40,6 +41,17 @@ struct TheLoggerApp: App {
                         formatter.timeStyle = .short
                         workout.name = formatter.string(from: workout.date)
                         needsSave = true
+                    }
+                    // Migrate sets: assign sortOrder = index so display order is stable.
+                    // Use stable order (id) so we don't renumber differently each launch.
+                    for exercise in workout.exercises {
+                        let ordered = exercise.sets.sorted { $0.id.uuidString < $1.id.uuidString }
+                        for (index, set) in ordered.enumerated() {
+                            if set.sortOrder != index {
+                                set.sortOrder = index
+                                needsSave = true
+                            }
+                        }
                     }
                 }
                 if needsSave {
@@ -102,9 +114,15 @@ struct TheLoggerApp: App {
         }
     }()
     
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    
     var body: some Scene {
         WindowGroup {
-            WorkoutListView()
+            if hasCompletedOnboarding {
+                WorkoutListView()
+            } else {
+                OnboardingView()
+            }
         }
         .modelContainer(sharedModelContainer)
     }
