@@ -330,22 +330,27 @@ struct WorkoutProgressRing: View {
 
     private var progress: Double {
         guard totalSets > 0 else { return 0 }
-        return Double(completedSets) / Double(totalSets)
+        return min(1.0, Double(completedSets) / Double(totalSets))
     }
 
     var body: some View {
         ZStack {
-            RingFillProgress(
-                progress: progress,
-                lineWidth: 6,
-                gradientColors: [.blue, .purple]
-            )
+            // Background ring
+            Circle()
+                .stroke(Color.blue.opacity(0.15), lineWidth: 6)
+
+            // Progress ring - solid blue
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(Color.blue, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(.easeOut(duration: 0.4), value: progress)
 
             VStack(spacing: 2) {
                 Text("\(completedSets)")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
-                Text("of \(totalSets)")
+                Text("sets")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
@@ -891,6 +896,118 @@ struct WeeklyGoalRing: View {
         .onChange(of: progress) { _, newValue in
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 animatedProgress = newValue
+            }
+        }
+    }
+}
+
+// MARK: - Level Avatar
+
+/// User avatar with level-based gradient colors that evolve with fitness progress
+struct LevelAvatar: View {
+    let name: String
+    let totalWorkouts: Int
+    var size: CGFloat = 48
+
+    private var level: Int {
+        switch totalWorkouts {
+        case 0..<5: return 1
+        case 5..<15: return 2
+        case 15..<30: return 3
+        case 30..<50: return 4
+        case 50..<100: return 5
+        case 100..<200: return 6
+        case 200..<500: return 7
+        default: return 8
+        }
+    }
+
+    private var levelColors: (primary: Color, secondary: Color) {
+        switch level {
+        case 1: return (.gray, .gray.opacity(0.6))              // Rookie
+        case 2: return (.green, .mint)                           // Regular
+        case 3: return (.blue, .cyan)                            // Dedicated
+        case 4: return (.purple, .indigo)                        // Strong
+        case 5: return (.orange, .yellow)                        // Elite
+        case 6: return (.red, .orange)                           // Champion
+        case 7: return (.yellow, .orange)                        // Legend
+        default: return (.pink, .purple)                         // Master
+        }
+    }
+
+    private var initial: String {
+        String(name.prefix(1).uppercased())
+    }
+
+    var body: some View {
+        ZStack {
+            // Gradient background circle
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [levelColors.primary, levelColors.secondary],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: size, height: size)
+
+            // Subtle inner shadow for depth
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [.clear, .black.opacity(0.15)],
+                        center: .center,
+                        startRadius: size * 0.2,
+                        endRadius: size * 0.5
+                    )
+                )
+                .frame(width: size, height: size)
+
+            // Ring highlight at top
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.4), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1.5
+                )
+                .frame(width: size - 2, height: size - 2)
+
+            // Initial letter
+            if name.isEmpty {
+                Image(systemName: "person.fill")
+                    .font(.system(size: size * 0.45, weight: .medium))
+                    .foregroundStyle(.white)
+            } else {
+                Text(initial)
+                    .font(.system(size: size * 0.5, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+
+            // Level indicator dot (shows level number for levels > 1)
+            if level > 1 {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        ZStack {
+                            Circle()
+                                .fill(Color(.systemBackground))
+                                .frame(width: size * 0.38, height: size * 0.38)
+                            Circle()
+                                .fill(levelColors.primary)
+                                .frame(width: size * 0.32, height: size * 0.32)
+                            Text("\(level)")
+                                .font(.system(size: size * 0.18, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .offset(x: size * 0.08, y: size * 0.08)
+                    }
+                }
+                .frame(width: size, height: size)
             }
         }
     }

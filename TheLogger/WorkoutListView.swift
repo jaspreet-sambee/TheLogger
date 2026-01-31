@@ -144,23 +144,13 @@ struct WorkoutListView: View {
                 // Welcome Header Section
                 Section {
                     HStack(spacing: 12) {
-                        // Greeting text in circular background
-                        ZStack {
-                            Circle()
-                                .fill(Color(.systemGray5))
-                                .frame(width: 48, height: 48)
-                            
-                            if userName.isEmpty {
-                                Image(systemName: "person.circle.fill")
-                                    .font(.system(size: 32, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text(String(userName.prefix(1).uppercased()))
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        
+                        // Level-based avatar with gradient
+                        LevelAvatar(
+                            name: userName,
+                            totalWorkouts: totalWorkouts,
+                            size: 48
+                        )
+
                         VStack(alignment: .leading, spacing: 4) {
                             if userName.isEmpty {
                                 Text("Welcome!")
@@ -194,6 +184,7 @@ struct WorkoutListView: View {
                                             .fill(Color(.systemGray6))
                                     )
                             }
+                            .buttonStyle(.borderless)
 
                             Button {
                                 showingSettings = true
@@ -207,6 +198,7 @@ struct WorkoutListView: View {
                                             .fill(Color(.systemGray6))
                                     )
                             }
+                            .buttonStyle(.borderless)
                         }
                     }
                     .padding(.vertical, 8)
