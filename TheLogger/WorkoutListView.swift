@@ -6,6 +6,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct WorkoutListView: View {
     @Query(sort: \Workout.date, order: .reverse) private var workouts: [Workout]
@@ -20,8 +21,34 @@ struct WorkoutListView: View {
     @State private var hasCheckedActiveWorkout = false
     @State private var userName: String = UserDefaults.standard.string(forKey: "userName") ?? ""
     @State private var showingNameEditor = false
+    @State private var showingExportSheet = false
+    @State private var exportCSVURL: URL? = nil
+    @State private var showingSettings = false
+    @State private var emptyTemplatesAppeared = false
+    @State private var showConfetti = false
+    @State private var lastCelebratedStreak: Int = 0
+    @AppStorage("weeklyWorkoutGoal") private var weeklyWorkoutGoal: Int = 4
 
-    
+    // Get recent workouts for inline display (last 5)
+    private var recentWorkouts: [Workout] {
+        Array(workoutHistory.prefix(5))
+    }
+
+    // Days since last workout (for rest day message)
+    private var daysSinceLastWorkout: Int {
+        guard let lastWorkout = workoutHistory.first else { return 0 }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let lastWorkoutDay = calendar.startOfDay(for: lastWorkout.date)
+        return calendar.dateComponents([.day], from: lastWorkoutDay, to: today).day ?? 0
+    }
+
+    // Check if we should celebrate a streak milestone
+    private var shouldCelebrateStreak: Bool {
+        let milestones = [3, 7, 14, 21, 30, 50, 100]
+        return milestones.contains(workoutStreak) && workoutStreak > lastCelebratedStreak
+    }
+
     // Get greeting based on time of day
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -52,7 +79,15 @@ struct WorkoutListView: View {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         var streak = 0
-        var currentDate = today
+        
+        // Check if worked out today
+        let hasWorkoutToday = workoutHistory.contains { workout in
+            calendar.isDate(workout.date, inSameDayAs: today)
+        }
+        
+        // Start from today if worked out today, otherwise start from yesterday
+        // (gives user until end of day to maintain streak)
+        var currentDate = hasWorkoutToday ? today : calendar.date(byAdding: .day, value: -1, to: today)!
         
         while true {
             let hasWorkout = workoutHistory.contains { workout in
@@ -70,11 +105,39 @@ struct WorkoutListView: View {
     
     private var thisWeekWorkouts: Int {
         let calendar = Calendar.current
-        let weekAgo = calendar.date(byAdding: .day, value: -7, to: Date())!
-        return workoutHistory.filter { $0.date >= weekAgo }.count
+        // Get start of current calendar week (respects user's locale for first day of week)
+        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: Date()) else {
+            return 0
+        }
+        let startOfWeek = weekInterval.start
+        return workoutHistory.filter { $0.date >= startOfWeek }.count
     }
 
-    
+    // Get which days of the week had workouts (0=Sun, 6=Sat)
+    private var thisWeekWorkoutDays: Set<Int> {
+        let calendar = Calendar.current
+        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: Date()) else {
+            return []
+        }
+        var days: Set<Int> = []
+        for workout in workoutHistory where workout.date >= weekInterval.start {
+            // weekday is 1-7 (Sun=1), convert to 0-6
+            days.insert(calendar.component(.weekday, from: workout.date) - 1)
+        }
+        return days
+    }
+
+    // Badge for workout milestones
+    private func milestoneBadge(for count: Int) -> String? {
+        switch count {
+        case 100...: return "Century!"
+        case 50..<100: return "50+ Club"
+        case 25..<50: return "25+ Strong"
+        case 10..<25: return "10+ Nice"
+        default: return nil
+        }
+    }
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
             List {
@@ -117,21 +180,56 @@ struct WorkoutListView: View {
                         }
                         
                         Spacer()
-                        
-                        Button {
-                            showingNameEditor = true
-                        } label: {
-                            Image(systemName: userName.isEmpty ? "person.crop.circle.badge.plus" : "pencil")
-                                .font(.system(.body, weight: .medium))
-                                .foregroundStyle(.blue)
-                                .padding(8)
-                                .background(
-                                    Circle()
-                                        .fill(Color(.systemGray6))
-                                )
+
+                        HStack(spacing: 8) {
+                            Button {
+                                showingNameEditor = true
+                            } label: {
+                                Image(systemName: userName.isEmpty ? "person.crop.circle.badge.plus" : "pencil")
+                                    .font(.system(.body, weight: .medium))
+                                    .foregroundStyle(.blue)
+                                    .padding(8)
+                                    .background(
+                                        Circle()
+                                            .fill(Color(.systemGray6))
+                                    )
+                            }
+
+                            Button {
+                                showingSettings = true
+                            } label: {
+                                Image(systemName: "gearshape.fill")
+                                    .font(.system(.body, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .padding(8)
+                                    .background(
+                                        Circle()
+                                            .fill(Color(.systemGray6))
+                                    )
+                            }
                         }
                     }
                     .padding(.vertical, 8)
+
+                    // Level badge and weekly goal (gamification)
+                    if totalWorkouts > 0 {
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("FITNESS LEVEL")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                                LevelBadge(totalWorkouts: totalWorkouts)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 8) {
+                                Text("WEEKLY GOAL")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                                WeeklyGoalRing(current: thisWeekWorkouts, goal: weeklyWorkoutGoal, color: .green)
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
                 } header: {
                     EmptyView()
                 }
@@ -139,86 +237,66 @@ struct WorkoutListView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
                 
-                // Active Workout Section
-                // Motivational Stats Section
-                // Motivational Stats Section
+                // Animated Stats Section with glass morphism
                 if totalWorkouts > 0 {
                     Section {
-                        HStack(spacing: 16) {
-                            // Streak Card
-                            VStack(spacing: 8) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "flame.fill")
-                                        .font(.system(.caption, weight: .bold))
-                                        .foregroundStyle(.orange)
-                                    Text("\(workoutStreak)")
-                                        .font(.system(.title2, weight: .bold))
-                                        .foregroundStyle(.orange)
+                        VStack(spacing: 12) {
+                            HStack(spacing: 12) {
+                                // Streak Card with animated flame
+                                AnimatedStatCard(
+                                    icon: AnimatedFlame(color: .orange),
+                                    value: workoutStreak,
+                                    label: "Day Streak",
+                                    color: .orange
+                                )
+                                .depthShadow(color: .orange, radius: 8)
+                                .staggeredAppear(index: 0, maxStagger: 3)
+
+                                // Total Workouts with milestone badge
+                                AnimatedStatCard(
+                                    icon: Image(systemName: "checkmark.circle.fill"),
+                                    value: totalWorkouts,
+                                    label: "Total",
+                                    color: .green,
+                                    badge: milestoneBadge(for: totalWorkouts)
+                                )
+                                .depthShadow(color: .green, radius: 8)
+                                .staggeredAppear(index: 1, maxStagger: 3)
+
+                                // This Week with day dots
+                                VStack(spacing: 6) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "calendar")
+                                            .font(.system(.caption, weight: .bold))
+                                            .foregroundStyle(.purple)
+                                        CountingNumber(value: thisWeekWorkouts)
+                                            .font(.system(.title2, weight: .bold))
+                                            .foregroundStyle(.purple)
+                                    }
+                                    Text("This Week")
+                                        .font(.system(.caption2, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                    WeekDots(workoutDays: thisWeekWorkoutDays, accentColor: .purple)
                                 }
-                                Text("Day Streak")
-                                    .font(.system(.caption2, weight: .medium))
-                                    .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.purple.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(Color.purple.opacity(0.25), lineWidth: 1)
+                                        )
+                                )
+                                .depthShadow(color: .purple, radius: 8)
+                                .staggeredAppear(index: 2, maxStagger: 3)
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.orange.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.orange.opacity(0.25), lineWidth: 1)
-                                    )
-                            )
-                            
-                            // Total Workouts Card
-                            VStack(spacing: 8) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(.caption, weight: .bold))
-                                        .foregroundStyle(.green)
-                                    Text("\(totalWorkouts)")
-                                        .font(.system(.title2, weight: .bold))
-                                        .foregroundStyle(.green)
-                                }
-                                Text("Total")
-                                    .font(.system(.caption2, weight: .medium))
-                                    .foregroundStyle(.secondary)
+
+                            // Rest day message (when not worked out today)
+                            if daysSinceLastWorkout > 0 && activeWorkout == nil {
+                                RestDayMessage(daysSinceLastWorkout: daysSinceLastWorkout)
+                                    .staggeredAppear(index: 3, maxStagger: 4)
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.green.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.green.opacity(0.25), lineWidth: 1)
-                                    )
-                            )
-                            
-                            // This Week Card
-                            VStack(spacing: 8) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "calendar")
-                                        .font(.system(.caption, weight: .bold))
-                                        .foregroundStyle(.purple)
-                                    Text("\(thisWeekWorkouts)")
-                                        .font(.system(.title2, weight: .bold))
-                                        .foregroundStyle(.purple)
-                                }
-                                Text("This Week")
-                                    .font(.system(.caption2, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.purple.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.purple.opacity(0.25), lineWidth: 1)
-                                    )
-                            )
                         }
                         .padding(.horizontal, 4)
                     } header: {
@@ -240,91 +318,75 @@ struct WorkoutListView: View {
                                 Color.clear
                                     .contentShape(Rectangle())
                             }
-                            
+
                             ActiveWorkoutRowView(workout: active)
+                                .depthShadow(color: .blue, radius: 12)
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                     } header: {
-                        Text("Active Workout")
-                            .font(.system(.subheadline, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 8, height: 8)
+                            Text("Active Workout")
+                                .font(.system(.subheadline, weight: .semibold))
+                        }
+                        .foregroundStyle(.secondary)
+                        .textCase(nil)
                     }
                 }
                 
-                // Start Workout Section (only show when no active workout)
+                // Start Workout Button (only show when no active workout)
                 if activeWorkout == nil {
                     Section {
                         Button {
-                            if templates.isEmpty { startWorkoutFromTemplate(template: nil) } else { showingWorkoutSelector = true }
-                        } label: {
-                            HStack(spacing: 14) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.blue.opacity(0.1))
-                                        .frame(width: 48, height: 48)
-                                    
-                                    Image(systemName: "play.circle.fill")
-                                        .font(.system(size: 26, weight: .semibold))
-                                        .foregroundStyle(.blue)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Start Workout")
-                                        .font(.system(.headline, weight: .semibold))
-                                        .foregroundStyle(.primary)
-                                    Text("Begin a new training session")
-                                        .font(.system(.subheadline, weight: .regular))
-                                        .foregroundStyle(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.system(.subheadline, weight: .semibold))
-                                    .foregroundStyle(.tertiary)
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            if templates.isEmpty {
+                                startWorkoutFromTemplate(template: nil)
+                            } else {
+                                showingWorkoutSelector = true
                             }
-                            .padding(.vertical, 16)
-                            .padding(.horizontal, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.black.opacity(0.6))
-                                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.blue.opacity(0.25), lineWidth: 1)
-                            )
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text("Start Workout")
+                                    .font(.system(.body, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.blue)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .pulsingGlow(color: .blue, radius: 10)
                         }
                         .buttonStyle(.plain)
-                        .padding(.vertical, 4)
-                        .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     } header: {
-                        Text("Quick Start")
-                            .font(.system(.subheadline, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
+                        EmptyView()
                     }
                 }
 
                 // Templates Section (prioritized)
                 Section {
                     if !templates.isEmpty {
-                        ForEach(templates) { template in
+                        ForEach(Array(templates.enumerated()), id: \.element.id) { index, template in
                             ZStack {
                                 NavigationLink(value: template.id.uuidString) {
                                     Color.clear
                                         .contentShape(Rectangle())
                                 }
-                                
+
                                 TemplateRowView(template: template)
                             }
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
+                            .staggeredAppear(index: index, maxStagger: 5)
                         }
                         .onDelete(perform: deleteTemplates)
                     } else {
@@ -333,6 +395,7 @@ struct WorkoutListView: View {
                             Image(systemName: "doc.text")
                                 .font(.system(size: 40))
                                 .foregroundStyle(.tertiary)
+                                .symbolEffect(.bounce, value: emptyTemplatesAppeared)
                             Text("No templates yet")
                                 .font(.system(.subheadline, weight: .medium))
                                 .foregroundStyle(.secondary)
@@ -343,6 +406,14 @@ struct WorkoutListView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 24)
+                        .opacity(emptyTemplatesAppeared ? 1 : 0)
+                        .animation(.easeOut(duration: 0.4), value: emptyTemplatesAppeared)
+                        .onAppear {
+                            if templates.isEmpty { emptyTemplatesAppeared = true }
+                        }
+                        .onChange(of: templates.count) { _, count in
+                            if count > 0 { emptyTemplatesAppeared = false }
+                        }
                     }
                     
                     // New Template button
@@ -402,58 +473,57 @@ struct WorkoutListView: View {
                     .textCase(nil)
                 }
                 
-                // Workout History Section (collapsed behind action)
-                if !workoutHistory.isEmpty {
+                // Recent Workouts Section (inline horizontal scroll)
+                if !recentWorkouts.isEmpty {
                     Section {
-                        Button {
-                            showingWorkoutHistory = true
-                        } label: {
-                            HStack(spacing: 14) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.black)
-                                        .frame(width: 44, height: 44)
-                                    
-                                    Image(systemName: "clock.fill")
-                                        .font(.system(size: 20, weight: .medium))
-                                        .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Horizontal scroll of recent workouts
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(Array(recentWorkouts.enumerated()), id: \.element.id) { index, workout in
+                                        RecentWorkoutCard(workout: workout) {
+                                            navigationPath.append(workout.id.uuidString)
+                                        }
+                                        .staggeredAppear(index: index, maxStagger: 5)
+                                    }
                                 }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Workout History")
-                                        .font(.system(.body, weight: .semibold))
-                                        .foregroundStyle(.primary)
-                                    Text("\(workoutHistory.count) completed \(workoutHistory.count == 1 ? "workout" : "workouts")")
-                                        .font(.system(.caption, weight: .regular))
-                                        .foregroundStyle(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                HStack(spacing: 6) {
-                                    Text("\(workoutHistory.count)")
-                                        .font(.system(.subheadline, weight: .semibold))
-                                        .foregroundStyle(.secondary)
+                                .padding(.horizontal, 4)
+                            }
+
+                            // View All button
+                            Button {
+                                showingWorkoutHistory = true
+                            } label: {
+                                HStack {
+                                    Text("View All History")
+                                        .font(.system(.subheadline, weight: .medium))
                                     Image(systemName: "chevron.right")
                                         .font(.system(.caption, weight: .semibold))
-                                        .foregroundStyle(.tertiary)
                                 }
+                                .foregroundStyle(.purple)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.purple.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
                             }
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.black.opacity(0.6))
-                                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-                            )
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     } header: {
                         HStack {
-                            Image(systemName: "clock.fill")
+                            Image(systemName: "clock.arrow.circlepath")
                                 .font(.system(.caption, weight: .semibold))
-                            Text("History")
+                            Text("Recent Workouts")
                                 .font(.system(.subheadline, weight: .semibold))
+                            Spacer()
+                            Text("\(workoutHistory.count) total")
+                                .font(.system(.caption, weight: .medium))
+                                .foregroundStyle(.tertiary)
                         }
                         .foregroundStyle(.secondary)
                         .textCase(nil)
@@ -462,6 +532,64 @@ struct WorkoutListView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
+                
+                // Data & Backup Section
+                Section {
+                    Button {
+                        exportWorkoutData()
+                    } label: {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.green.opacity(0.15))
+                                    .frame(width: 44, height: 44)
+                                
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(.green)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Export Workout Data")
+                                    .font(.system(.body, weight: .semibold))
+                                    .foregroundStyle(.primary)
+                                Text("Your data is stored safely on this device")
+                                    .font(.system(.caption, weight: .regular))
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(.caption, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.black.opacity(0.6))
+                                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.green.opacity(0.25), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                } header: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(.caption, weight: .semibold))
+                        Text("Data & Backup")
+                            .font(.system(.subheadline, weight: .semibold))
+                    }
+                    .foregroundStyle(.secondary)
+                    .textCase(nil)
+                }
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
                 
                 // Empty state
                 if templates.isEmpty && workoutHistory.isEmpty && activeWorkout == nil {
@@ -473,8 +601,11 @@ struct WorkoutListView: View {
                 }
             }
             .navigationDestination(for: String.self) { workoutId in
+                // Check both workouts and templates arrays
                 if let workout = workouts.first(where: { $0.id.uuidString == workoutId }) {
                     WorkoutDetailView(workout: workout)
+                } else if let template = templates.first(where: { $0.id.uuidString == workoutId }) {
+                    WorkoutDetailView(workout: template)
                 }
             }
             .listStyle(.plain)
@@ -512,6 +643,14 @@ struct WorkoutListView: View {
             } message: {
                 Text("We'll use this to personalize your experience")
             }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
+            }
+            .sheet(isPresented: $showingExportSheet) {
+                if let url = exportCSVURL {
+                    ExportShareSheet(url: url)
+                }
+            }
             .task {
                 // Auto-navigate to active workout on app launch (only once)
                 if !hasCheckedActiveWorkout {
@@ -521,13 +660,45 @@ struct WorkoutListView: View {
                     }
                 }
             }
+            .onChange(of: activeWorkout) { oldValue, newValue in
+                // Clear navigation path when workout ends (becomes nil)
+                if oldValue != nil && newValue == nil && !navigationPath.isEmpty {
+                    navigationPath = NavigationPath()
+                }
+            }
+            .onChange(of: workoutStreak) { _, newStreak in
+                // Celebrate streak milestones
+                let milestones = [3, 7, 14, 21, 30, 50, 100]
+                if milestones.contains(newStreak) && newStreak > lastCelebratedStreak {
+                    lastCelebratedStreak = newStreak
+                    showConfetti = true
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    // Reset confetti after animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        showConfetti = false
+                    }
+                }
+            }
+            .overlay {
+                // Confetti overlay for streak celebrations
+                StreakConfettiView(isActive: showConfetti)
+                    .ignoresSafeArea()
+            }
         }
     }
     
     private func startWorkoutFromTemplate(template: Workout?) {
-        // Ensure no other workout is active (safety check)
+        // End any existing active workout first and save immediately
         if let existingActive = activeWorkout {
             existingActive.endTime = Date()
+            try? modelContext.save()
+        }
+
+        // Double-check no active workout exists after save
+        let stillActive = workouts.first { $0.isActive }
+        if stillActive != nil {
+            print("Warning: Active workout still exists, aborting new workout creation")
+            return
         }
 
         // Create workout (blank or from template)
@@ -537,7 +708,7 @@ struct WorkoutListView: View {
         } else {
             newWorkout = Workout(date: Date(), isTemplate: false)
         }
-        
+
         // Mark as active and save (templates are never active)
         newWorkout.startTime = Date()
         newWorkout.endTime = nil
@@ -578,10 +749,41 @@ struct WorkoutListView: View {
             print("Error deleting template: \(error)")
         }
     }
+    
+    private func exportWorkoutData() {
+        let csvContent = WorkoutDataExporter.generateCSV(from: Array(workouts))
+        
+        // Create temporary file
+        let fileName = "TheLogger_Export_\(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none).replacingOccurrences(of: "/", with: "-")).csv"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        
+        do {
+            try csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
+            exportCSVURL = tempURL
+            showingExportSheet = true
+        } catch {
+            print("Error creating CSV file: \(error)")
+        }
+    }
 }
 
 
 // MARK: - Active Workout Row View
+// MARK: - Export Share Sheet
+struct ExportShareSheet: UIViewControllerRepresentable {
+    let url: URL
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let activityVC = UIActivityViewController(
+            activityItems: [url],
+            applicationActivities: nil
+        )
+        return activityVC
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
 struct ActiveWorkoutRowView: View {
     let workout: Workout
     @State private var elapsedTime: TimeInterval = 0
@@ -691,64 +893,76 @@ struct ActiveWorkoutRowView: View {
 // MARK: - Template Row View
 struct TemplateRowView: View {
     let template: Workout
-    
+
+    // Get first few exercise names for preview
+    private var exercisePreview: [String] {
+        Array(template.exercises.prefix(3).map { $0.name })
+    }
+
+    private var remainingCount: Int {
+        max(0, template.exercises.count - 3)
+    }
+
     var body: some View {
-        HStack(spacing: 14) {
-            // Icon indicator
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.blue.opacity(0.1))
-                    .frame(width: 48, height: 48)
-                
-                Image(systemName: "doc.text.fill")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.blue)
-            }
-            
-            // Content
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header row
+            HStack {
                 Text(template.name)
                     .font(.system(.headline, weight: .semibold))
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
-                
-                HStack(spacing: 16) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.system(.caption2, weight: .medium))
-                        Text("\(template.exerciseCount)")
-                            .font(.system(.subheadline, weight: .semibold))
+                    .lineLimit(1)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(.caption, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+
+            // Exercise chips
+            if !exercisePreview.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(exercisePreview, id: \.self) { exercise in
+                        Text(exercise)
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule()
+                                    .fill(Color(.systemGray5))
+                            )
+                            .lineLimit(1)
                     }
-                    .foregroundStyle(.secondary)
-                    
-                    if template.totalSets > 0 {
-                        HStack(spacing: 4) {
-                            Image(systemName: "list.bullet")
-                                .font(.system(.caption2, weight: .medium))
-                            Text("\(template.totalSets)")
-                                .font(.system(.subheadline, weight: .semibold))
-                        }
-                        .foregroundStyle(.secondary)
+
+                    if remainingCount > 0 {
+                        Text("+\(remainingCount)")
+                            .font(.system(.caption, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule()
+                                    .strokeBorder(Color(.systemGray4), lineWidth: 1)
+                            )
                     }
                 }
+            } else {
+                Text("No exercises yet")
+                    .font(.system(.caption, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .italic()
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.system(.caption, weight: .semibold))
-                .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 14)
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
-                )
+                .fill(Color(.systemGray6).opacity(0.8))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(.systemGray4).opacity(0.5), lineWidth: 0.5)
         )
     }
 }
@@ -1198,14 +1412,25 @@ struct WorkoutHistoryView: View {
 // MARK: - History Workout Row View
 struct HistoryWorkoutRowView: View {
     let workout: Workout
-    
+
     private var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateStyle = .none
         formatter.timeStyle = .short
         return formatter.string(from: workout.date)
     }
-    
+
+    // Get first 2-3 exercise names for preview
+    private var exercisePreview: String? {
+        guard !workout.exercises.isEmpty else { return nil }
+        let names = workout.exercises.prefix(3).map { $0.name }
+        let joined = names.joined(separator: ", ")
+        if workout.exercises.count > 3 {
+            return joined + ", ..."
+        }
+        return joined
+    }
+
     var body: some View {
         HStack(spacing: 14) {
             // Date indicator with subtle accent
@@ -1215,14 +1440,22 @@ struct HistoryWorkoutRowView: View {
                     .foregroundStyle(.purple)
                     .frame(width: 50)
             }
-            
+
             // Main content
             VStack(alignment: .leading, spacing: 6) {
                 Text(workout.name)
                     .font(.system(.headline, weight: .semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                
+
+                // Exercise names preview
+                if let preview = exercisePreview {
+                    Text(preview)
+                        .font(.system(.caption, weight: .regular))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+
                 HStack(spacing: 16) {
                     HStack(spacing: 4) {
                         Image(systemName: "figure.strengthtraining.traditional")
