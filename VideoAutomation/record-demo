@@ -1,0 +1,42 @@
+#!/bin/bash
+# Usage: ./record-demo <workflow-name>
+# Example: ./record-demo new-workout
+#
+# This script records a demo video of TheLogger app based on predefined workflows.
+# The output is a Twitter-ready video with device frame and light neutral background.
+#
+# Prerequisites:
+#   brew install screenframer ffmpeg yq
+#
+# Available workflows:
+#   - new-workout: Shows creating a new workout and adding exercises
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+WORKFLOW=$1
+
+if [ -z "$WORKFLOW" ]; then
+    echo "Usage: ./record-demo <workflow-name>"
+    echo ""
+    echo "Available workflows:"
+    for f in "$SCRIPT_DIR/workflows/"*.yaml; do
+        name=$(basename "$f" .yaml)
+        desc=$(yq '.description' "$f" 2>/dev/null || echo "No description")
+        echo "  - $name: $desc"
+    done
+    exit 1
+fi
+
+WORKFLOW_FILE="$SCRIPT_DIR/workflows/${WORKFLOW}.yaml"
+
+if [ ! -f "$WORKFLOW_FILE" ]; then
+    echo "Error: Workflow '$WORKFLOW' not found at $WORKFLOW_FILE"
+    echo ""
+    echo "Available workflows:"
+    ls -1 "$SCRIPT_DIR/workflows/"*.yaml 2>/dev/null | xargs -I {} basename {} .yaml | sed 's/^/  - /'
+    exit 1
+fi
+
+# Run the main recording script
+"$SCRIPT_DIR/scripts/record-video.sh" "$WORKFLOW_FILE"

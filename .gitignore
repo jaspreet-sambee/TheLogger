@@ -1,0 +1,15 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Cursor IDE
+.cursor/
+.cursorrules
+
+# macOS
+.DS_Store
+
+# Video automation output
+VideoAutomation/output/

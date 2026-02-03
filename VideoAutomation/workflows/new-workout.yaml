@@ -1,0 +1,70 @@
+name: "New Workout Demo"
+description: "Shows creating a new workout, adding an exercise, and logging sets"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 20  # seconds fallback if XCUITest not available
+
+steps:
+  - action: launch_app
+    wait: 2
+
+  - action: tap
+    description: "Tap Start Workout button"
+    accessibility_id: "startWorkoutButton"
+
+  - action: wait
+    duration: 1
+
+  - action: tap
+    description: "Add first exercise"
+    accessibility_id: "addExerciseButton"
+
+  - action: wait
+    duration: 0.5
+
+  - action: type
+    text: "Bench Press"
+    accessibility_id: "exerciseSearchField"
+
+  - action: wait
+    duration: 0.5
+
+  - action: tap
+    description: "Select exercise from results"
+    accessibility_id: "exerciseResult_Bench Press"
+
+  - action: wait
+    duration: 1
+
+  - action: tap
+    description: "Add a set"
+    accessibility_id: "addSetButton"
+
+  - action: wait
+    duration: 0.5
+
+  - action: type
+    text: "135"
+    accessibility_id: "weightInput"
+
+  - action: type
+    text: "10"
+    accessibility_id: "repsInput"
+
+  - action: tap
+    description: "Save the set"
+    accessibility_id: "saveSetButton"
+
+  - action: wait
+    duration: 2
+    description: "Show the completed set"
+
+output:
+  filename: "new-workout"
+  twitter_optimized: true
+  include_device_frame: true
+  background_color: "#f5f5f5"
