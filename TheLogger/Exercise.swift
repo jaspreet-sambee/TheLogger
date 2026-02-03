@@ -10,16 +10,19 @@ import SwiftData
 
 @Model
 final class Exercise: Identifiable {
-    var id: UUID
-    var name: String
-    @Relationship(deleteRule: .cascade) var sets: [WorkoutSet]
+    var id: UUID = UUID()
+    var name: String = ""
+    @Relationship(deleteRule: .cascade, inverse: \WorkoutSet.exercise) var sets: [WorkoutSet]?
+
+    /// Inverse relationship to parent workout (required for CloudKit)
+    var workout: Workout?
 
     /// Groups exercises into supersets. Exercises with the same groupId are performed back-to-back.
     /// nil = standalone exercise, same UUID = part of same superset
     var supersetGroupId: UUID?
 
     /// Position within a superset (0, 1, 2...). Used to maintain order within a group.
-    var supersetOrder: Int
+    var supersetOrder: Int = 0
 
     /// Indicates if sets were auto-filled from exercise memory (transient, not persisted)
     @Transient var isAutoFilled: Bool = false
@@ -39,24 +42,29 @@ final class Exercise: Identifiable {
     
     /// Add a new set to this exercise
     func addSet(reps: Int, weight: Double) {
-        let nextOrder = (sets.map(\.sortOrder).max() ?? -1) + 1
+        let currentSets = sets ?? []
+        let nextOrder = (currentSets.map(\.sortOrder).max() ?? -1) + 1
         let newSet = WorkoutSet(reps: reps, weight: weight, sortOrder: nextOrder)
-        sets.append(newSet)
+        if sets == nil {
+            sets = [newSet]
+        } else {
+            sets?.append(newSet)
+        }
     }
-    
+
     /// Sets in stable display order (SwiftData relationship order is not guaranteed)
     var setsByOrder: [WorkoutSet] {
-        sets.sorted { $0.sortOrder < $1.sortOrder }
+        (sets ?? []).sorted { $0.sortOrder < $1.sortOrder }
     }
-    
+
     /// Remove a set by ID
     func removeSet(id: UUID) {
-        sets.removeAll { $0.id == id }
+        sets?.removeAll { $0.id == id }
     }
-    
+
     /// Get total reps across all sets
     var totalReps: Int {
-        sets.reduce(0) { $0 + $1.reps }
+        (sets ?? []).reduce(0) { $0 + $1.reps }
     }
 }
 

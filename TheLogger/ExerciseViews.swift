@@ -49,9 +49,9 @@ struct ExerciseRowView: View {
 
         // Find most recent workout containing the same normalized exercise name
         for workout in completedWorkouts {
-            if let previous = workout.exercises.first(where: {
+            if let previous = (workout.exercises ?? []).first(where: {
                 $0.name.lowercased().trimmingCharacters(in: .whitespaces) == normalizedName
-            }), !previous.sets.isEmpty {
+            }), !(previous.sets ?? []).isEmpty {
                 return previous
             }
         }
@@ -61,11 +61,11 @@ struct ExerciseRowView: View {
 
     // Get progress message based on comparison
     private var progressMessage: String? {
-        guard let previous = previousExercise, !exercise.sets.isEmpty else { return nil }
+        guard let previous = previousExercise, !(exercise.sets ?? []).isEmpty else { return nil }
 
         // Only compare PR-eligible sets (excludes warmup)
-        let currentWorkingSets = exercise.sets.filter { $0.type.countsForPR }
-        let previousWorkingSets = previous.sets.filter { $0.type.countsForPR }
+        let currentWorkingSets = (exercise.sets ?? []).filter { $0.type.countsForPR }
+        let previousWorkingSets = (previous.sets ?? []).filter { $0.type.countsForPR }
 
         guard !currentWorkingSets.isEmpty, !previousWorkingSets.isEmpty else { return nil }
 
@@ -123,7 +123,7 @@ struct ExerciseRowView: View {
 
                     // Set type badges (show non-working types)
                     ForEach(SetType.allCases.filter { $0 != .working }, id: \.self) { type in
-                        let count = exercise.sets.filter { $0.type == type }.count
+                        let count = (exercise.sets ?? []).filter { $0.type == type }.count
                         if count > 0 {
                             HStack(spacing: 2) {
                                 Image(systemName: type.icon)
@@ -162,7 +162,7 @@ struct ExerciseRowView: View {
                 }
             }
 
-            if exercise.sets.isEmpty {
+            if (exercise.sets ?? []).isEmpty {
                 Text("No sets added")
                     .font(.system(.subheadline, weight: .regular))
                     .foregroundStyle(isActive ? .secondary : .tertiary)
@@ -205,8 +205,9 @@ struct ExerciseCard: View {
     var isActive: Bool = false
 
     private var setsSummary: String {
-        if exercise.sets.isEmpty { return "No sets" }
-        let count = exercise.sets.count
+        let sets = exercise.sets ?? []
+        if sets.isEmpty { return "No sets" }
+        let count = sets.count
         let total = exercise.totalReps
         return "\(count) \(count == 1 ? "set" : "sets") · \(total) reps"
     }
@@ -252,8 +253,9 @@ struct ExerciseCard: View {
                     }
 
                     // Sets count badge
-                    if !exercise.sets.isEmpty {
-                        Text("\(exercise.sets.count)")
+                    let setsList = exercise.sets ?? []
+                    if !setsList.isEmpty {
+                        Text("\(setsList.count)")
                             .font(.system(.caption, weight: .bold))
                             .foregroundStyle(.secondary)
                             .frame(width: 24, height: 24)
@@ -395,7 +397,7 @@ struct ExerciseEditView: View {
             }
 
             Section {
-                if exercise.sets.isEmpty {
+                if (exercise.sets ?? []).isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "circle.dashed")
                             .font(.system(size: 32))
@@ -456,6 +458,18 @@ struct ExerciseEditView: View {
                         onSave: {
                             exercise.addSet(reps: newSetReps, weight: newSetWeight)
                             saveChanges()
+                            // Sync to widget
+                            workout.syncToWidget(currentExercise: exercise)
+                            // Update Live Activity with current exercise's set count
+                            Task {
+                                await LiveActivityManager.shared.updateActivity(
+                                    exerciseName: exercise.name,
+                                    exerciseId: exercise.id,
+                                    exerciseSets: (exercise.sets ?? []).count,
+                                    lastReps: newSetReps,
+                                    lastWeight: newSetWeight
+                                )
+                            }
                             // Check for PR
                             checkForPR(weight: newSetWeight, reps: newSetReps)
                             // Offer rest option (only for active workouts)
@@ -511,6 +525,7 @@ struct ExerciseEditView: View {
                         }
                         .buttonStyle(.borderless)
                         .tint(.blue)
+                        .accessibilityIdentifier("addSetButton")
 
                         // Quick Repeat button (one-tap duplicate of last set)
                         if let lastSet = exercise.setsByOrder.last {
@@ -523,6 +538,18 @@ struct ExerciseEditView: View {
                                     exercise.addSet(reps: lastSet.reps, weight: lastSet.weight)
                                 }
                                 saveChanges()
+                                // Sync to widget
+                                workout.syncToWidget(currentExercise: exercise)
+                                // Update Live Activity with current exercise's set count
+                                Task {
+                                    await LiveActivityManager.shared.updateActivity(
+                                        exerciseName: exercise.name,
+                                        exerciseId: exercise.id,
+                                        exerciseSets: (exercise.sets ?? []).count,
+                                        lastReps: lastSet.reps,
+                                        lastWeight: lastSet.weight
+                                    )
+                                }
                                 // Check for PR
                                 checkForPR(weight: lastSet.weight, reps: lastSet.reps)
 

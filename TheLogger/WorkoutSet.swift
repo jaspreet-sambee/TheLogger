@@ -58,11 +58,14 @@ enum SetType: String, Codable, CaseIterable {
 
 @Model
 final class WorkoutSet: Identifiable {
-    var id: UUID
-    var reps: Int
-    var weight: Double
-    var setType: String  // Store as String for SwiftData compatibility
-    var sortOrder: Int   // Ensures consistent display order (SwiftData doesn't guarantee relationship order)
+    var id: UUID = UUID()
+    var reps: Int = 0
+    var weight: Double = 0
+    var setType: String = "Working"  // Store as String for SwiftData compatibility
+    var sortOrder: Int = 0   // Ensures consistent display order (SwiftData doesn't guarantee relationship order)
+
+    /// Inverse relationship to parent exercise (required for CloudKit)
+    var exercise: Exercise?
     
     init(id: UUID = UUID(), reps: Int, weight: Double, setType: SetType = .working, sortOrder: Int = 0) {
         self.id = id

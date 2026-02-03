@@ -48,7 +48,7 @@ struct AddWorkoutView: View {
 
         // Collect all unique exercise names from all workouts
         for workout in allWorkouts {
-            for exercise in workout.exercises {
+            for exercise in (workout.exercises ?? []) {
                 exerciseNames.insert(exercise.name)
             }
         }
@@ -112,9 +112,10 @@ struct AddWorkoutView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(recentlyUsedExercises, id: \.self) { exerciseName in
+                                    let exerciseExists = (newWorkout.exercises ?? []).contains(where: { $0.name == exerciseName })
                                     Button {
                                         // Check if exercise already exists in current workout
-                                        if !newWorkout.exercises.contains(where: { $0.name == exerciseName }) {
+                                        if !exerciseExists {
                                             newWorkout.addExercise(name: exerciseName)
                                         }
                                     } label: {
@@ -123,12 +124,12 @@ struct AddWorkoutView: View {
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 12)
                                             .background(
-                                                newWorkout.exercises.contains(where: { $0.name == exerciseName })
+                                                exerciseExists
                                                     ? Color.blue.opacity(0.15)
                                                     : Color(.systemGray5)
                                             )
                                             .foregroundColor(
-                                                newWorkout.exercises.contains(where: { $0.name == exerciseName })
+                                                exerciseExists
                                                     ? .blue
                                                     : .primary
                                             )
@@ -136,7 +137,7 @@ struct AddWorkoutView: View {
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 10)
                                                     .stroke(
-                                                        newWorkout.exercises.contains(where: { $0.name == exerciseName })
+                                                        exerciseExists
                                                             ? Color.blue.opacity(0.25)
                                                             : Color.clear,
                                                         lineWidth: 1
@@ -157,10 +158,11 @@ struct AddWorkoutView: View {
                     }
                 }
 
-                if !newWorkout.exercises.isEmpty {
-                    ForEach(Array(newWorkout.exercises.enumerated()), id: \.element.id) { index, exercise in
+                let workoutExercises = newWorkout.exercises ?? []
+                if !workoutExercises.isEmpty {
+                    ForEach(Array(workoutExercises.enumerated()), id: \.element.id) { index, exercise in
                         Section {
-                            if exercise.sets.isEmpty {
+                            if (exercise.sets ?? []).isEmpty {
                                 Text("No sets added yet")
                                     .font(.system(.subheadline, weight: .regular))
                                     .foregroundStyle(.secondary)
@@ -196,8 +198,8 @@ struct AddWorkoutView: View {
                                     let ordered = exercise.setsByOrder
                                     // Sort descending to avoid index shift issues
                                     for setIndex in indexSet.sorted(by: >) where setIndex < ordered.count {
-                                        guard index < newWorkout.exercises.count else { continue }
-                                        newWorkout.exercises[index].removeSet(id: ordered[setIndex].id)
+                                        guard index < workoutExercises.count else { continue }
+                                        workoutExercises[index].removeSet(id: ordered[setIndex].id)
                                     }
                                 }
                             }
@@ -222,14 +224,14 @@ struct AddWorkoutView: View {
                     .onDelete { indexSet in
                         // Sort descending to avoid index shift issues
                         for index in indexSet.sorted(by: >) {
-                            guard index < newWorkout.exercises.count else { continue }
-                            newWorkout.removeExercise(id: newWorkout.exercises[index].id)
+                            guard index < workoutExercises.count else { continue }
+                            newWorkout.removeExercise(id: workoutExercises[index].id)
                         }
                     }
                 }
 
                 Section {
-                    if newWorkout.exercises.isEmpty {
+                    if workoutExercises.isEmpty {
                         Text("No exercises added yet")
                             .font(.system(.subheadline, weight: .regular))
                             .foregroundStyle(.secondary)
@@ -291,9 +293,10 @@ struct AddWorkoutView: View {
             .sheet(isPresented: $showingAddSet) {
                 AddSetView(reps: $setReps, weight: $setWeight) {
                     // Add the set to the exercise at the tracked index
+                    let exercises = newWorkout.exercises ?? []
                     if let exerciseIndex = addingSetToExerciseIndex,
-                       exerciseIndex < newWorkout.exercises.count {
-                        newWorkout.exercises[exerciseIndex].addSet(reps: setReps, weight: setWeight)
+                       exerciseIndex < exercises.count {
+                        exercises[exerciseIndex].addSet(reps: setReps, weight: setWeight)
                     }
                     addingSetToExerciseIndex = nil
                 }

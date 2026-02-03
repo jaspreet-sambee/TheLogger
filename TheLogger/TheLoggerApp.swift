@@ -10,7 +10,7 @@ import SwiftData
 
 @main
 struct TheLoggerApp: App {
-    // Configure SwiftData model container for local persistence
+    // Configure SwiftData model container with iCloud sync
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Workout.self,
@@ -19,9 +19,12 @@ struct TheLoggerApp: App {
             ExerciseMemory.self,
             PersonalRecord.self
         ])
+
+        // Use CloudKit for automatic iCloud backup and sync
         let modelConfiguration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .automatic
         )
         
         do {
@@ -44,8 +47,8 @@ struct TheLoggerApp: App {
                     }
                     // Migrate sets: assign sortOrder = index so display order is stable.
                     // Use stable order (id) so we don't renumber differently each launch.
-                    for exercise in workout.exercises {
-                        let ordered = exercise.sets.sorted { $0.id.uuidString < $1.id.uuidString }
+                    for exercise in workout.exercises ?? [] {
+                        let ordered = (exercise.sets ?? []).sorted { $0.id.uuidString < $1.id.uuidString }
                         for (index, set) in ordered.enumerated() {
                             if set.sortOrder != index {
                                 set.sortOrder = index
@@ -115,15 +118,81 @@ struct TheLoggerApp: App {
     }()
     
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    
+    @Environment(\.scenePhase) private var scenePhase
+
+    // Deep link state for widget navigation
+    @State private var deepLinkWorkoutId: UUID?
+    @State private var deepLinkExerciseId: UUID?
+
     var body: some Scene {
         WindowGroup {
             if hasCompletedOnboarding {
-                WorkoutListView()
+                WorkoutListView(
+                    deepLinkWorkoutId: $deepLinkWorkoutId,
+                    deepLinkExerciseId: $deepLinkExerciseId
+                )
+                .onAppear {
+                    syncPendingSetsFromWidget()
+                }
             } else {
                 OnboardingView()
             }
         }
         .modelContainer(sharedModelContainer)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                // Sync any sets logged from the widget
+                syncPendingSetsFromWidget()
+            }
+        }
+        .handlesExternalEvents(matching: ["thelogger"])
+    }
+
+    /// Sync sets that were logged from the Live Activity widget
+    private func syncPendingSetsFromWidget() {
+        // Debug: Print full intent debug log
+        if let debugDefaults = UserDefaults(suiteName: "group.SDL-Tutorial.TheLogger"),
+           let debugLog = debugDefaults.string(forKey: "debugIntentLog") {
+            print("[App] ====== WIDGET INTENT DEBUG LOG ======")
+            print(debugLog)
+            print("[App] ====================================")
+        } else {
+            print("[App] DEBUG - No widget intent log found")
+        }
+
+        let pendingSets = PendingSetManager.getPendingSets()
+        guard !pendingSets.isEmpty else { return }
+
+        let context = sharedModelContainer.mainContext
+
+        for pendingSet in pendingSets {
+            // Find the workout and exercise
+            guard let workoutId = UUID(uuidString: pendingSet.workoutId),
+                  let exerciseId = UUID(uuidString: pendingSet.exerciseId) else {
+                continue
+            }
+
+            let descriptor = FetchDescriptor<Workout>(
+                predicate: #Predicate { $0.id == workoutId }
+            )
+
+            guard let workout = try? context.fetch(descriptor).first,
+                  let exercise = workout.exercises?.first(where: { $0.id == exerciseId }) else {
+                continue
+            }
+
+            // Add the set to the exercise
+            exercise.addSet(reps: pendingSet.reps, weight: pendingSet.weight)
+            print("[App] Synced pending set: \(pendingSet.reps) reps @ \(pendingSet.weight) for \(exercise.name)")
+        }
+
+        // Save and clear pending sets
+        try? context.save()
+        PendingSetManager.clearPendingSets()
+
+        // Update widget with latest data
+        if let activeWorkout = try? context.fetch(FetchDescriptor<Workout>()).first(where: { $0.isActive }) {
+            activeWorkout.syncToWidget()
+        }
     }
 }

@@ -61,13 +61,14 @@ struct TemplateEditView: View {
                 }
 
                 Section {
-                    if templateWorkout.exercises.isEmpty {
+                    let exercisesList = templateWorkout.exercises ?? []
+                    if exercisesList.isEmpty {
                         Text("Add your first exercise to start logging")
                             .font(.system(.subheadline, weight: .regular))
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 8)
                     } else {
-                        ForEach(templateWorkout.exercises) { exercise in
+                        ForEach(exercisesList) { exercise in
                             NavigationLink {
                                 ExerciseEditView(exercise: exercise, workout: templateWorkout)
                             } label: {
@@ -80,7 +81,7 @@ struct TemplateEditView: View {
                         }
                         .onDelete { indexSet in
                             for index in indexSet {
-                                templateWorkout.removeExercise(id: templateWorkout.exercises[index].id)
+                                templateWorkout.removeExercise(id: exercisesList[index].id)
                             }
                             autoSaveTemplate()
                         }

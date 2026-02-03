@@ -213,11 +213,11 @@ struct ExerciseProgressView: View {
 
         for workout in workouts where workout.endTime != nil && !workout.isTemplate {
             // Find matching exercise
-            if let exercise = workout.exercises.first(where: { (ex: Exercise) -> Bool in
+            if let exercise = workout.exercises?.first(where: { (ex: Exercise) -> Bool in
                 ex.name.lowercased().trimmingCharacters(in: CharacterSet.whitespaces) == normalizedName
             }) {
                 // Get max weight from this workout
-                let maxWeight = exercise.sets.map { $0.weight }.max() ?? 0
+                let maxWeight = (exercise.sets ?? []).map { $0.weight }.max() ?? 0
                 if maxWeight > 0 {
                     dataPoints.append(WeightDataPoint(date: workout.date, maxWeight: maxWeight))
                 }

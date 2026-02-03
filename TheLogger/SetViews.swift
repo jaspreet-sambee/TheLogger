@@ -119,7 +119,7 @@ struct InlineSetRowView: View {
 
         // Find most recent completed workout with same exercise
         for workout in workouts where workout.id != currentWorkout.id && !workout.isTemplate && workout.endTime != nil {
-            if let previousExercise = workout.exercises.first(where: { ex in
+            if let previousExercise = workout.exercises?.first(where: { ex in
                 ex.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName
             }) {
                 // Get the set at the same position (setNumber - 1) using ordered sets
@@ -587,6 +587,7 @@ struct InlineAddSetView: View {
                     .focused($focusedField, equals: .reps)
                     .frame(width: 60)
                     .textFieldStyle(.plain)
+                    .accessibilityIdentifier("repsInput")
                     .onAppear {
                         repsText = "\(reps)"
                     }
@@ -610,6 +611,7 @@ struct InlineAddSetView: View {
                     .focused($focusedField, equals: .weight)
                     .frame(width: 70)
                     .textFieldStyle(.plain)
+                    .accessibilityIdentifier("weightInput")
                     .onAppear {
                         weightText = String(format: "%.1f", weight)
                     }
@@ -628,21 +630,32 @@ struct InlineAddSetView: View {
 
             // Action buttons
             HStack(spacing: 8) {
-                Button {
-                    onCancel()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(.body, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(.title2, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        TapGesture()
+                            .onEnded { _ in
+                                focusedField = nil
+                                onCancel()
+                            }
+                    )
 
-                Button {
-                    saveAndContinue()
-                } label: {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(.body, weight: .medium))
-                        .foregroundStyle(.blue)
-                }
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(.title2, weight: .medium))
+                    .foregroundStyle(.green)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .accessibilityIdentifier("saveSetButton")
+                    .highPriorityGesture(
+                        TapGesture()
+                            .onEnded { _ in
+                                commitTextValues()
+                                saveAndContinue()
+                            }
+                    )
             }
         }
         .padding(.vertical, 8)
@@ -684,6 +697,16 @@ struct InlineAddSetView: View {
                 repsText = "\(reps)"
                 weightText = String(format: "%.1f", weight)
             }
+        }
+    }
+
+    /// Commit text field values to bindings (called before save to ensure values are captured)
+    private func commitTextValues() {
+        if let repsValue = Int(repsText), repsValue >= 1 && repsValue <= 1000 {
+            reps = repsValue
+        }
+        if let weightValue = Double(weightText), weightValue >= 0 && weightValue <= 10000 {
+            weight = weightValue
         }
     }
 

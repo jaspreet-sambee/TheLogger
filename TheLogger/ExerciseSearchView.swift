@@ -76,6 +76,7 @@ struct ExerciseSearchView: View {
                 .textFieldStyle(.plain)
                 .focused($isSearchFocused)
                 .submitLabel(.done)
+                .accessibilityIdentifier("exerciseSearchField")
                 .onSubmit {
                     if isSearching {
                         selectExercise(searchText.trimmingCharacters(in: .whitespaces))
@@ -157,6 +158,7 @@ struct ExerciseSearchView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
+                .accessibilityIdentifier("exerciseResult_\(memory.name)")
                 .listRowBackground(Color.black.opacity(0.6))
             }
         } header: {
@@ -212,6 +214,7 @@ struct ExerciseSearchView: View {
                 Spacer()
             }
         }
+        .accessibilityIdentifier("exerciseResult_\(exercise.name)")
         .listRowBackground(Color.black.opacity(0.6))
     }
 

@@ -20,6 +20,7 @@ struct WorkoutDetailView: View {
     @State private var showingAddExercise = false
     @State private var exerciseName = ""
     @State private var showingEndWorkoutConfirmation = false
+    @State private var showingDiscardConfirmation = false
     @State private var showingSaveAsTemplate = false
     @State private var isEditingWorkoutName = false
     @State private var workoutNameText = ""
@@ -48,7 +49,7 @@ struct WorkoutDetailView: View {
             .navigationTitle("Workout Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !workout.exercises.isEmpty {
+                if !(workout.exercises ?? []).isEmpty {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         EditButton()
                     }
@@ -81,6 +82,14 @@ struct WorkoutDetailView: View {
                 }
             } message: {
                 Text("Are you sure you want to end this workout?")
+            }
+            .alert("Discard Workout?", isPresented: $showingDiscardConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Discard", role: .destructive) {
+                    discardWorkout()
+                }
+            } message: {
+                Text("This workout will be permanently deleted and cannot be recovered.")
             }
             .alert("Template Saved", isPresented: $showingSaveAsTemplate) {
                 Button("OK", role: .cancel) { }
@@ -139,9 +148,24 @@ struct WorkoutDetailView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.red)
+                    .accessibilityIdentifier("endWorkoutButton")
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+
+                    Button {
+                        showingDiscardConfirmation = true
+                    } label: {
+                        Text("Discard Workout")
+                            .font(.system(.body, weight: .medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.secondary)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
                 }
             }
         }
@@ -340,7 +364,7 @@ struct WorkoutDetailView: View {
         Section {
             VStack(spacing: 12) {
                 summaryStatsRow
-                if !workout.exercises.isEmpty {
+                if !(workout.exercises ?? []).isEmpty {
                     datePickerRow
                 }
             }
@@ -358,7 +382,7 @@ struct WorkoutDetailView: View {
 
     private var exercisesSection: some View {
         Section {
-            if workout.exercises.isEmpty {
+            if (workout.exercises ?? []).isEmpty {
                 emptyExercisesView
             } else {
                 exercisesList
@@ -392,9 +416,9 @@ struct WorkoutDetailView: View {
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
         .onAppear {
-            if workout.exercises.isEmpty { emptyExercisesAppeared = true }
+            if (workout.exercises ?? []).isEmpty { emptyExercisesAppeared = true }
         }
-        .onChange(of: workout.exercises.isEmpty) { _, isEmpty in
+        .onChange(of: (workout.exercises ?? []).isEmpty) { _, isEmpty in
             // Reset animation state when exercises change
             emptyExercisesAppeared = isEmpty
         }
@@ -491,7 +515,7 @@ struct WorkoutDetailView: View {
     private func exerciseContextMenu(for exercise: Exercise) -> some View {
         if workout.isActive {
             // Superset options
-            let otherExercises = workout.exercises.filter { $0.id != exercise.id && !$0.isInSuperset }
+            let otherExercises = (workout.exercises ?? []).filter { $0.id != exercise.id && !$0.isInSuperset }
 
             if !otherExercises.isEmpty {
                 Menu {
@@ -525,9 +549,9 @@ struct WorkoutDetailView: View {
         HStack {
             Text("Exercises")
                 .font(.system(.caption, weight: .medium))
-            if !workout.exercises.isEmpty {
+            if !(workout.exercises ?? []).isEmpty {
                 Spacer()
-                Text("\(workout.exercises.count)")
+                Text("\((workout.exercises ?? []).count)")
                     .font(.system(.caption, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
@@ -552,6 +576,7 @@ struct WorkoutDetailView: View {
                 .padding(.vertical, 12)
         }
         .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("addExerciseButton")
         .padding(.horizontal)
         .padding(.bottom, 8)
     }
@@ -654,7 +679,7 @@ struct WorkoutDetailView: View {
     private func deleteExercises(at indexSet: IndexSet) {
         // The list displays exercises in reversed order, so we need to map indices
         // Collect exercise IDs first (before any mutations)
-        let reversedExercises = Array(workout.exercises.reversed())
+        let reversedExercises = Array((workout.exercises ?? []).reversed())
         let exerciseIdsToDelete = indexSet.compactMap { index -> UUID? in
             guard index < reversedExercises.count else { return nil }
             return reversedExercises[index].id
@@ -703,7 +728,11 @@ struct WorkoutDetailView: View {
             print("Error with exercise memory: \(error)")
         }
 
-        workout.exercises.append(exercise)
+        if workout.exercises == nil {
+            workout.exercises = [exercise]
+        } else {
+            workout.exercises?.append(exercise)
+        }
         // Auto-update workout name based on exercises
         workout.updateNameFromExercises()
     }
@@ -726,6 +755,12 @@ struct WorkoutDetailView: View {
 
         do {
             try modelContext.save()
+            // Clear widget data since workout ended
+            WidgetDataManager.clear()
+            // End Live Activity
+            Task {
+                await LiveActivityManager.shared.endActivity()
+            }
             // Show summary instead of immediate dismiss
             showingEndSummary = true
         } catch {
@@ -733,13 +768,37 @@ struct WorkoutDetailView: View {
         }
     }
 
+    private func discardWorkout() {
+        // Stop rest timer
+        RestTimerManager.shared.stop()
+
+        // Clear widget data
+        WidgetDataManager.clear()
+
+        // End Live Activity
+        Task {
+            await LiveActivityManager.shared.endActivity()
+        }
+
+        // Delete the workout
+        modelContext.delete(workout)
+
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            print("Error discarding workout: \(error)")
+        }
+    }
+
     private func saveExerciseMemory() {
-        for exercise in workout.exercises {
-            guard !exercise.sets.isEmpty else { continue }
+        for exercise in (workout.exercises ?? []) {
+            let sets = exercise.sets ?? []
+            guard !sets.isEmpty else { continue }
 
             // Get the last set's values as the "memory" (highest sortOrder)
-            guard let lastSet = exercise.sets.max(by: { $0.sortOrder < $1.sortOrder }) else { continue }
-            let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let lastSet = sets.max(by: { $0.sortOrder < $1.sortOrder }) else { continue }
+            let normalizedName = exercise.name.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
             // Try to find existing memory
             let descriptor = FetchDescriptor<ExerciseMemory>(
@@ -752,14 +811,14 @@ struct WorkoutDetailView: View {
                 // Find exact match
                 if let memory = existingMemories.first(where: { $0.normalizedName == normalizedName }) {
                     // Update existing
-                    memory.update(reps: lastSet.reps, weight: lastSet.weight, sets: exercise.sets.count)
+                    memory.update(reps: lastSet.reps, weight: lastSet.weight, sets: sets.count)
                 } else {
                     // Create new
                     let newMemory = ExerciseMemory(
                         name: exercise.name,
                         lastReps: lastSet.reps,
                         lastWeight: lastSet.weight,
-                        lastSets: exercise.sets.count
+                        lastSets: sets.count
                     )
                     modelContext.insert(newMemory)
                 }
@@ -787,7 +846,7 @@ struct SupersetGroupCard: View {
     }
 
     private var totalSets: Int {
-        exercises.reduce(0) { $0 + $1.sets.count }
+        exercises.reduce(0) { $0 + ($1.sets ?? []).count }
     }
 
     private var totalReps: Int {
@@ -891,8 +950,9 @@ struct SupersetExerciseRow: View {
     var isActive: Bool = false
 
     private var setsSummary: String {
-        if exercise.sets.isEmpty { return "No sets" }
-        let count = exercise.sets.count
+        let sets = exercise.sets ?? []
+        if sets.isEmpty { return "No sets" }
+        let count = sets.count
         let reps = exercise.totalReps
         return "\(count) \(count == 1 ? "set" : "sets") · \(reps) reps"
     }
@@ -936,8 +996,8 @@ struct SupersetExerciseRow: View {
             Spacer()
 
             // Sets count badge
-            if !exercise.sets.isEmpty {
-                Text("\(exercise.sets.count)")
+            if !(exercise.sets ?? []).isEmpty {
+                Text("\((exercise.sets ?? []).count)")
                     .font(.system(.caption2, weight: .bold))
                     .foregroundStyle(.secondary)
                     .frame(width: 20, height: 20)
@@ -966,16 +1026,20 @@ struct SupersetExerciseRow: View {
             // Template with this name already exists, update it instead
             if let existingTemplate = existing.first {
                 // Remove old exercises
-                existingTemplate.exercises.removeAll()
+                existingTemplate.exercises = []
                 // Copy exercises with their sets
-                for exercise in workout.exercises {
+                for exercise in (workout.exercises ?? []) {
                     var copiedSets: [WorkoutSet] = []
                     for (index, set) in exercise.setsByOrder.enumerated() {
                         let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, setType: set.type, sortOrder: index)
                         copiedSets.append(copiedSet)
                     }
                     let templateExercise = Exercise(name: exercise.name, sets: copiedSets)
-                    existingTemplate.exercises.append(templateExercise)
+                    if existingTemplate.exercises == nil {
+                        existingTemplate.exercises = [templateExercise]
+                    } else {
+                        existingTemplate.exercises?.append(templateExercise)
+                    }
                 }
             }
         } else {
@@ -983,14 +1047,18 @@ struct SupersetExerciseRow: View {
             let template = Workout(name: workout.name, date: Date(), isTemplate: true)
 
             // Copy exercises with their sets
-            for exercise in workout.exercises {
+            for exercise in (workout.exercises ?? []) {
                 var copiedSets: [WorkoutSet] = []
                 for (index, set) in exercise.setsByOrder.enumerated() {
                     let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, setType: set.type, sortOrder: index)
                     copiedSets.append(copiedSet)
                 }
                 let templateExercise = Exercise(name: exercise.name, sets: copiedSets)
-                template.exercises.append(templateExercise)
+                if template.exercises == nil {
+                    template.exercises = [templateExercise]
+                } else {
+                    template.exercises?.append(templateExercise)
+                }
             }
 
             modelContext.insert(template)

@@ -99,13 +99,13 @@ extension EnvironmentValues {
 
 @Model
 final class Workout: Identifiable {
-    var id: UUID
+    var id: UUID = UUID()
     var name: String = ""
-    var date: Date
+    var date: Date = Date()
     var startTime: Date?
     var endTime: Date?
     var isTemplate: Bool = false  // True for reusable templates, false for workout history
-    @Relationship(deleteRule: .cascade) var exercises: [Exercise]
+    @Relationship(deleteRule: .cascade, inverse: \Exercise.workout) var exercises: [Exercise]?
     
     init(id: UUID = UUID(), name: String = "", date: Date = Date(), exercises: [Exercise] = [], isTemplate: Bool = false) {
         self.id = id
@@ -153,20 +153,20 @@ final class Workout: Identifiable {
         // Only auto-update if name is still the default timestamp format
         let timestampPattern = #"^[A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M$"#
         let isDefaultName = name.range(of: timestampPattern, options: .regularExpression) != nil
-        
+
         if isDefaultName || name.isEmpty {
-            if let firstExercise = exercises.first, !firstExercise.name.isEmpty {
+            if let firstExercise = exercises?.first, !firstExercise.name.isEmpty {
                 name = "\(firstExercise.name) Workout"
-            } else if exercises.count > 1 {
+            } else if (exercises ?? []).count > 1 {
                 // Multiple exercises - use workout type
                 name = detectWorkoutType()
             }
         }
     }
-    
+
     /// Detect workout type from exercises
     private func detectWorkoutType() -> String {
-        let exerciseNames = exercises.map { $0.name.lowercased() }
+        let exerciseNames = (exercises ?? []).map { $0.name.lowercased() }
         
         // Check for common patterns
         let pushExercises = ["bench", "press", "shoulder", "tricep", "chest", "push"]
@@ -203,19 +203,23 @@ final class Workout: Identifiable {
     /// Add a new exercise to this workout
     func addExercise(name: String) {
         let newExercise = Exercise(name: name)
-        exercises.append(newExercise)
+        if exercises == nil {
+            exercises = [newExercise]
+        } else {
+            exercises?.append(newExercise)
+        }
         // Auto-update name if it's still default
         updateNameFromExercises()
     }
-    
+
     /// Remove an exercise by ID
     func removeExercise(id: UUID) {
-        exercises.removeAll { $0.id == id }
+        exercises?.removeAll { $0.id == id }
     }
 
     /// Get exercise by ID
     func getExercise(id: UUID) -> Exercise? {
-        exercises.first { $0.id == id }
+        exercises?.first { $0.id == id }
     }
 
     // MARK: - Superset Management
@@ -227,7 +231,7 @@ final class Workout: Identifiable {
 
         let groupId = UUID()
         for (index, exerciseId) in exerciseIds.enumerated() {
-            if let exercise = exercises.first(where: { $0.id == exerciseId }) {
+            if let exercise = exercises?.first(where: { $0.id == exerciseId }) {
                 exercise.supersetGroupId = groupId
                 exercise.supersetOrder = index
             }
@@ -237,7 +241,7 @@ final class Workout: Identifiable {
     /// Break apart a superset, making all exercises standalone
     /// - Parameter groupId: The superset group ID to dissolve
     func breakSuperset(groupId: UUID) {
-        for exercise in exercises where exercise.supersetGroupId == groupId {
+        for exercise in (exercises ?? []) where exercise.supersetGroupId == groupId {
             exercise.supersetGroupId = nil
             exercise.supersetOrder = 0
         }
@@ -248,10 +252,10 @@ final class Workout: Identifiable {
     ///   - exerciseId: ID of exercise to add
     ///   - groupId: The superset group to join
     func addToSuperset(exerciseId: UUID, groupId: UUID) {
-        guard let exercise = exercises.first(where: { $0.id == exerciseId }) else { return }
+        guard let exercise = exercises?.first(where: { $0.id == exerciseId }) else { return }
 
         // Find current max order in the group
-        let maxOrder = exercises
+        let maxOrder = (exercises ?? [])
             .filter { $0.supersetGroupId == groupId }
             .map(\.supersetOrder)
             .max() ?? -1
@@ -263,14 +267,14 @@ final class Workout: Identifiable {
     /// Remove an exercise from its superset (make it standalone)
     /// If only one exercise remains in the superset, it's also made standalone
     func removeFromSuperset(exerciseId: UUID) {
-        guard let exercise = exercises.first(where: { $0.id == exerciseId }),
+        guard let exercise = exercises?.first(where: { $0.id == exerciseId }),
               let groupId = exercise.supersetGroupId else { return }
 
         exercise.supersetGroupId = nil
         exercise.supersetOrder = 0
 
         // Check if only one exercise remains in the group
-        let remaining = exercises.filter { $0.supersetGroupId == groupId }
+        let remaining = (exercises ?? []).filter { $0.supersetGroupId == groupId }
         if remaining.count == 1 {
             remaining.first?.supersetGroupId = nil
             remaining.first?.supersetOrder = 0
@@ -279,14 +283,14 @@ final class Workout: Identifiable {
 
     /// Get exercises in a superset, ordered by their position
     func exercisesInSuperset(groupId: UUID) -> [Exercise] {
-        exercises
+        (exercises ?? [])
             .filter { $0.supersetGroupId == groupId }
             .sorted { $0.supersetOrder < $1.supersetOrder }
     }
 
     /// Get all unique superset group IDs
     var supersetGroupIds: [UUID] {
-        Array(Set(exercises.compactMap(\.supersetGroupId)))
+        Array(Set((exercises ?? []).compactMap(\.supersetGroupId)))
     }
 
     /// Get exercises grouped for display (standalone + superset groups)
@@ -296,7 +300,7 @@ final class Workout: Identifiable {
         var result: [ExerciseDisplayItem] = []
         var processedGroupIds: Set<UUID> = []
 
-        for (index, exercise) in exercises.enumerated() {
+        for (index, exercise) in (exercises ?? []).enumerated() {
             if let groupId = exercise.supersetGroupId {
                 // Part of a superset - only process once per group
                 if !processedGroupIds.contains(groupId) {
@@ -322,12 +326,12 @@ final class Workout: Identifiable {
     
     /// Get total number of exercises
     var exerciseCount: Int {
-        exercises.count
+        (exercises ?? []).count
     }
-    
+
     /// Get total number of sets across all exercises
     var totalSets: Int {
-        exercises.reduce(0) { $0 + $1.sets.count }
+        (exercises ?? []).reduce(0) { $0 + ($1.sets ?? []).count }
     }
     
     /// Formatted date string
@@ -341,6 +345,32 @@ final class Workout: Identifiable {
     /// Check if workout is currently active
     var isActive: Bool {
         startTime != nil && endTime == nil
+    }
+
+    /// Create widget data from this workout
+    func toWidgetData(currentExercise: Exercise? = nil) -> WidgetWorkoutData {
+        // Use provided exercise, or find the most recent one with sets
+        let exercise = currentExercise ?? exercises?.last
+
+        return WidgetWorkoutData(
+            workoutId: id,
+            workoutName: name,
+            currentExerciseId: exercise?.id,
+            currentExerciseName: exercise?.name,
+            setsCompleted: totalSets,
+            totalExercises: (exercises ?? []).count,
+            startTime: startTime ?? date,
+            lastUpdated: Date()
+        )
+    }
+
+    /// Sync this workout's state to the widget
+    func syncToWidget(currentExercise: Exercise? = nil) {
+        guard isActive else {
+            WidgetDataManager.clear()
+            return
+        }
+        WidgetDataManager.save(toWidgetData(currentExercise: currentExercise))
     }
     
     /// Check if workout is completed (has endTime)
@@ -437,14 +467,15 @@ struct WorkoutSummary {
         } else {
             self.duration = nil
         }
-        
-        self.totalExercises = workout.exercises.count
-        self.totalSets = workout.exercises.reduce(0) { $0 + $1.sets.count }
-        self.totalReps = workout.exercises.reduce(0) { $0 + $1.totalReps }
-        
+
+        let exercisesList = workout.exercises ?? []
+        self.totalExercises = exercisesList.count
+        self.totalSets = exercisesList.reduce(0) { $0 + ($1.sets ?? []).count }
+        self.totalReps = exercisesList.reduce(0) { $0 + $1.totalReps }
+
         // Volume = sum of (weight × reps) for all sets
-        self.totalVolume = workout.exercises.reduce(0.0) { exerciseSum, exercise in
-            exerciseSum + exercise.sets.reduce(0.0) { setSum, set in
+        self.totalVolume = exercisesList.reduce(0.0) { exerciseSum, exercise in
+            exerciseSum + (exercise.sets ?? []).reduce(0.0) { setSum, set in
                 setSum + (set.weight * Double(set.reps))
             }
         }
@@ -516,26 +547,26 @@ struct WorkoutDataExporter {
         for workout in completedWorkouts {
             let dateString = dateFormatter.string(from: workout.date)
             let workoutName = escapeCSV(workout.name)
-            
-            for exercise in workout.exercises {
+
+            for exercise in (workout.exercises ?? []) {
                 let exerciseName = escapeCSV(exercise.name)
-                
+
                 for (index, set) in exercise.setsByOrder.enumerated() {
                     let setNumber = index + 1
                     csv += "\(dateString),\(workoutName),\(exerciseName),\(setNumber),\(set.reps),\(set.weight)\n"
                 }
             }
         }
-        
+
         return csv
     }
-    
+
     /// Generate summary statistics
     static func generateStats(from workouts: [Workout]) -> ExportStats {
         let completed = workouts.filter { !$0.isTemplate && $0.endTime != nil }
-        
+
         let totalWorkouts = completed.count
-        let totalExercises = completed.reduce(0) { $0 + $1.exercises.count }
+        let totalExercises = completed.reduce(0) { $0 + ($1.exercises ?? []).count }
         let totalSets = completed.reduce(0) { $0 + $1.totalSets }
         
         let firstDate = completed.map { $0.date }.min()
@@ -762,11 +793,11 @@ struct ExerciseLibrary {
 
 @Model
 final class ExerciseMemory {
-    var name: String
-    var lastReps: Int
-    var lastWeight: Double
-    var lastSets: Int
-    var lastUpdated: Date
+    var name: String = ""
+    var lastReps: Int = 10
+    var lastWeight: Double = 0
+    var lastSets: Int = 1
+    var lastUpdated: Date = Date()
     var note: String?
     
     init(name: String, lastReps: Int = 10, lastWeight: Double = 0, lastSets: Int = 1, lastUpdated: Date = Date(), note: String? = nil) {
@@ -806,11 +837,11 @@ final class ExerciseMemory {
 /// Model for tracking personal records (PRs) per exercise
 @Model
 final class PersonalRecord {
-    var exerciseName: String  // Normalized exercise name
-    var weight: Double        // Weight in lbs (storage unit)
-    var reps: Int             // Reps at that weight
-    var date: Date            // When the PR was set
-    var workoutId: UUID       // Which workout it was set in
+    var exerciseName: String = ""  // Normalized exercise name
+    var weight: Double = 0        // Weight in lbs (storage unit)
+    var reps: Int = 0             // Reps at that weight
+    var date: Date = Date()       // When the PR was set
+    var workoutId: UUID = UUID()  // Which workout it was set in
     
     init(exerciseName: String, weight: Double, reps: Int, date: Date = Date(), workoutId: UUID) {
         self.exerciseName = exerciseName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
@@ -925,9 +956,9 @@ struct PersonalRecordManager {
     /// Check all sets in a workout for PRs (call when workout ends)
     static func processWorkoutForPRs(workout: Workout, modelContext: ModelContext) -> [String] {
         var newPRExercises: [String] = []
-        
-        for exercise in workout.exercises {
-            for set in exercise.sets {
+
+        for exercise in (workout.exercises ?? []) {
+            for set in (exercise.sets ?? []) {
                 if checkAndSavePR(
                     exerciseName: exercise.name,
                     weight: set.weight,
@@ -942,7 +973,7 @@ struct PersonalRecordManager {
                 }
             }
         }
-        
+
         return newPRExercises
     }
 }
@@ -1017,41 +1048,41 @@ struct ExerciseProgressCalculator {
         currentWorkoutId: UUID,
         completedWorkouts: [Workout]
     ) -> ExerciseProgressComparison {
-        
-        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
+        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+
         // Find the most recent completed workout (not current, not template) with this exercise
         guard let previousWorkout = completedWorkouts.first(where: { workout in
             workout.id != currentWorkoutId &&
             !workout.isTemplate &&
             workout.endTime != nil &&
-            workout.exercises.contains { ex in
-                ex.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName
+            (workout.exercises ?? []).contains { ex in
+                ex.name.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) == normalizedName
             }
         }) else {
             return .firstTime
         }
-        
+
         // Find the matching exercise in the previous workout
-        guard let previousExercise = previousWorkout.exercises.first(where: { ex in
-            ex.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName
+        guard let previousExercise = (previousWorkout.exercises ?? []).first(where: { ex in
+            ex.name.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) == normalizedName
         }) else {
             return .firstTime
         }
-        
+
         // Get best set from previous exercise (ignoring sets with 0 reps as "incomplete")
-        let previousSets = previousExercise.sets.filter { $0.reps > 0 }
+        let previousSets = (previousExercise.sets ?? []).filter { $0.reps > 0 }
         guard let previousBest = previousSets.map({ SetPerformance(weight: $0.weight, reps: $0.reps) }).max() else {
             return .firstTime
         }
-        
+
         // Get best set from current exercise
-        let currentSets = exercise.sets.filter { $0.reps > 0 }
+        let currentSets = (exercise.sets ?? []).filter { $0.reps > 0 }
         guard let currentBest = currentSets.map({ SetPerformance(weight: $0.weight, reps: $0.reps) }).max() else {
             // No completed sets yet in current workout
             return .firstTime
         }
-        
+
         // Compare
         return comparePerformance(current: currentBest, previous: previousBest)
     }
@@ -1093,28 +1124,28 @@ struct ExerciseProgressCalculator {
         currentWorkoutId: UUID,
         completedWorkouts: [Workout]
     ) -> (weight: Double, reps: Int, totalSets: Int)? {
-        
-        let normalizedName = exerciseName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
+        let normalizedName = exerciseName.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+
         guard let previousWorkout = completedWorkouts.first(where: { workout in
             workout.id != currentWorkoutId &&
             !workout.isTemplate &&
             workout.endTime != nil &&
-            workout.exercises.contains { ex in
-                ex.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName
+            (workout.exercises ?? []).contains { ex in
+                ex.name.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) == normalizedName
             }
         }),
-        let previousExercise = previousWorkout.exercises.first(where: { ex in
-            ex.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName
+        let previousExercise = (previousWorkout.exercises ?? []).first(where: { ex in
+            ex.name.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) == normalizedName
         }) else {
             return nil
         }
-        
-        let validSets = previousExercise.sets.filter { $0.reps > 0 }
+
+        let validSets = (previousExercise.sets ?? []).filter { $0.reps > 0 }
         guard let bestSet = validSets.map({ SetPerformance(weight: $0.weight, reps: $0.reps) }).max() else {
             return nil
         }
-        
+
         return (weight: bestSet.weight, reps: bestSet.reps, totalSets: validSets.count)
     }
 }

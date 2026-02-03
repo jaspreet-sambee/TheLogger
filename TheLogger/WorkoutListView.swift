@@ -19,6 +19,15 @@ struct WorkoutListView: View {
     @State private var showingWorkoutHistory = false
     @State private var navigationPath = NavigationPath()
     @State private var hasCheckedActiveWorkout = false
+
+    // Deep link from widget
+    @Binding var deepLinkWorkoutId: UUID?
+    @Binding var deepLinkExerciseId: UUID?
+
+    init(deepLinkWorkoutId: Binding<UUID?> = .constant(nil), deepLinkExerciseId: Binding<UUID?> = .constant(nil)) {
+        _deepLinkWorkoutId = deepLinkWorkoutId
+        _deepLinkExerciseId = deepLinkExerciseId
+    }
     @State private var userName: String = UserDefaults.standard.string(forKey: "userName") ?? ""
     @State private var showingNameEditor = false
     @State private var showingExportSheet = false
@@ -355,6 +364,7 @@ struct WorkoutListView: View {
                             .pulsingGlow(color: .blue, radius: 10)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("startWorkoutButton")
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
@@ -582,15 +592,6 @@ struct WorkoutListView: View {
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
-                
-                // Empty state
-                if templates.isEmpty && workoutHistory.isEmpty && activeWorkout == nil {
-                    ContentUnavailableView(
-                        "No Templates",
-                        systemImage: "figure.strengthtraining.traditional",
-                        description: Text("Start a workout to create your first template")
-                    )
-                }
             }
             .navigationDestination(for: String.self) { workoutId in
                 // Check both workouts and templates arrays
@@ -676,6 +677,34 @@ struct WorkoutListView: View {
                 StreakConfettiView(isActive: showConfetti)
                     .ignoresSafeArea()
             }
+            .onOpenURL { url in
+                handleDeepLink(url)
+            }
+            .onChange(of: deepLinkWorkoutId) { _, workoutId in
+                // Navigate to workout when deep link is received
+                if let workoutId = workoutId {
+                    navigationPath = NavigationPath()
+                    navigationPath.append(workoutId.uuidString)
+                    // Clear after navigation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        deepLinkWorkoutId = nil
+                        deepLinkExerciseId = nil
+                    }
+                }
+            }
+        }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard let destination = WidgetDeepLink.parse(url) else { return }
+
+        switch destination {
+        case .workout(let workoutId):
+            deepLinkWorkoutId = workoutId
+            deepLinkExerciseId = nil
+        case .exercise(let workoutId, let exerciseId):
+            deepLinkWorkoutId = workoutId
+            deepLinkExerciseId = exerciseId
         }
     }
     
@@ -709,24 +738,39 @@ struct WorkoutListView: View {
 
         do {
             try modelContext.save()
+            // Sync to widget
+            newWorkout.syncToWidget()
+            // Start Live Activity for lock screen logging
+            let exerciseName = newWorkout.exercises?.first?.name ?? "Workout"
+            let exerciseId = newWorkout.exercises?.first?.id ?? UUID()
+            LiveActivityManager.shared.startActivity(
+                workoutId: newWorkout.id,
+                workoutName: newWorkout.name,
+                exerciseName: exerciseName,
+                exerciseId: exerciseId
+            )
             // Navigate to the workout detail view
             navigationPath.append(newWorkout.id.uuidString)
         } catch {
             print("Error starting workout: \(error)")
         }
     }
-    
+
     private func duplicateWorkoutFromTemplate(_ template: Workout) -> Workout {
         // Create new workout with today's date and copy the name
         let newWorkout = Workout(name: template.name, date: Date(), isTemplate: false)
-        
+
         // Copy all exercises (templates only have exercise names, no sets)
-        for exercise in template.exercises {
+        for exercise in (template.exercises ?? []) {
             let newExercise = Exercise(name: exercise.name)
             // Templates don't have sets, so we don't copy them
-            newWorkout.exercises.append(newExercise)
+            if newWorkout.exercises == nil {
+                newWorkout.exercises = [newExercise]
+            } else {
+                newWorkout.exercises?.append(newExercise)
+            }
         }
-        
+
         return newWorkout
     }
     
@@ -888,11 +932,11 @@ struct TemplateRowView: View {
 
     // Get first few exercise names for preview
     private var exercisePreview: [String] {
-        Array(template.exercises.prefix(3).map { $0.name })
+        Array((template.exercises ?? []).prefix(3).map { $0.name })
     }
 
     private var remainingCount: Int {
-        max(0, template.exercises.count - 3)
+        max(0, (template.exercises ?? []).count - 3)
     }
 
     var body: some View {
@@ -1414,10 +1458,11 @@ struct HistoryWorkoutRowView: View {
 
     // Get first 2-3 exercise names for preview
     private var exercisePreview: String? {
-        guard !workout.exercises.isEmpty else { return nil }
-        let names = workout.exercises.prefix(3).map { $0.name }
+        let exercises = workout.exercises ?? []
+        guard !exercises.isEmpty else { return nil }
+        let names = exercises.prefix(3).map { $0.name }
         let joined = names.joined(separator: ", ")
-        if workout.exercises.count > 3 {
+        if exercises.count > 3 {
             return joined + ", ..."
         }
         return joined

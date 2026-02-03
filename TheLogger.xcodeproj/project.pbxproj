@@ -6,20 +6,107 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		46B5F1F42F2ECAA3005CFC92 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46B5F1F32F2ECAA3005CFC92 /* WidgetKit.framework */; };
+		46B5F1F62F2ECAA3005CFC92 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46B5F1F52F2ECAA3005CFC92 /* SwiftUI.framework */; };
+		46B5F2032F2ECAA4005CFC92 /* TheLoggerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		46UITEST0012F300000000001 /* DemoScenarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46UITEST0012F300000000002 /* DemoScenarios.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		46B5F2012F2ECAA4005CFC92 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4678C6502F07164200E5B779 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 46B5F1F02F2ECAA3005CFC92;
+			remoteInfo = TheLoggerWidgetExtension;
+		};
+		46UITEST0012F300000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4678C6502F07164200E5B779 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4678C6572F07164200E5B779;
+			remoteInfo = TheLogger;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		46B5F2082F2ECAA4005CFC92 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				46B5F2032F2ECAA4005CFC92 /* TheLoggerWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		4678C6582F07164200E5B779 /* TheLogger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheLogger.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TheLoggerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		46B5F1F32F2ECAA3005CFC92 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		46B5F1F52F2ECAA3005CFC92 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		46UITEST0012F300000000002 /* DemoScenarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoScenarios.swift; sourceTree = "<group>"; };
+		46UITEST0012F300000000004 /* TheLoggerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheLoggerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		46B5F2042F2ECAA4005CFC92 /* Exceptions for "TheLoggerWidget" folder in "TheLoggerWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 46B5F1F02F2ECAA3005CFC92 /* TheLoggerWidgetExtension */;
+		};
+		46B5F2122F2FD1B5005CFC92 /* Exceptions for "TheLogger" folder in "TheLogger" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4678C6572F07164200E5B779 /* TheLogger */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4678C65A2F07164200E5B779 /* TheLogger */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				46B5F2122F2FD1B5005CFC92 /* Exceptions for "TheLogger" folder in "TheLogger" target */,
+			);
 			path = TheLogger;
+			sourceTree = "<group>";
+		};
+		46B5F1F72F2ECAA3005CFC92 /* TheLoggerWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				46B5F2042F2ECAA4005CFC92 /* Exceptions for "TheLoggerWidget" folder in "TheLoggerWidgetExtension" target */,
+			);
+			path = TheLoggerWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		4678C6552F07164200E5B779 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46B5F1EE2F2ECAA3005CFC92 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46B5F1F62F2ECAA3005CFC92 /* SwiftUI.framework in Frameworks */,
+				46B5F1F42F2ECAA3005CFC92 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46UITEST0012F300000000005 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +120,9 @@
 			isa = PBXGroup;
 			children = (
 				4678C65A2F07164200E5B779 /* TheLogger */,
+				46B5F1F72F2ECAA3005CFC92 /* TheLoggerWidget */,
+				46UITEST0012F300000000006 /* TheLoggerUITests */,
+				46B5F1F22F2ECAA3005CFC92 /* Frameworks */,
 				4678C6592F07164200E5B779 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +131,27 @@
 			isa = PBXGroup;
 			children = (
 				4678C6582F07164200E5B779 /* TheLogger.app */,
+				46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */,
+				46UITEST0012F300000000004 /* TheLoggerUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		46UITEST0012F300000000006 /* TheLoggerUITests */ = {
+			isa = PBXGroup;
+			children = (
+				46UITEST0012F300000000002 /* DemoScenarios.swift */,
+			);
+			path = TheLoggerUITests;
+			sourceTree = "<group>";
+		};
+		46B5F1F22F2ECAA3005CFC92 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				46B5F1F32F2ECAA3005CFC92 /* WidgetKit.framework */,
+				46B5F1F52F2ECAA3005CFC92 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,10 +164,12 @@
 				4678C6542F07164200E5B779 /* Sources */,
 				4678C6552F07164200E5B779 /* Frameworks */,
 				4678C6562F07164200E5B779 /* Resources */,
+				46B5F2082F2ECAA4005CFC92 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				46B5F2022F2ECAA4005CFC92 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				4678C65A2F07164200E5B779 /* TheLogger */,
@@ -69,6 +180,48 @@
 			productName = TheLogger;
 			productReference = 4678C6582F07164200E5B779 /* TheLogger.app */;
 			productType = "com.apple.product-type.application";
+		};
+		46B5F1F02F2ECAA3005CFC92 /* TheLoggerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46B5F2052F2ECAA4005CFC92 /* Build configuration list for PBXNativeTarget "TheLoggerWidgetExtension" */;
+			buildPhases = (
+				46B5F1ED2F2ECAA3005CFC92 /* Sources */,
+				46B5F1EE2F2ECAA3005CFC92 /* Frameworks */,
+				46B5F1EF2F2ECAA3005CFC92 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				46B5F1F72F2ECAA3005CFC92 /* TheLoggerWidget */,
+			);
+			name = TheLoggerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = TheLoggerWidgetExtension;
+			productReference = 46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		46UITEST0012F300000000007 /* TheLoggerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46UITEST0012F30000000000D /* Build configuration list for PBXNativeTarget "TheLoggerUITests" */;
+			buildPhases = (
+				46UITEST0012F300000000008 /* Sources */,
+				46UITEST0012F300000000005 /* Frameworks */,
+				46UITEST0012F300000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				46UITEST0012F30000000000A /* PBXTargetDependency */,
+			);
+			name = TheLoggerUITests;
+			packageProductDependencies = (
+			);
+			productName = TheLoggerUITests;
+			productReference = 46UITEST0012F300000000004 /* TheLoggerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -82,6 +235,13 @@
 				TargetAttributes = {
 					4678C6572F07164200E5B779 = {
 						CreatedOnToolsVersion = 26.1.1;
+					};
+					46B5F1F02F2ECAA3005CFC92 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					46UITEST0012F300000000007 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 4678C6572F07164200E5B779;
 					};
 				};
 			};
@@ -100,12 +260,28 @@
 			projectRoot = "";
 			targets = (
 				4678C6572F07164200E5B779 /* TheLogger */,
+				46B5F1F02F2ECAA3005CFC92 /* TheLoggerWidgetExtension */,
+				46UITEST0012F300000000007 /* TheLoggerUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		4678C6562F07164200E5B779 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46B5F1EF2F2ECAA3005CFC92 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46UITEST0012F300000000009 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +298,35 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		46B5F1ED2F2ECAA3005CFC92 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46UITEST0012F300000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46UITEST0012F300000000001 /* DemoScenarios.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		46B5F2022F2ECAA4005CFC92 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 46B5F1F02F2ECAA3005CFC92 /* TheLoggerWidgetExtension */;
+			targetProxy = 46B5F2012F2ECAA4005CFC92 /* PBXContainerItemProxy */;
+		};
+		46UITEST0012F30000000000A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4678C6572F07164200E5B779 /* TheLogger */;
+			targetProxy = 46UITEST0012F300000000003 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		4678C6612F07164400E5B779 /* Debug */ = {
@@ -251,12 +455,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TheLogger/TheLogger.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 77BC8S8T5X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TheLogger/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -286,12 +492,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TheLogger/TheLogger.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 77BC8S8T5X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TheLogger/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -316,6 +524,118 @@
 			};
 			name = Release;
 		};
+		46B5F2062F2ECAA4005CFC92 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = TheLoggerWidget/TheLoggerWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = 77BC8S8T5X;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TheLoggerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TheLoggerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLogger.TheLoggerWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		46B5F2072F2ECAA4005CFC92 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = TheLoggerWidget/TheLoggerWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = 77BC8S8T5X;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TheLoggerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TheLoggerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLogger.TheLoggerWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		46UITEST0012F30000000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 77BC8S8T5X;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLoggerUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TheLogger;
+			};
+			name = Debug;
+		};
+		46UITEST0012F30000000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 77BC8S8T5X;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLoggerUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TheLogger;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -333,6 +653,24 @@
 			buildConfigurations = (
 				4678C6642F07164400E5B779 /* Debug */,
 				4678C6652F07164400E5B779 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46B5F2052F2ECAA4005CFC92 /* Build configuration list for PBXNativeTarget "TheLoggerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46B5F2062F2ECAA4005CFC92 /* Debug */,
+				46B5F2072F2ECAA4005CFC92 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46UITEST0012F30000000000D /* Build configuration list for PBXNativeTarget "TheLoggerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46UITEST0012F30000000000B /* Debug */,
+				46UITEST0012F30000000000C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
