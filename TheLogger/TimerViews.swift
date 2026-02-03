@@ -75,18 +75,28 @@ struct RestTimerView: View {
                             .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
-                    Button { timer.adjustSuggestedDuration(delta: -15) } label: {
-                        Text("−15")
+                    HStack(spacing: 0) {
+                        Button { timer.adjustSuggestedDuration(delta: -15) } label: {
+                            Text("−")
+                                .font(.system(.caption, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                                .frame(minWidth: 24)
+                        }
+                        .buttonStyle(.plain)
+                        Text("15")
                             .font(.system(.caption, weight: .medium))
                             .foregroundStyle(.tertiary)
+                        Button { timer.adjustSuggestedDuration(delta: 15) } label: {
+                            Text("+")
+                                .font(.system(.caption, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                                .frame(minWidth: 24)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    Button { timer.adjustSuggestedDuration(delta: 15) } label: {
-                        Text("+15")
-                            .font(.system(.caption, weight: .medium))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.secondary.opacity(0.12)))
                     Button { timer.adjustSuggestedDuration(delta: 30) } label: {
                         Image(systemName: "plus.circle")
                             .font(.system(.subheadline))

@@ -704,6 +704,14 @@ struct ExerciseLibrary {
             LibraryExercise(id: "pec-deck", name: "Pec Deck", muscleGroup: .chest, isCompound: false),
             LibraryExercise(id: "push-up", name: "Push-Up", muscleGroup: .chest, isCompound: true),
             LibraryExercise(id: "dips-chest", name: "Dips (Chest)", muscleGroup: .chest, isCompound: true),
+            LibraryExercise(id: "dumbbell-fly", name: "Dumbbell Fly", muscleGroup: .chest, isCompound: false),
+            LibraryExercise(id: "decline-dumbbell-press", name: "Decline Dumbbell Press", muscleGroup: .chest, isCompound: true),
+            LibraryExercise(id: "chest-press-machine", name: "Chest Press Machine", muscleGroup: .chest, isCompound: true),
+            LibraryExercise(id: "floor-press", name: "Floor Press", muscleGroup: .chest, isCompound: true),
+            LibraryExercise(id: "landmine-press", name: "Landmine Press", muscleGroup: .chest, isCompound: true),
+            LibraryExercise(id: "svend-press", name: "Svend Press", muscleGroup: .chest, isCompound: false),
+            LibraryExercise(id: "pec-fly-machine", name: "Pec Fly Machine", muscleGroup: .chest, isCompound: false),
+            LibraryExercise(id: "incline-cable-fly", name: "Incline Cable Fly", muscleGroup: .chest, isCompound: false),
         ])
         
         // BACK
@@ -720,6 +728,17 @@ struct ExerciseLibrary {
             LibraryExercise(id: "straight-arm-pulldown", name: "Straight Arm Pulldown", muscleGroup: .back, isCompound: false),
             LibraryExercise(id: "rack-pull", name: "Rack Pull", muscleGroup: .back, isCompound: true),
             LibraryExercise(id: "romanian-deadlift", name: "Romanian Deadlift", muscleGroup: .back, isCompound: true),
+            LibraryExercise(id: "single-arm-dumbbell-row", name: "Single-Arm Dumbbell Row", muscleGroup: .back, isCompound: false),
+            LibraryExercise(id: "pendlay-row", name: "Pendlay Row", muscleGroup: .back, isCompound: true),
+            LibraryExercise(id: "wide-grip-lat-pulldown", name: "Wide Grip Lat Pulldown", muscleGroup: .back, isCompound: true),
+            LibraryExercise(id: "close-grip-lat-pulldown", name: "Close Grip Lat Pulldown", muscleGroup: .back, isCompound: true),
+            LibraryExercise(id: "reverse-grip-pulldown", name: "Reverse Grip Pulldown", muscleGroup: .back, isCompound: true),
+            LibraryExercise(id: "inverted-row", name: "Inverted Row", muscleGroup: .back, isCompound: true),
+            LibraryExercise(id: "machine-row", name: "Machine Row", muscleGroup: .back, isCompound: true),
+            LibraryExercise(id: "back-extension", name: "Back Extension", muscleGroup: .back, isCompound: false),
+            LibraryExercise(id: "good-morning", name: "Good Morning", muscleGroup: .back, isCompound: true),
+            LibraryExercise(id: "hyperextension", name: "Hyperextension", muscleGroup: .back, isCompound: false),
+            LibraryExercise(id: "v-bar-row", name: "V-Bar Row", muscleGroup: .back, isCompound: true),
         ])
         
         // SHOULDERS
@@ -733,6 +752,14 @@ struct ExerciseLibrary {
             LibraryExercise(id: "upright-row", name: "Upright Row", muscleGroup: .shoulders, isCompound: true),
             LibraryExercise(id: "shrugs", name: "Shrugs", muscleGroup: .shoulders, isCompound: false),
             LibraryExercise(id: "cable-lateral-raise", name: "Cable Lateral Raise", muscleGroup: .shoulders, isCompound: false),
+            LibraryExercise(id: "face-pull-shoulders", name: "Face Pull", muscleGroup: .shoulders, isCompound: false),
+            LibraryExercise(id: "push-press", name: "Push Press", muscleGroup: .shoulders, isCompound: true),
+            LibraryExercise(id: "machine-shoulder-press", name: "Machine Shoulder Press", muscleGroup: .shoulders, isCompound: true),
+            LibraryExercise(id: "reverse-pec-deck", name: "Reverse Pec Deck", muscleGroup: .shoulders, isCompound: false),
+            LibraryExercise(id: "bent-over-lateral-raise", name: "Bent Over Lateral Raise", muscleGroup: .shoulders, isCompound: false),
+            LibraryExercise(id: "cable-front-raise", name: "Cable Front Raise", muscleGroup: .shoulders, isCompound: false),
+            LibraryExercise(id: "scaption-raise", name: "Scaption Raise", muscleGroup: .shoulders, isCompound: false),
+            LibraryExercise(id: "landmine-shoulder-press", name: "Landmine Shoulder Press", muscleGroup: .shoulders, isCompound: true),
         ])
         
         // ARMS
@@ -749,6 +776,18 @@ struct ExerciseLibrary {
             LibraryExercise(id: "overhead-tricep-extension", name: "Overhead Tricep Extension", muscleGroup: .arms, isCompound: false),
             LibraryExercise(id: "close-grip-bench-press", name: "Close Grip Bench Press", muscleGroup: .arms, isCompound: true),
             LibraryExercise(id: "wrist-curl", name: "Wrist Curl", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "ez-bar-curl", name: "EZ-Bar Curl", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "incline-dumbbell-curl", name: "Incline Dumbbell Curl", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "reverse-curl", name: "Reverse Curl", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "spider-curl", name: "Spider Curl", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "tricep-kickback", name: "Tricep Kickback", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "jm-press", name: "JM Press", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "diamond-push-up", name: "Diamond Push-Up", muscleGroup: .arms, isCompound: true),
+            LibraryExercise(id: "reverse-grip-tricep-pushdown", name: "Reverse Grip Tricep Pushdown", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "zottman-curl", name: "Zottman Curl", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "drag-curl", name: "Drag Curl", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "reverse-wrist-curl", name: "Reverse Wrist Curl", muscleGroup: .arms, isCompound: false),
+            LibraryExercise(id: "forearm-curl", name: "Forearm Curl", muscleGroup: .arms, isCompound: false),
         ])
         
         // LEGS
@@ -768,6 +807,20 @@ struct ExerciseLibrary {
             LibraryExercise(id: "seated-calf-raise", name: "Seated Calf Raise", muscleGroup: .legs, isCompound: false),
             LibraryExercise(id: "sumo-deadlift", name: "Sumo Deadlift", muscleGroup: .legs, isCompound: true),
             LibraryExercise(id: "step-ups", name: "Step-Ups", muscleGroup: .legs, isCompound: true),
+            LibraryExercise(id: "romanian-deadlift-legs", name: "Romanian Deadlift", muscleGroup: .legs, isCompound: true),
+            LibraryExercise(id: "walking-lunges", name: "Walking Lunges", muscleGroup: .legs, isCompound: true),
+            LibraryExercise(id: "stiff-leg-deadlift", name: "Stiff Leg Deadlift", muscleGroup: .legs, isCompound: true),
+            LibraryExercise(id: "trap-bar-deadlift", name: "Trap Bar Deadlift", muscleGroup: .legs, isCompound: true),
+            LibraryExercise(id: "leg-press-calf-raise", name: "Leg Press Calf Raise", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "calf-press", name: "Calf Press on Leg Press", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "glute-kickback", name: "Glute Kickback", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "hip-abduction", name: "Hip Abduction", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "hip-adduction", name: "Hip Adduction", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "single-leg-rdl", name: "Single-Leg RDL", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "cossack-squat", name: "Cossack Squat", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "sissy-squat", name: "Sissy Squat", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "glute-ham-raise", name: "Glute Ham Raise", muscleGroup: .legs, isCompound: false),
+            LibraryExercise(id: "box-step-up", name: "Box Step-Up", muscleGroup: .legs, isCompound: true),
         ])
         
         // CORE
@@ -782,6 +835,24 @@ struct ExerciseLibrary {
             LibraryExercise(id: "dead-bug", name: "Dead Bug", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "mountain-climbers", name: "Mountain Climbers", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "woodchop", name: "Woodchop", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "bicycle-crunch", name: "Bicycle Crunch", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "v-up", name: "V-Up", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "reverse-crunch", name: "Reverse Crunch", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "side-plank", name: "Side Plank", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "oblique-crunch", name: "Oblique Crunch", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "decline-crunch", name: "Decline Crunch", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "pallof-press", name: "Pallof Press", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "bird-dog", name: "Bird Dog", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "hollow-hold", name: "Hollow Hold", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "windshield-wipers", name: "Windshield Wipers", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "knee-raise", name: "Knee Raise", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "flutter-kicks", name: "Flutter Kicks", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "heel-touch", name: "Heel Touch", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "sit-up", name: "Sit-Up", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "toe-touch", name: "Toe Touch", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "l-sit", name: "L-Sit", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "plank-up-down", name: "Plank Up-Down", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "landmine-rotation", name: "Landmine Rotation", muscleGroup: .core, isCompound: false),
         ])
         
         return list.sorted { $0.name < $1.name }
@@ -934,6 +1005,80 @@ struct PersonalRecordManager {
         }
         
         return false
+    }
+    
+    /// Recalculate PR for an exercise by scanning all workouts. Use when a set is edited
+    /// (especially lowered) so the PR reflects the true best set across all data.
+    /// Returns true if the PR changed (updated, created, or removed).
+    @discardableResult
+    static func recalculatePR(exerciseName: String, modelContext: ModelContext) -> Bool {
+        let normalizedName = exerciseName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Fetch all non-template workouts
+        let workoutDescriptor = FetchDescriptor<Workout>(
+            predicate: #Predicate<Workout> { $0.isTemplate == false }
+        )
+        guard let workouts = try? modelContext.fetch(workoutDescriptor) else { return false }
+        
+        // Collect all valid working sets for this exercise
+        var bestSet: (weight: Double, reps: Int, workoutId: UUID)? = nil
+        var best1RM: Double = 0
+        
+        for workout in workouts {
+            for exercise in (workout.exercises ?? []) {
+                guard exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName else { continue }
+                for set in (exercise.sets ?? []) {
+                    guard set.weight > 0, set.reps > 0, set.type == .working else { continue }
+                    let est1RM = calculateEstimated1RM(weight: set.weight, reps: set.reps)
+                    if est1RM > best1RM {
+                        best1RM = est1RM
+                        bestSet = (set.weight, set.reps, workout.id)
+                    }
+                }
+            }
+        }
+        
+        let prDescriptor = FetchDescriptor<PersonalRecord>(
+            predicate: #Predicate<PersonalRecord> { $0.exerciseName == normalizedName }
+        )
+        let existingPRs = (try? modelContext.fetch(prDescriptor)) ?? []
+        let existingPR = existingPRs.first
+        
+        if let best = bestSet {
+            let changed: Bool
+            if let pr = existingPR {
+                changed = pr.weight != best.weight || pr.reps != best.reps
+                pr.weight = best.weight
+                pr.reps = best.reps
+                pr.date = Date()
+                pr.workoutId = best.workoutId
+            } else {
+                let newPR = PersonalRecord(
+                    exerciseName: normalizedName,
+                    weight: best.weight,
+                    reps: best.reps,
+                    workoutId: best.workoutId
+                )
+                modelContext.insert(newPR)
+                changed = true
+            }
+            try? modelContext.save()
+            #if DEBUG
+            print("[PR] recalculatePR \(normalizedName) -> \(best.weight)x\(best.reps) 1RM=\(best1RM)")
+            #endif
+            return changed
+        } else {
+            // No valid sets - remove existing PR if any
+            if let pr = existingPR {
+                modelContext.delete(pr)
+                try? modelContext.save()
+                #if DEBUG
+                print("[PR] recalculatePR \(normalizedName) REMOVED (no valid sets)")
+                #endif
+                return true
+            }
+            return false
+        }
     }
     
     /// Get PR for an exercise

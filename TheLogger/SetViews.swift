@@ -143,9 +143,7 @@ struct InlineSetRowView: View {
                     Button {
                         set.type = type
                         onUpdate(set.reps, set.weight)
-                        if type.countsForPR {
-                            runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: type)
-                        }
+                        runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: type)
                     } label: {
                         Label(type.rawValue, systemImage: type.icon)
                     }
@@ -420,18 +418,11 @@ struct InlineSetRowView: View {
     }
 
     private func runPRCheckAndNotify(weight: Double, reps: Int, setType: SetType) {
-        let isNew = PersonalRecordManager.checkAndSavePR(
-            exerciseName: exerciseName,
-            weight: weight,
-            reps: reps,
-            workoutId: currentWorkout.id,
-            modelContext: modelContext,
-            setType: setType
-        )
+        let changed = PersonalRecordManager.recalculatePR(exerciseName: exerciseName, modelContext: modelContext)
         #if DEBUG
-        print("[PR] checkAndSavePR weight=\(weight) reps=\(reps) setType=\(setType) isNew=\(isNew) hasCallback=\(onPRSet != nil)")
+        print("[PR] recalculatePR exercise=\(exerciseName) changed=\(changed) hasCallback=\(onPRSet != nil)")
         #endif
-        if isNew { onPRSet?() }
+        if changed { onPRSet?() }
     }
 
     private func saveReps() {
