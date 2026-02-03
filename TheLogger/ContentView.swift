@@ -38,8 +38,9 @@ struct AddWorkoutView: View {
     @State private var exerciseName = ""
     @State private var showingAddSet = false
     @State private var addingSetToExerciseIndex: Int?
-    @State private var setReps = 10  // Default value
-    @State private var setWeight = 135.0  // Default value
+    @State private var setReps = 10
+    @State private var setWeight = 135.0
+    @State private var setDuration = 30
     @State private var showingPRCelebration = false
 
     // Get unique exercise names from all workouts
@@ -176,8 +177,10 @@ struct AddWorkoutView: View {
                                         currentWorkout: newWorkout,
                                         modelContext: modelContext,
                                         onUpdate: { newReps, newWeight in
-                                            set.reps = newReps
-                                            set.weight = newWeight
+                                            if !(ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false) {
+                                                set.reps = newReps
+                                                set.weight = newWeight
+                                            }
                                         },
                                         onPRSet: {
                                             withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
@@ -208,6 +211,7 @@ struct AddWorkoutView: View {
                                 addingSetToExerciseIndex = index
                                 setReps = 10
                                 setWeight = 135.0
+                                setDuration = 30
                                 showingAddSet = true
                             } label: {
                                 Label("Add Set", systemImage: "plus.circle")
@@ -291,12 +295,25 @@ struct AddWorkoutView: View {
                 }
             }
             .sheet(isPresented: $showingAddSet) {
-                AddSetView(reps: $setReps, weight: $setWeight) {
-                    // Add the set to the exercise at the tracked index
-                    let exercises = newWorkout.exercises ?? []
+                let exercises = newWorkout.exercises ?? []
+                let exerciseName: String = {
+                    guard let idx = addingSetToExerciseIndex, idx < exercises.count else { return "" }
+                    return exercises[idx].name
+                }()
+                let isTimeBased = ExerciseLibrary.shared.find(name: exerciseName)?.isTimeBased ?? false
+                AddSetView(
+                    reps: $setReps,
+                    weight: $setWeight,
+                    exerciseName: exerciseName,
+                    durationSeconds: isTimeBased ? $setDuration : nil
+                ) {
                     if let exerciseIndex = addingSetToExerciseIndex,
                        exerciseIndex < exercises.count {
-                        exercises[exerciseIndex].addSet(reps: setReps, weight: setWeight)
+                        if isTimeBased {
+                            exercises[exerciseIndex].addSet(reps: 0, weight: 0, durationSeconds: setDuration)
+                        } else {
+                            exercises[exerciseIndex].addSet(reps: setReps, weight: setWeight)
+                        }
                     }
                     addingSetToExerciseIndex = nil
                 }

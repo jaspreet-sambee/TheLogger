@@ -707,11 +707,14 @@ struct WorkoutDetailView: View {
 
             // Find matching exercise memory
             if let memory = memories.first(where: { $0.normalizedName == normalizedName }) {
-                // Auto-create sets from memory (addSet assigns sortOrder)
+                let isTimeBased = ExerciseLibrary.shared.find(name: name)?.isTimeBased ?? false
                 for _ in 0..<memory.lastSets {
-                    exercise.addSet(reps: memory.lastReps, weight: memory.lastWeight)
+                    if isTimeBased, let d = memory.lastDuration {
+                        exercise.addSet(reps: 0, weight: 0, durationSeconds: d)
+                    } else {
+                        exercise.addSet(reps: memory.lastReps, weight: memory.lastWeight)
+                    }
                 }
-                // Mark as auto-filled
                 exercise.isAutoFilled = true
             } else {
                 // Create new exercise memory immediately so it appears in search
@@ -809,16 +812,22 @@ struct WorkoutDetailView: View {
                 let existingMemories = try modelContext.fetch(descriptor)
 
                 // Find exact match
+                let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+                let duration = lastSet.durationSeconds
                 if let memory = existingMemories.first(where: { $0.normalizedName == normalizedName }) {
-                    // Update existing
-                    memory.update(reps: lastSet.reps, weight: lastSet.weight, sets: sets.count)
+                    memory.update(
+                        reps: lastSet.reps,
+                        weight: lastSet.weight,
+                        sets: sets.count,
+                        durationSeconds: isTimeBased ? duration : nil
+                    )
                 } else {
-                    // Create new
                     let newMemory = ExerciseMemory(
                         name: exercise.name,
                         lastReps: lastSet.reps,
                         lastWeight: lastSet.weight,
-                        lastSets: sets.count
+                        lastSets: sets.count,
+                        lastDuration: isTimeBased ? duration : nil
                     )
                     modelContext.insert(newMemory)
                 }
@@ -1031,7 +1040,7 @@ struct SupersetExerciseRow: View {
                 for exercise in (workout.exercises ?? []) {
                     var copiedSets: [WorkoutSet] = []
                     for (index, set) in exercise.setsByOrder.enumerated() {
-                        let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, setType: set.type, sortOrder: index)
+                        let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, durationSeconds: set.durationSeconds, setType: set.type, sortOrder: index)
                         copiedSets.append(copiedSet)
                     }
                     let templateExercise = Exercise(name: exercise.name, sets: copiedSets)
@@ -1050,7 +1059,7 @@ struct SupersetExerciseRow: View {
             for exercise in (workout.exercises ?? []) {
                 var copiedSets: [WorkoutSet] = []
                 for (index, set) in exercise.setsByOrder.enumerated() {
-                    let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, setType: set.type, sortOrder: index)
+                    let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, durationSeconds: set.durationSeconds, setType: set.type, sortOrder: index)
                     copiedSets.append(copiedSet)
                 }
                 let templateExercise = Exercise(name: exercise.name, sets: copiedSets)

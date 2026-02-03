@@ -61,16 +61,23 @@ final class WorkoutSet: Identifiable {
     var id: UUID = UUID()
     var reps: Int = 0
     var weight: Double = 0
+    /// Duration in seconds for time-based sets (e.g. Plank, Hollow Hold). When non-nil, set is time-based; reps/weight unused.
+    var durationSeconds: Int?
     var setType: String = "Working"  // Store as String for SwiftData compatibility
     var sortOrder: Int = 0   // Ensures consistent display order (SwiftData doesn't guarantee relationship order)
 
     /// Inverse relationship to parent exercise (required for CloudKit)
     var exercise: Exercise?
     
-    init(id: UUID = UUID(), reps: Int, weight: Double, setType: SetType = .working, sortOrder: Int = 0) {
+    var isTimeBased: Bool {
+        durationSeconds != nil
+    }
+    
+    init(id: UUID = UUID(), reps: Int, weight: Double, durationSeconds: Int? = nil, setType: SetType = .working, sortOrder: Int = 0) {
         self.id = id
         self.reps = reps
         self.weight = weight
+        self.durationSeconds = durationSeconds
         self.setType = setType.rawValue
         self.sortOrder = sortOrder
     }

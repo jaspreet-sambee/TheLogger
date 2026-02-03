@@ -83,6 +83,13 @@ struct UnitFormatter {
     static var weightUnit: String {
         currentSystem.weightUnit
     }
+    
+    /// Format duration in seconds as "M:SS" (e.g. 0:45, 1:30)
+    static func formatDuration(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        return String(format: "%d:%02d", m, s)
+    }
 }
 
 /// Environment key for unit system
@@ -642,6 +649,16 @@ struct LibraryExercise: Identifiable, Hashable {
     let name: String
     let muscleGroup: MuscleGroup
     let isCompound: Bool
+    /// When true, sets are logged by duration (seconds) instead of reps/weight
+    let isTimeBased: Bool
+    
+    init(id: String, name: String, muscleGroup: MuscleGroup, isCompound: Bool, isTimeBased: Bool = false) {
+        self.id = id
+        self.name = name
+        self.muscleGroup = muscleGroup
+        self.isCompound = isCompound
+        self.isTimeBased = isTimeBased
+    }
     
     var normalizedName: String {
         name.lowercased().trimmingCharacters(in: .whitespaces)
@@ -825,32 +842,32 @@ struct ExerciseLibrary {
         
         // CORE
         list.append(contentsOf: [
-            LibraryExercise(id: "plank", name: "Plank", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "plank", name: "Plank", muscleGroup: .core, isCompound: false, isTimeBased: true),
             LibraryExercise(id: "crunches", name: "Crunches", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "leg-raise", name: "Leg Raise", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "hanging-leg-raise", name: "Hanging Leg Raise", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "russian-twist", name: "Russian Twist", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "cable-crunch", name: "Cable Crunch", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "ab-wheel-rollout", name: "Ab Wheel Rollout", muscleGroup: .core, isCompound: false),
-            LibraryExercise(id: "dead-bug", name: "Dead Bug", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "dead-bug", name: "Dead Bug", muscleGroup: .core, isCompound: false, isTimeBased: true),
             LibraryExercise(id: "mountain-climbers", name: "Mountain Climbers", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "woodchop", name: "Woodchop", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "bicycle-crunch", name: "Bicycle Crunch", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "v-up", name: "V-Up", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "reverse-crunch", name: "Reverse Crunch", muscleGroup: .core, isCompound: false),
-            LibraryExercise(id: "side-plank", name: "Side Plank", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "side-plank", name: "Side Plank", muscleGroup: .core, isCompound: false, isTimeBased: true),
             LibraryExercise(id: "oblique-crunch", name: "Oblique Crunch", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "decline-crunch", name: "Decline Crunch", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "pallof-press", name: "Pallof Press", muscleGroup: .core, isCompound: false),
-            LibraryExercise(id: "bird-dog", name: "Bird Dog", muscleGroup: .core, isCompound: false),
-            LibraryExercise(id: "hollow-hold", name: "Hollow Hold", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "bird-dog", name: "Bird Dog", muscleGroup: .core, isCompound: false, isTimeBased: true),
+            LibraryExercise(id: "hollow-hold", name: "Hollow Hold", muscleGroup: .core, isCompound: false, isTimeBased: true),
             LibraryExercise(id: "windshield-wipers", name: "Windshield Wipers", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "knee-raise", name: "Knee Raise", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "flutter-kicks", name: "Flutter Kicks", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "heel-touch", name: "Heel Touch", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "sit-up", name: "Sit-Up", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "toe-touch", name: "Toe Touch", muscleGroup: .core, isCompound: false),
-            LibraryExercise(id: "l-sit", name: "L-Sit", muscleGroup: .core, isCompound: false),
+            LibraryExercise(id: "l-sit", name: "L-Sit", muscleGroup: .core, isCompound: false, isTimeBased: true),
             LibraryExercise(id: "plank-up-down", name: "Plank Up-Down", muscleGroup: .core, isCompound: false),
             LibraryExercise(id: "landmine-rotation", name: "Landmine Rotation", muscleGroup: .core, isCompound: false),
         ])
@@ -868,14 +885,17 @@ final class ExerciseMemory {
     var lastReps: Int = 10
     var lastWeight: Double = 0
     var lastSets: Int = 1
+    /// For time-based exercises (e.g. Plank), last duration in seconds
+    var lastDuration: Int?
     var lastUpdated: Date = Date()
     var note: String?
     
-    init(name: String, lastReps: Int = 10, lastWeight: Double = 0, lastSets: Int = 1, lastUpdated: Date = Date(), note: String? = nil) {
+    init(name: String, lastReps: Int = 10, lastWeight: Double = 0, lastSets: Int = 1, lastDuration: Int? = nil, lastUpdated: Date = Date(), note: String? = nil) {
         self.name = name
         self.lastReps = lastReps
         self.lastWeight = lastWeight
         self.lastSets = lastSets
+        self.lastDuration = lastDuration
         self.lastUpdated = lastUpdated
         self.note = note
     }
@@ -886,10 +906,11 @@ final class ExerciseMemory {
     }
     
     /// Update memory with new exercise data
-    func update(reps: Int, weight: Double, sets: Int, note: String? = nil) {
+    func update(reps: Int, weight: Double, sets: Int, durationSeconds: Int? = nil, note: String? = nil) {
         self.lastReps = reps
         self.lastWeight = weight
         self.lastSets = sets
+        self.lastDuration = durationSeconds
         self.lastUpdated = Date()
         if let note = note {
             self.note = note.isEmpty ? nil : note

@@ -168,16 +168,25 @@ struct ExerciseRowView: View {
                     .foregroundStyle(isActive ? .secondary : .tertiary)
                     .padding(.top, 2)
             } else {
+                let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(exercise.setsByOrder) { set in
                         HStack {
-                            Text("\(set.reps) reps")
-                                .font(.system(.subheadline, weight: .regular))
-                                .foregroundStyle(isActive ? .primary : .secondary)
+                            if isTimeBased, let d = set.durationSeconds {
+                                Text(UnitFormatter.formatDuration(d))
+                                    .font(.system(.subheadline, weight: .regular))
+                                    .foregroundStyle(isActive ? .primary : .secondary)
+                            } else {
+                                Text("\(set.reps) reps")
+                                    .font(.system(.subheadline, weight: .regular))
+                                    .foregroundStyle(isActive ? .primary : .secondary)
+                            }
                             Spacer()
-                            Text(UnitFormatter.formatWeight(set.weight))
-                                .font(.system(.subheadline, weight: .regular))
-                                .foregroundStyle(isActive ? .secondary : .tertiary)
+                            if !isTimeBased {
+                                Text(UnitFormatter.formatWeight(set.weight))
+                                    .font(.system(.subheadline, weight: .regular))
+                                    .foregroundStyle(isActive ? .secondary : .tertiary)
+                            }
                         }
                     }
                 }
@@ -185,9 +194,16 @@ struct ExerciseRowView: View {
             }
 
             HStack {
-                Text("Total: \(exercise.totalReps) reps")
-                    .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(isActive ? .secondary : .tertiary)
+                let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+                Group {
+                    if isTimeBased {
+                        Text("Total: \(UnitFormatter.formatDuration(exercise.totalDurationSeconds))")
+                    } else {
+                        Text("Total: \(exercise.totalReps) reps")
+                    }
+                }
+                .font(.system(.caption, weight: .medium))
+                .foregroundStyle(isActive ? .secondary : .tertiary)
                 Spacer()
             }
             .padding(.top, 4)
@@ -208,8 +224,11 @@ struct ExerciseCard: View {
         let sets = exercise.sets ?? []
         if sets.isEmpty { return "No sets" }
         let count = sets.count
-        let total = exercise.totalReps
-        return "\(count) \(count == 1 ? "set" : "sets") · \(total) reps"
+        let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+        if isTimeBased {
+            return "\(count) \(count == 1 ? "set" : "sets") · \(UnitFormatter.formatDuration(exercise.totalDurationSeconds))"
+        }
+        return "\(count) \(count == 1 ? "set" : "sets") · \(exercise.totalReps) reps"
     }
 
     // Determine accent color based on exercise type
@@ -301,6 +320,7 @@ struct ExerciseEditView: View {
     @State private var isAddingSet = false
     @State private var newSetReps: Int = 10
     @State private var newSetWeight: Double = 135.0
+    @State private var newSetDuration: Int = 30
     @State private var isEditingExerciseName = false
     @State private var exerciseNameText = ""
     @State private var showingProgress = false
@@ -418,8 +438,10 @@ struct ExerciseEditView: View {
                             currentWorkout: workout,
                             modelContext: modelContext,
                             onUpdate: { newReps, newWeight in
-                                set.reps = newReps
-                                set.weight = newWeight
+                                if !(ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false) {
+                                    set.reps = newReps
+                                    set.weight = newWeight
+                                }
                                 saveChanges()
                             },
                             onPRSet: {
@@ -450,13 +472,19 @@ struct ExerciseEditView: View {
                 }
 
                 if isAddingSet {
-                    // Inline add set form
+                    let exerciseIsTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
                     InlineAddSetView(
                         reps: $newSetReps,
                         weight: $newSetWeight,
                         focusedField: $focusedField,
+                        exerciseName: exercise.name,
+                        durationSeconds: exerciseIsTimeBased ? $newSetDuration : nil,
                         onSave: {
-                            exercise.addSet(reps: newSetReps, weight: newSetWeight)
+                            if exerciseIsTimeBased {
+                                exercise.addSet(reps: 0, weight: 0, durationSeconds: newSetDuration)
+                            } else {
+                                exercise.addSet(reps: newSetReps, weight: newSetWeight)
+                            }
                             saveChanges()
                             // Sync to widget
                             workout.syncToWidget(currentExercise: exercise)
@@ -466,12 +494,14 @@ struct ExerciseEditView: View {
                                     exerciseName: exercise.name,
                                     exerciseId: exercise.id,
                                     exerciseSets: (exercise.sets ?? []).count,
-                                    lastReps: newSetReps,
-                                    lastWeight: newSetWeight
+                                    lastReps: exerciseIsTimeBased ? 0 : newSetReps,
+                                    lastWeight: exerciseIsTimeBased ? 0 : newSetWeight
                                 )
                             }
-                            // Check for PR
-                            checkForPR(weight: newSetWeight, reps: newSetReps)
+                            // Check for PR (skip for time-based)
+                            if !exerciseIsTimeBased {
+                                checkForPR(weight: newSetWeight, reps: newSetReps)
+                            }
                             // Offer rest option (only for active workouts)
                             // For supersets, only offer rest after the last exercise in the group
                             if workout.isActive && workout.isLastInSuperset(exercise) {
@@ -482,21 +512,25 @@ struct ExerciseEditView: View {
                             } else if !workout.isActive {
                                 newSetReps = 10
                                 newSetWeight = 135.0
+                                newSetDuration = 30
                             }
                             // Keep form open for quick successive adds
                         },
                         onCancel: {
                             isAddingSet = false
                             focusedField = nil
-                            // Resume rest timer if it was paused
                             RestTimerManager.shared.resume()
-                            // Reset to previous set values or defaults
                             if workout.isActive, let lastSet = exercise.setsByOrder.last {
-                                newSetReps = lastSet.reps
-                                newSetWeight = lastSet.weight
+                                if exerciseIsTimeBased {
+                                    newSetDuration = lastSet.durationSeconds ?? 30
+                                } else {
+                                    newSetReps = lastSet.reps
+                                    newSetWeight = lastSet.weight
+                                }
                             } else {
                                 newSetReps = 10
                                 newSetWeight = 135.0
+                                newSetDuration = 30
                             }
                         }
                     )
@@ -504,20 +538,23 @@ struct ExerciseEditView: View {
                     HStack(spacing: 16) {
                         // Add Set button (opens inline form)
                         Button {
-                            // Pause rest timer when adding new set
                             RestTimerManager.shared.pause()
-
-                            // Inherit from previous set if workout is active and sets exist
+                            let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
                             if workout.isActive, let lastSet = exercise.setsByOrder.last {
-                                newSetReps = lastSet.reps
-                                newSetWeight = lastSet.weight
+                                if timeBased {
+                                    newSetDuration = lastSet.durationSeconds ?? 30
+                                } else {
+                                    newSetReps = lastSet.reps
+                                    newSetWeight = lastSet.weight
+                                }
                             } else {
                                 newSetReps = 10
                                 newSetWeight = 135.0
+                                newSetDuration = 30
                             }
                             isAddingSet = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                focusedField = .reps
+                                focusedField = timeBased ? .duration : .reps
                             }
                         } label: {
                             Label("Add Set", systemImage: "plus.circle")
@@ -530,12 +567,15 @@ struct ExerciseEditView: View {
                         // Quick Repeat button (one-tap duplicate of last set)
                         if let lastSet = exercise.setsByOrder.last {
                             Button {
-                                // Haptic feedback
                                 let impact = UIImpactFeedbackGenerator(style: .light)
                                 impact.impactOccurred()
-
+                                let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
                                 withAnimation(.easeOut(duration: 0.2)) {
-                                    exercise.addSet(reps: lastSet.reps, weight: lastSet.weight)
+                                    if timeBased, let d = lastSet.durationSeconds {
+                                        exercise.addSet(reps: 0, weight: 0, durationSeconds: d)
+                                    } else {
+                                        exercise.addSet(reps: lastSet.reps, weight: lastSet.weight)
+                                    }
                                 }
                                 saveChanges()
                                 // Sync to widget
@@ -546,12 +586,13 @@ struct ExerciseEditView: View {
                                         exerciseName: exercise.name,
                                         exerciseId: exercise.id,
                                         exerciseSets: (exercise.sets ?? []).count,
-                                        lastReps: lastSet.reps,
-                                        lastWeight: lastSet.weight
+                                        lastReps: timeBased ? 0 : lastSet.reps,
+                                        lastWeight: timeBased ? 0 : lastSet.weight
                                     )
                                 }
-                                // Check for PR
-                                checkForPR(weight: lastSet.weight, reps: lastSet.reps)
+                                if !timeBased {
+                                    checkForPR(weight: lastSet.weight, reps: lastSet.reps)
+                                }
 
                                 // Offer rest option (only for active workouts)
                                 // For supersets, only offer rest after the last exercise in the group
@@ -578,14 +619,15 @@ struct ExerciseEditView: View {
             Section {
                 HStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 6) {
+                        let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
                         HStack(spacing: 6) {
-                            Image(systemName: "number")
+                            Image(systemName: isTimeBased ? "clock" : "number")
                                 .font(.system(.caption, weight: .medium))
-                            Text("Total Reps")
+                            Text(isTimeBased ? "Total Time" : "Total Reps")
                                 .font(.system(.caption, weight: .medium))
                         }
                         .foregroundStyle(.secondary)
-                        Text("\(exercise.totalReps)")
+                        Text(isTimeBased ? UnitFormatter.formatDuration(exercise.totalDurationSeconds) : "\(exercise.totalReps)")
                             .font(.system(.title2, weight: .semibold))
                             .foregroundStyle(.primary)
                     }

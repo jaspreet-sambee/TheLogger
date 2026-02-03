@@ -41,10 +41,14 @@ final class Exercise: Identifiable {
     }
     
     /// Add a new set to this exercise
-    func addSet(reps: Int, weight: Double) {
+    /// - Parameters:
+    ///   - reps: Rep count (ignored when durationSeconds is non-nil)
+    ///   - weight: Weight (ignored when durationSeconds is non-nil)
+    ///   - durationSeconds: For time-based exercises (e.g. Plank). When non-nil, set is time-based.
+    func addSet(reps: Int, weight: Double, durationSeconds: Int? = nil) {
         let currentSets = sets ?? []
         let nextOrder = (currentSets.map(\.sortOrder).max() ?? -1) + 1
-        let newSet = WorkoutSet(reps: reps, weight: weight, sortOrder: nextOrder)
+        let newSet = WorkoutSet(reps: reps, weight: weight, durationSeconds: durationSeconds, sortOrder: nextOrder)
         if sets == nil {
             sets = [newSet]
         } else {
@@ -65,6 +69,16 @@ final class Exercise: Identifiable {
     /// Get total reps across all sets
     var totalReps: Int {
         (sets ?? []).reduce(0) { $0 + $1.reps }
+    }
+
+    /// Total duration in seconds (for time-based exercises)
+    var totalDurationSeconds: Int {
+        (sets ?? []).compactMap { $0.durationSeconds }.reduce(0, +)
+    }
+
+    /// Whether this exercise has any time-based sets
+    var hasTimeBasedSets: Bool {
+        (sets ?? []).contains { $0.isTimeBased }
     }
 }
 

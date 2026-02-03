@@ -11,7 +11,7 @@ import UIKit
 
 // MARK: - Shared Enum for Set Field Focus
 enum SetInputField: Hashable {
-    case reps, weight
+    case reps, weight, duration
 }
 
 // MARK: - Select All Text Field
@@ -103,8 +103,14 @@ struct InlineSetRowView: View {
     @State private var focusRepsWhenAppear = false
     @State private var focusWeightWhenAppear = false
     @State private var didAdjustViaButton = false
+    @State private var isEditingDuration = false
+    @State private var durationText = ""
 
     private let feedbackMessages = ["Set logged", "Saved", "Got it", "That counts", "Nice"]
+
+    private var isTimeBased: Bool {
+        ExerciseLibrary.shared.find(name: exerciseName)?.isTimeBased ?? false
+    }
 
     // Get previous set data for this set number
     private var previousSet: (reps: Int, weight: Double)? {
@@ -132,6 +138,25 @@ struct InlineSetRowView: View {
             }
         }
 
+        return nil
+    }
+
+    private var previousDuration: Int? {
+        guard isTimeBased else { return nil }
+        let normalizedName = exerciseName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let descriptor = FetchDescriptor<Workout>(sortBy: [SortDescriptor(\Workout.date, order: .reverse)])
+        guard let workouts = try? modelContext.fetch(descriptor) else { return nil }
+        for workout in workouts where workout.id != currentWorkout.id && !workout.isTemplate && workout.endTime != nil {
+            if let previousExercise = workout.exercises?.first(where: { ex in
+                ex.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName
+            }) {
+                let ordered = previousExercise.setsByOrder
+                let setIndex = setNumber - 1
+                if setIndex >= 0, setIndex < ordered.count, let d = ordered[setIndex].durationSeconds {
+                    return d
+                }
+            }
+        }
         return nil
     }
 
@@ -167,36 +192,64 @@ struct InlineSetRowView: View {
             }
             .buttonStyle(.plain)
 
-            // Reps - inline editable
-            HStack(spacing: 6) {
-                Image(systemName: "repeat")
-                    .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(.secondary)
+            if isTimeBased {
+                // Duration - inline editable for time-based exercises
+                HStack(spacing: 6) {
+                    Image(systemName: "clock")
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(.secondary)
 
-                if isEditingReps {
-                    SelectAllTextField(
-                        text: $repsText,
-                        focusWhenAppear: focusRepsWhenAppear,
-                        placeholder: "Reps",
-                        keyboardType: .numberPad,
-                        onFocusTriggered: { focusRepsWhenAppear = false },
-                        onCommit: { saveReps() }
-                    )
-                    .frame(width: 60, height: 24)
-                } else {
-                    Text("\(set.reps)")
-                        .font(.system(.body, weight: .semibold))
-                        .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            startEditingReps()
-                        }
+                    if isEditingDuration {
+                        SelectAllTextField(
+                            text: $durationText,
+                            focusWhenAppear: true,
+                            placeholder: "Sec",
+                            keyboardType: .numberPad,
+                            onFocusTriggered: { },
+                            onCommit: { saveDuration() }
+                        )
+                        .frame(width: 60, height: 24)
+                    } else {
+                        Text(UnitFormatter.formatDuration(set.durationSeconds ?? 0))
+                            .font(.system(.body, weight: .semibold))
+                            .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
+                            .contentShape(Rectangle())
+                            .onTapGesture { startEditingDuration() }
+                    }
+                }
+            } else {
+                // Reps - inline editable
+                HStack(spacing: 6) {
+                    Image(systemName: "repeat")
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    if isEditingReps {
+                        SelectAllTextField(
+                            text: $repsText,
+                            focusWhenAppear: focusRepsWhenAppear,
+                            placeholder: "Reps",
+                            keyboardType: .numberPad,
+                            onFocusTriggered: { focusRepsWhenAppear = false },
+                            onCommit: { saveReps() }
+                        )
+                        .frame(width: 60, height: 24)
+                    } else {
+                        Text("\(set.reps)")
+                            .font(.system(.body, weight: .semibold))
+                            .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                startEditingReps()
+                            }
+                    }
                 }
             }
 
             Spacer()
 
-            // Weight - inline editable with quick adjust
+            // Weight - inline editable (hidden for time-based)
+            if !isTimeBased {
             HStack(spacing: 4) {
                 if isEditingWeight {
                     // Quick adjust buttons (decrease)
@@ -300,19 +353,30 @@ struct InlineSetRowView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            }
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(set.type == .working
-                      ? Color(.systemGray6).opacity(isEditingReps || isEditingWeight ? 0.8 : 0.5)
-                      : set.type.color.opacity(isEditingReps || isEditingWeight ? 0.15 : 0.08))
-                .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isEditingReps || isEditingWeight)
+                      ? Color(.systemGray6).opacity(isEditingReps || isEditingWeight || isEditingDuration ? 0.8 : 0.5)
+                      : set.type.color.opacity(isEditingReps || isEditingWeight || isEditingDuration ? 0.15 : 0.08))
+                .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isEditingReps || isEditingWeight || isEditingDuration)
         )
         .overlay(alignment: .bottomLeading) {
             // Previous set indicator
-            if let previous = previousSet, !isEditingReps && !isEditingWeight {
+            if isTimeBased, let prev = previousDuration, !isEditingDuration {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(.caption2, weight: .medium))
+                    Text("Last: \(UnitFormatter.formatDuration(prev))")
+                        .font(.system(.caption2, weight: .regular))
+                }
+                .foregroundStyle(.tertiary)
+                .padding(.leading, 48)
+                .padding(.bottom, 2)
+            } else if let previous = previousSet, !isEditingReps && !isEditingWeight {
                 HStack(spacing: 4) {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(.caption2, weight: .medium))
@@ -358,13 +422,22 @@ struct InlineSetRowView: View {
                 originalWeight = newValue
             }
         }
+        .onChange(of: set.durationSeconds) { oldValue, newValue in
+            if !isEditingDuration {
+                durationText = "\(newValue ?? 0)"
+            }
+        }
         .onAppear {
             originalReps = set.reps
             originalWeight = set.weight
+            if isTimeBased {
+                durationText = "\(set.durationSeconds ?? 0)"
+            }
         }
         .onDisappear {
             if isEditingReps { saveReps() }
             if isEditingWeight { saveWeight() }
+            if isEditingDuration { saveDuration() }
         }
     }
 
@@ -373,6 +446,21 @@ struct InlineSetRowView: View {
         repsText = "\(set.reps)"
         isEditingReps = true
         focusRepsWhenAppear = true
+    }
+
+    private func startEditingDuration() {
+        durationText = "\(set.durationSeconds ?? 0)"
+        isEditingDuration = true
+    }
+
+    private func saveDuration() {
+        defer { isEditingDuration = false }
+        let secs = Int(durationText.trimmingCharacters(in: .whitespaces)) ?? 0
+        let clamped = min(9999, max(1, secs))
+        set.durationSeconds = clamped
+        durationText = "\(clamped)"
+        onUpdate(0, 0)
+        showMicroFeedback()
     }
 
     private func startEditingWeight() {
@@ -543,80 +631,101 @@ struct InlineAddSetView: View {
     @Binding var reps: Int
     @Binding var weight: Double
     @FocusState.Binding var focusedField: SetInputField?
+    var exerciseName: String = ""
+    var durationSeconds: Binding<Int>? = nil
     let onSave: () -> Void
     let onCancel: () -> Void
 
     @State private var repsText: String = ""
     @State private var weightText: String = ""
+    @State private var durationText: String = ""
     @State private var showFeedback = false
     @State private var feedbackMessage = "Set logged"
 
     private let feedbackMessages = ["Set logged", "Added", "Saved", "Got it", "That counts", "Nice"]
 
+    private var isTimeBased: Bool {
+        !exerciseName.isEmpty && (ExerciseLibrary.shared.find(name: exerciseName)?.isTimeBased ?? false)
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            // Plus icon indicator
             ZStack {
                 Circle()
                     .fill(Color.blue.opacity(0.12))
                     .frame(width: 32, height: 32)
-
                 Image(systemName: "plus")
                     .font(.system(.caption, weight: .semibold))
                     .foregroundStyle(.blue)
             }
 
-            // Reps input
-            HStack(spacing: 6) {
-                Image(systemName: "repeat")
-                    .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                TextField("Reps", text: $repsText)
-                    .keyboardType(.numberPad)
-                    .font(.system(.body, weight: .semibold))
-                    .focused($focusedField, equals: .reps)
-                    .frame(width: 60)
-                    .textFieldStyle(.plain)
-                    .accessibilityIdentifier("repsInput")
-                    .onAppear {
-                        repsText = "\(reps)"
-                    }
-                    .onChange(of: repsText) { oldValue, newValue in
-                        if let value = Int(newValue), value > 0 && value <= 1000 {
-                            reps = value
+            if isTimeBased, let durationBinding = durationSeconds {
+                // Duration input for time-based exercises
+                HStack(spacing: 6) {
+                    Image(systemName: "clock")
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    TextField("Sec", text: $durationText)
+                        .keyboardType(.numberPad)
+                        .font(.system(.body, weight: .semibold))
+                        .focused($focusedField, equals: .duration)
+                        .frame(width: 70)
+                        .textFieldStyle(.plain)
+                        .accessibilityIdentifier("durationInput")
+                        .onAppear { durationText = "\(durationBinding.wrappedValue)" }
+                        .onChange(of: durationText) { _, newValue in
+                            if let v = Int(newValue), v >= 1 && v <= 9999 {
+                                durationBinding.wrappedValue = v
+                            }
                         }
-                    }
-                    .onSubmit {
-                        focusedField = .weight
-                    }
+                        .onSubmit { saveAndContinue() }
+                }
+            } else {
+                // Reps input
+                HStack(spacing: 6) {
+                    Image(systemName: "repeat")
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    TextField("Reps", text: $repsText)
+                        .keyboardType(.numberPad)
+                        .font(.system(.body, weight: .semibold))
+                        .focused($focusedField, equals: .reps)
+                        .frame(width: 60)
+                        .textFieldStyle(.plain)
+                        .accessibilityIdentifier("repsInput")
+                        .onAppear { repsText = "\(reps)" }
+                        .onChange(of: repsText) { _, newValue in
+                            if let value = Int(newValue), value > 0 && value <= 1000 {
+                                reps = value
+                            }
+                        }
+                        .onSubmit { focusedField = .weight }
+                }
             }
 
             Spacer()
 
-            // Weight input
-            HStack(spacing: 4) {
-                TextField("Weight", text: $weightText)
-                    .keyboardType(.decimalPad)
-                    .font(.system(.body, weight: .semibold))
-                    .focused($focusedField, equals: .weight)
-                    .frame(width: 70)
-                    .textFieldStyle(.plain)
-                    .accessibilityIdentifier("weightInput")
-                    .onAppear {
-                        weightText = String(format: "%.1f", weight)
-                    }
-                    .onChange(of: weightText) { oldValue, newValue in
-                        if let value = Double(newValue), value >= 0 && value <= 10000 {
-                            weight = value
+            if !isTimeBased {
+                // Weight input
+                HStack(spacing: 4) {
+                    TextField("Weight", text: $weightText)
+                        .keyboardType(.decimalPad)
+                        .font(.system(.body, weight: .semibold))
+                        .focused($focusedField, equals: .weight)
+                        .frame(width: 70)
+                        .textFieldStyle(.plain)
+                        .accessibilityIdentifier("weightInput")
+                        .onAppear { weightText = String(format: "%.1f", weight) }
+                        .onChange(of: weightText) { _, newValue in
+                            if let value = Double(newValue), value >= 0 && value <= 10000 {
+                                weight = value
+                            }
                         }
-                    }
-                    .onSubmit {
-                        saveAndContinue()
-                    }
-                Text(UnitFormatter.weightUnit)
-                    .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(.secondary)
+                        .onSubmit { saveAndContinue() }
+                    Text(UnitFormatter.weightUnit)
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             // Action buttons
@@ -687,46 +796,62 @@ struct InlineAddSetView: View {
             if newValue == nil && oldValue != nil {
                 repsText = "\(reps)"
                 weightText = String(format: "%.1f", weight)
+                if isTimeBased, let dBinding = durationSeconds {
+                    durationText = "\(dBinding.wrappedValue)"
+                }
             }
         }
     }
 
     /// Commit text field values to bindings (called before save to ensure values are captured)
     private func commitTextValues() {
-        if let repsValue = Int(repsText), repsValue >= 1 && repsValue <= 1000 {
-            reps = repsValue
-        }
-        if let weightValue = Double(weightText), weightValue >= 0 && weightValue <= 10000 {
-            weight = weightValue
+        if isTimeBased, let dBinding = durationSeconds {
+            if let v = Int(durationText), v >= 1 && v <= 9999 {
+                dBinding.wrappedValue = v
+            }
+        } else {
+            if let repsValue = Int(repsText), repsValue >= 1 && repsValue <= 1000 {
+                reps = repsValue
+            }
+            if let weightValue = Double(weightText), weightValue >= 0 && weightValue <= 10000 {
+                weight = weightValue
+            }
         }
     }
 
     private func saveAndContinue() {
-        // Validate reps - must be >= 1
-        guard let repsValue = Int(repsText), repsValue >= 1 && repsValue <= 1000 else {
-            // Invalid reps - don't save, provide feedback
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.warning)
-            repsText = "\(max(1, reps))"
-            return
-        }
-
-        // Light haptic on set save
-        let impact = UIImpactFeedbackGenerator(style: .light)
-        impact.impactOccurred()
-
-        // Apply validated values
-        reps = repsValue
-        if let weightValue = Double(weightText), weightValue >= 0 && weightValue <= 10000 {
-            weight = weightValue
-        }
-        onSave()
-        showMicroFeedback()
-        // Keep form open and focus back on reps for next set
-        repsText = "\(reps)"
-        weightText = String(format: "%.1f", weight)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            focusedField = .reps
+        if isTimeBased, let dBinding = durationSeconds {
+            guard let secs = Int(durationText), secs >= 1 && secs <= 9999 else {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                durationText = "\(max(1, dBinding.wrappedValue))"
+                return
+            }
+            dBinding.wrappedValue = secs
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onSave()
+            showMicroFeedback()
+            durationText = "\(secs)"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                focusedField = .duration
+            }
+        } else {
+            guard let repsValue = Int(repsText), repsValue >= 1 && repsValue <= 1000 else {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                repsText = "\(max(1, reps))"
+                return
+            }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            reps = repsValue
+            if let weightValue = Double(weightText), weightValue >= 0 && weightValue <= 10000 {
+                weight = weightValue
+            }
+            onSave()
+            showMicroFeedback()
+            repsText = "\(reps)"
+            weightText = String(format: "%.1f", weight)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                focusedField = .reps
+            }
         }
     }
 
@@ -748,22 +873,59 @@ struct InlineAddSetView: View {
 struct AddSetView: View {
     @Binding var reps: Int
     @Binding var weight: Double
+    var exerciseName: String = ""
+    var durationSeconds: Binding<Int>? = nil
     @Environment(\.dismiss) var dismiss
     let onAdd: () -> Void
 
     @State private var isEditingReps = false
     @State private var isEditingWeight = false
+    @State private var isEditingDuration = false
     @State private var repsText = ""
     @State private var weightText = ""
+    @State private var durationText = ""
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case reps, weight
+        case reps, weight, duration
+    }
+
+    private var isTimeBased: Bool {
+        !exerciseName.isEmpty && (ExerciseLibrary.shared.find(name: exerciseName)?.isTimeBased ?? false)
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                if isTimeBased, let durationBinding = durationSeconds {
+                    Section {
+                        Stepper(value: durationBinding, in: 5...600, step: 5) {
+                            HStack {
+                                if isEditingDuration {
+                                    TextField("Seconds", text: $durationText)
+                                        .keyboardType(.numberPad)
+                                        .font(.system(.title3, weight: .semibold))
+                                        .focused($focusedField, equals: .duration)
+                                        .onSubmit { saveDuration() }
+                                        .onChange(of: focusedField) {
+                                            if focusedField != .duration { saveDuration() }
+                                        }
+                                } else {
+                                    Text(UnitFormatter.formatDuration(durationBinding.wrappedValue))
+                                        .font(.system(.title3, weight: .semibold))
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { startEditingDuration() }
+                                }
+                                Spacer()
+                            }
+                        }
+                    } header: {
+                        Text("Duration (seconds)")
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .textCase(nil)
+                    }
+                } else {
                 Section {
                     Stepper(value: $reps, in: 1...100, step: 1) {
                         HStack {
@@ -831,6 +993,7 @@ struct AddSetView: View {
                         .foregroundStyle(.secondary)
                         .textCase(nil)
                 }
+                }
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
@@ -885,17 +1048,34 @@ struct AddSetView: View {
     }
 
     private func saveAll() {
-        if isEditingReps {
-            saveReps()
-        }
-        if isEditingWeight {
-            saveWeight()
+        if isTimeBased && isEditingDuration {
+            saveDuration()
+        } else {
+            if isEditingReps { saveReps() }
+            if isEditingWeight { saveWeight() }
         }
     }
 
     private func cancelEditing() {
         isEditingReps = false
         isEditingWeight = false
+        isEditingDuration = false
+        focusedField = nil
+    }
+
+    private func startEditingDuration() {
+        if let dBinding = durationSeconds {
+            durationText = "\(dBinding.wrappedValue)"
+        }
+        isEditingDuration = true
+        focusedField = .duration
+    }
+
+    private func saveDuration() {
+        if let dBinding = durationSeconds, let v = Int(durationText), v >= 1 && v <= 9999 {
+            dBinding.wrappedValue = v
+        }
+        isEditingDuration = false
         focusedField = nil
     }
 }
