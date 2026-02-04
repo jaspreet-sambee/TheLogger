@@ -927,7 +927,7 @@ struct AddSetView: View {
                     }
                 } else {
                 Section {
-                    Stepper(value: $reps, in: 1...100, step: 1) {
+                    Stepper(value: $reps, in: 0...100, step: 1) {
                         HStack {
                             if isEditingReps {
                                 TextField("Reps", text: $repsText)
@@ -1102,7 +1102,7 @@ struct EditSetView: View {
         NavigationStack {
             Form {
                 Section {
-                    Stepper(value: $reps, in: 1...100, step: 1) {
+                    Stepper(value: $reps, in: 0...100, step: 1) {
                         HStack {
                             if isEditingReps {
                                 TextField("Reps", text: $repsText)

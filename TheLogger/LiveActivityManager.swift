@@ -196,8 +196,8 @@ final class LiveActivityManager: ObservableObject {
         exerciseName: String,
         exerciseId: UUID,
         exerciseSets: Int = 0,
-        lastReps: Int = 10,
-        lastWeight: Double = 135
+        lastReps: Int = 0,
+        lastWeight: Double = 0
     ) {
         print("[LiveActivity] Starting for workout: \(workoutName)")
 

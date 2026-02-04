@@ -318,8 +318,8 @@ struct ExerciseEditView: View {
     @AppStorage("autoStartRestTimer") private var autoStartRestTimer: Bool = false
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
     @State private var isAddingSet = false
-    @State private var newSetReps: Int = 10
-    @State private var newSetWeight: Double = 135.0
+    @State private var newSetReps: Int = 0
+    @State private var newSetWeight: Double = 0
     @State private var newSetDuration: Int = 30
     @State private var isEditingExerciseName = false
     @State private var exerciseNameText = ""
@@ -510,8 +510,8 @@ struct ExerciseEditView: View {
                                 newSetReps = newSetReps  // Keep same as last added
                                 newSetWeight = newSetWeight
                             } else if !workout.isActive {
-                                newSetReps = 10
-                                newSetWeight = 135.0
+                                newSetReps = 0
+                                newSetWeight = 0
                                 newSetDuration = 30
                             }
                             // Keep form open for quick successive adds
@@ -528,8 +528,8 @@ struct ExerciseEditView: View {
                                     newSetWeight = lastSet.weight
                                 }
                             } else {
-                                newSetReps = 10
-                                newSetWeight = 135.0
+                                newSetReps = 0
+                                newSetWeight = 0
                                 newSetDuration = 30
                             }
                         }
@@ -548,8 +548,8 @@ struct ExerciseEditView: View {
                                     newSetWeight = lastSet.weight
                                 }
                             } else {
-                                newSetReps = 10
-                                newSetWeight = 135.0
+                                newSetReps = 0
+                                newSetWeight = 0
                                 newSetDuration = 30
                             }
                             isAddingSet = true

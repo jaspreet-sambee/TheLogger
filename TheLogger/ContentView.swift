@@ -38,8 +38,8 @@ struct AddWorkoutView: View {
     @State private var exerciseName = ""
     @State private var showingAddSet = false
     @State private var addingSetToExerciseIndex: Int?
-    @State private var setReps = 10
-    @State private var setWeight = 135.0
+    @State private var setReps = 0
+    @State private var setWeight = 0.0
     @State private var setDuration = 30
     @State private var showingPRCelebration = false
 
@@ -209,8 +209,8 @@ struct AddWorkoutView: View {
 
                             Button {
                                 addingSetToExerciseIndex = index
-                                setReps = 10
-                                setWeight = 135.0
+                                setReps = 0
+                                setWeight = 0.0
                                 setDuration = 30
                                 showingAddSet = true
                             } label: {

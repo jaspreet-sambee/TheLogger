@@ -882,7 +882,7 @@ struct ExerciseLibrary {
 @Model
 final class ExerciseMemory {
     var name: String = ""
-    var lastReps: Int = 10
+    var lastReps: Int = 0
     var lastWeight: Double = 0
     var lastSets: Int = 1
     /// For time-based exercises (e.g. Plank), last duration in seconds
@@ -890,7 +890,7 @@ final class ExerciseMemory {
     var lastUpdated: Date = Date()
     var note: String?
     
-    init(name: String, lastReps: Int = 10, lastWeight: Double = 0, lastSets: Int = 1, lastDuration: Int? = nil, lastUpdated: Date = Date(), note: String? = nil) {
+    init(name: String, lastReps: Int = 0, lastWeight: Double = 0, lastSets: Int = 1, lastDuration: Int? = nil, lastUpdated: Date = Date(), note: String? = nil) {
         self.name = name
         self.lastReps = lastReps
         self.lastWeight = lastWeight

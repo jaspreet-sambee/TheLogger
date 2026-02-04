@@ -653,12 +653,8 @@ struct WorkoutListView: View {
                     }
                 }
             }
-            .onChange(of: activeWorkout) { oldValue, newValue in
-                // Clear navigation path when workout ends (becomes nil)
-                if oldValue != nil && newValue == nil && !navigationPath.isEmpty {
-                    navigationPath = NavigationPath()
-                }
-            }
+            // Do NOT clear navigation when workout ends - let user see the end summary first.
+            // WorkoutDetailView calls dismiss() when summary is dismissed.
             .onChange(of: workoutStreak) { _, newStreak in
                 // Celebrate streak milestones
                 let milestones = [3, 7, 14, 21, 30, 50, 100]

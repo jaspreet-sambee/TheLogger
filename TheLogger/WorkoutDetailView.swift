@@ -33,6 +33,14 @@ struct WorkoutDetailView: View {
     @State private var elapsedTime: TimeInterval = 0
     @State private var timerTask: Task<Void, Never>? = nil
 
+    /// PR details for summary display (name, weight, reps)
+    private var prDetailsForSummary: [(name: String, weight: Double, reps: Int)] {
+        prExercises.compactMap { name in
+            guard let pr = PersonalRecordManager.getPR(for: name, modelContext: modelContext) else { return nil }
+            return (name: name, weight: pr.weight, reps: pr.reps)
+        }
+    }
+
     // Get recently used exercises (top 5, preserving order from @Query sort)
     private var recentlyUsedExercises: [String] {
         var seen = Set<String>()
@@ -109,8 +117,15 @@ struct WorkoutDetailView: View {
             }
             .sheet(isPresented: $showingEndSummary) {
                 if workout.isCompleted {
-                    WorkoutEndSummaryView(summary: workout.summary, prExercises: prExercises) {
+                    WorkoutEndSummaryView(
+                        summary: workout.summary,
+                        workoutName: workout.name,
+                        workoutDate: workout.date,
+                        prExercises: prExercises,
+                        prDetails: prDetailsForSummary
+                    ) {
                         showingEndSummary = false
+                        dismiss()
                     }
                 }
             }
@@ -720,7 +735,7 @@ struct WorkoutDetailView: View {
                 // Create new exercise memory immediately so it appears in search
                 let newMemory = ExerciseMemory(
                     name: name,
-                    lastReps: 10,
+                    lastReps: 0,
                     lastWeight: 0,
                     lastSets: 1
                 )
