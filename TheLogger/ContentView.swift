@@ -159,7 +159,7 @@ struct AddWorkoutView: View {
                     }
                 }
 
-                let workoutExercises = newWorkout.exercises ?? []
+                let workoutExercises = newWorkout.exercisesByOrder
                 if !workoutExercises.isEmpty {
                     ForEach(Array(workoutExercises.enumerated()), id: \.element.id) { index, exercise in
                         Section {
@@ -295,7 +295,7 @@ struct AddWorkoutView: View {
                 }
             }
             .sheet(isPresented: $showingAddSet) {
-                let exercises = newWorkout.exercises ?? []
+                let exercises = newWorkout.exercisesByOrder
                 let exerciseName: String = {
                     guard let idx = addingSetToExerciseIndex, idx < exercises.count else { return "" }
                     return exercises[idx].name

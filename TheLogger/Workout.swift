@@ -121,6 +121,9 @@ final class Workout: Identifiable {
         self.startTime = nil
         self.endTime = nil
         self.isTemplate = isTemplate
+        for (index, ex) in exercises.enumerated() {
+            ex.order = index
+        }
         self.exercises = exercises
     }
     
@@ -207,9 +210,15 @@ final class Workout: Identifiable {
         return "Workout"
     }
     
+    /// Exercises in display order (SwiftData relationships don't preserve order)
+    var exercisesByOrder: [Exercise] {
+        (exercises ?? []).sorted { $0.order < $1.order }
+    }
+
     /// Add a new exercise to this workout
     func addExercise(name: String) {
-        let newExercise = Exercise(name: name)
+        let nextOrder = (exercises ?? []).map(\.order).max().map { $0 + 1 } ?? 0
+        let newExercise = Exercise(name: name, order: nextOrder)
         if exercises == nil {
             exercises = [newExercise]
         } else {
@@ -307,7 +316,7 @@ final class Workout: Identifiable {
         var result: [ExerciseDisplayItem] = []
         var processedGroupIds: Set<UUID> = []
 
-        for (index, exercise) in (exercises ?? []).enumerated() {
+        for (_, exercise) in exercisesByOrder.enumerated() {
             if let groupId = exercise.supersetGroupId {
                 // Part of a superset - only process once per group
                 if !processedGroupIds.contains(groupId) {
@@ -1121,26 +1130,34 @@ struct PersonalRecordManager {
     
     /// Check all sets in a workout for PRs (call when workout ends)
     static func processWorkoutForPRs(workout: Workout, modelContext: ModelContext) -> [String] {
-        var newPRExercises: [String] = []
-
         for exercise in (workout.exercises ?? []) {
             for set in (exercise.sets ?? []) {
-                if checkAndSavePR(
+                _ = checkAndSavePR(
                     exerciseName: exercise.name,
                     weight: set.weight,
                     reps: set.reps,
                     workoutId: workout.id,
                     modelContext: modelContext,
                     setType: set.type
-                ) {
-                    if !newPRExercises.contains(exercise.name) {
-                        newPRExercises.append(exercise.name)
-                    }
-                }
+                )
             }
         }
+        return exercisesWithPRsInWorkout(workout, modelContext: modelContext)
+    }
 
-        return newPRExercises
+    /// Exercises whose current PR was achieved in this workout (workoutId match).
+    /// Use this to show "PRs achieved this workout" - PRs are often saved when the set is
+    /// logged (via checkAndSavePR or recalculatePR), so processWorkoutForPRs' return value
+    /// would miss them since checkAndSavePR returns false when the PR already exists.
+    static func exercisesWithPRsInWorkout(_ workout: Workout, modelContext: ModelContext) -> [String] {
+        var result: [String] = []
+        for exercise in (workout.exercises ?? []) {
+            guard let pr = getPR(for: exercise.name, modelContext: modelContext) else { continue }
+            if pr.workoutId == workout.id, !result.contains(exercise.name) {
+                result.append(exercise.name)
+            }
+        }
+        return result
     }
 }
 

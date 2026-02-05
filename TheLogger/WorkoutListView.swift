@@ -190,7 +190,7 @@ struct WorkoutListView: View {
                                     .padding(8)
                                     .background(
                                         Circle()
-                                            .fill(Color(.systemGray6))
+                                            .fill(Color.black.opacity(0.6))
                                     )
                             }
                             .buttonStyle(.borderless)
@@ -204,7 +204,7 @@ struct WorkoutListView: View {
                                     .padding(8)
                                     .background(
                                         Circle()
-                                            .fill(Color(.systemGray6))
+                                            .fill(Color.black.opacity(0.6))
                                     )
                             }
                             .buttonStyle(.borderless)
@@ -218,14 +218,14 @@ struct WorkoutListView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("FITNESS LEVEL")
                                     .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.secondary)
                                 LevelBadge(totalWorkouts: totalWorkouts)
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 8) {
                                 Text("WEEKLY GOAL")
                                     .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.secondary)
                                 WeeklyGoalRing(current: thisWeekWorkouts, goal: weeklyWorkoutGoal, color: .green)
                             }
                         }
@@ -269,27 +269,27 @@ struct WorkoutListView: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: "calendar")
                                             .font(.system(.caption, weight: .bold))
-                                            .foregroundStyle(.purple)
+                                            .foregroundStyle(.blue)
                                         CountingNumber(value: thisWeekWorkouts)
                                             .font(.system(.title2, weight: .bold))
-                                            .foregroundStyle(.purple)
+                                            .foregroundStyle(.blue)
                                     }
                                     Text("This Week")
                                         .font(.system(.caption2, weight: .medium))
                                         .foregroundStyle(.secondary)
-                                    WeekDots(workoutDays: thisWeekWorkoutDays, accentColor: .purple)
+                                    WeekDots(workoutDays: thisWeekWorkoutDays, accentColor: .blue)
                                 }
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: .infinity, minHeight: 76)
                                 .padding(.vertical, 12)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.purple.opacity(0.1))
+                                        .fill(Color.blue.opacity(0.1))
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.purple.opacity(0.25), lineWidth: 1)
+                                                .stroke(Color.blue.opacity(0.25), lineWidth: 1)
                                         )
                                 )
-                                .depthShadow(color: .purple, radius: 8)
+                                .depthShadow(color: .blue, radius: 8)
                                 .staggeredAppear(index: 2, maxStagger: 3)
                             }
 
@@ -329,7 +329,7 @@ struct WorkoutListView: View {
                     } header: {
                         HStack(spacing: 6) {
                             Circle()
-                                .fill(Color.green)
+                                .fill(Color.blue)
                                 .frame(width: 8, height: 8)
                             Text("Active Workout")
                                 .font(.system(.subheadline, weight: .semibold))
@@ -360,6 +360,7 @@ struct WorkoutListView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
                             .background(Color.blue)
+                            .shimmerEffect()
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .pulsingGlow(color: .blue, radius: 10)
                         }
@@ -444,7 +445,7 @@ struct WorkoutListView: View {
                         .padding(.horizontal, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.black.opacity(0.6))
+                                .fill(Color.blue.opacity(0.08))
                                 .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
@@ -456,6 +457,7 @@ struct WorkoutListView: View {
                     HStack {
                         Image(systemName: "doc.text.fill")
                             .font(.system(.caption, weight: .semibold))
+                            .foregroundStyle(.blue)
                         Text("Templates")
                             .font(.system(.subheadline, weight: .semibold))
                         if !templates.isEmpty {
@@ -502,15 +504,15 @@ struct WorkoutListView: View {
                                     Image(systemName: "chevron.right")
                                         .font(.system(.caption, weight: .semibold))
                                 }
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(.blue)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
                                 .background(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color.purple.opacity(0.1))
+                                        .fill(Color.blue.opacity(0.1))
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+                                                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
                                         )
                                 )
                             }
@@ -520,6 +522,7 @@ struct WorkoutListView: View {
                         HStack {
                             Image(systemName: "clock.arrow.circlepath")
                                 .font(.system(.caption, weight: .semibold))
+                                .foregroundStyle(.blue)
                             Text("Recent Workouts")
                                 .font(.system(.subheadline, weight: .semibold))
                             Spacer()
@@ -583,6 +586,7 @@ struct WorkoutListView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "lock.shield.fill")
                             .font(.system(.caption, weight: .semibold))
+                            .foregroundStyle(.green)
                         Text("Data & Backup")
                             .font(.system(.subheadline, weight: .semibold))
                     }
@@ -604,8 +608,11 @@ struct WorkoutListView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background {
-                Color(.systemBackground)
-                    .ignoresSafeArea()
+                ZStack {
+                    Color(.systemBackground)
+                    FloatingParticlesView()
+                }
+                .ignoresSafeArea()
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -755,11 +762,11 @@ struct WorkoutListView: View {
     private func duplicateWorkoutFromTemplate(_ template: Workout) -> Workout {
         // Create new workout with today's date and copy the name
         let newWorkout = Workout(name: template.name, date: Date(), isTemplate: false)
+        let templateExercises = template.exercisesByOrder
 
         // Copy all exercises (templates only have exercise names, no sets)
-        for exercise in (template.exercises ?? []) {
-            let newExercise = Exercise(name: exercise.name)
-            // Templates don't have sets, so we don't copy them
+        for (index, exercise) in templateExercises.enumerated() {
+            let newExercise = Exercise(name: exercise.name, order: index)
             if newWorkout.exercises == nil {
                 newWorkout.exercises = [newExercise]
             } else {
@@ -899,11 +906,8 @@ struct ActiveWorkoutRowView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.black.opacity(0.6))
                 .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
-                )
         )
+        .overlay(AnimatedGradientBorder())
         .onAppear {
             if let startTime = workout.startTime {
                 elapsedTime = Date().timeIntervalSince(startTime)
@@ -926,13 +930,13 @@ struct ActiveWorkoutRowView: View {
 struct TemplateRowView: View {
     let template: Workout
 
-    // Get first few exercise names for preview
+    // Get first few exercise names for preview (in saved order)
     private var exercisePreview: [String] {
-        Array((template.exercises ?? []).prefix(3).map { $0.name })
+        Array(template.exercisesByOrder.prefix(3).map { $0.name })
     }
 
     private var remainingCount: Int {
-        max(0, (template.exercises ?? []).count - 3)
+        max(0, template.exercisesByOrder.count - 3)
     }
 
     var body: some View {
@@ -990,12 +994,13 @@ struct TemplateRowView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6).opacity(0.8))
+                .fill(Color.black.opacity(0.6))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(.systemGray4).opacity(0.5), lineWidth: 0.5)
+                .stroke(Color(.separator), lineWidth: 0.5)
         )
+        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
     }
 }
 
@@ -1452,9 +1457,9 @@ struct HistoryWorkoutRowView: View {
         return formatter.string(from: workout.date)
     }
 
-    // Get first 2-3 exercise names for preview
+    // Get first 2-3 exercise names for preview (in saved order)
     private var exercisePreview: String? {
-        let exercises = workout.exercises ?? []
+        let exercises = workout.exercisesByOrder
         guard !exercises.isEmpty else { return nil }
         let names = exercises.prefix(3).map { $0.name }
         let joined = names.joined(separator: ", ")
@@ -1470,7 +1475,7 @@ struct HistoryWorkoutRowView: View {
             VStack(spacing: 4) {
                 Text(formattedDate)
                     .font(.system(.caption, weight: .semibold))
-                    .foregroundStyle(.purple)
+                    .foregroundStyle(.secondary)
                     .frame(width: 50)
             }
 

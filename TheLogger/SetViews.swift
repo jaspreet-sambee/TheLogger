@@ -79,6 +79,88 @@ struct SelectAllTextField: UIViewRepresentable {
     }
 }
 
+// MARK: - Set Input Text Field with Log Set Keyboard Accessory
+/// UITextField with toolbar above keyboard: [Done] dismisses keyboard, [Log Set] saves set.
+/// Eliminates the need to tap outside and then tap checkmark when using numberPad/decimalPad.
+struct SetInputTextFieldWithAccessory: UIViewRepresentable {
+    @Binding var text: String
+    var placeholder: String
+    var keyboardType: UIKeyboardType
+    var focusWhenAppear: Bool
+    var onDismissKeyboard: () -> Void
+    var onLogSet: () -> Void
+
+    func makeUIView(context: Context) -> UITextField {
+        let field = UITextField()
+        field.delegate = context.coordinator
+        field.placeholder = placeholder
+        field.keyboardType = keyboardType
+        field.borderStyle = .none
+        field.backgroundColor = .clear
+        field.font = .systemFont(ofSize: 17, weight: .semibold)
+        field.textAlignment = .natural
+        field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged), for: .editingChanged)
+
+        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
+        toolbar.sizeToFit()
+        let doneButton = UIBarButtonItem(title: "Done", style: .plain, target: context.coordinator, action: #selector(Coordinator.doneTapped))
+        let logSetButton = UIBarButtonItem(title: "Log Set", style: .done, target: context.coordinator, action: #selector(Coordinator.logSetTapped))
+        let spacer = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        toolbar.items = [doneButton, spacer, logSetButton]
+        field.inputAccessoryView = toolbar
+
+        return field
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+        if !focusWhenAppear {
+            context.coordinator.didTriggerFocus = false
+        }
+        if focusWhenAppear && !context.coordinator.didTriggerFocus {
+            context.coordinator.didTriggerFocus = true
+            DispatchQueue.main.async {
+                uiView.becomeFirstResponder()
+                uiView.selectAll(nil)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: SetInputTextFieldWithAccessory
+        var didTriggerFocus = false
+
+        init(_ parent: SetInputTextFieldWithAccessory) {
+            self.parent = parent
+        }
+
+        @objc func editingChanged(_ field: UITextField) {
+            parent.text = field.text ?? ""
+        }
+
+        @objc func doneTapped() {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            parent.onDismissKeyboard()
+        }
+
+        @objc func logSetTapped() {
+            parent.onLogSet()  // Save first; parent may refocus for next set (no dismiss)
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            DispatchQueue.main.async {
+                textField.selectAll(nil)
+            }
+        }
+    }
+}
+
 // MARK: - Inline Set Row View
 struct InlineSetRowView: View {
     @Bindable var set: WorkoutSet
@@ -660,68 +742,74 @@ struct InlineAddSetView: View {
             }
 
             if isTimeBased, let durationBinding = durationSeconds {
-                // Duration input for time-based exercises
+                // Duration input for time-based exercises (with keyboard Log Set accessory)
                 HStack(spacing: 6) {
                     Image(systemName: "clock")
                         .font(.system(.caption, weight: .medium))
                         .foregroundStyle(.secondary)
-                    TextField("Sec", text: $durationText)
-                        .keyboardType(.numberPad)
-                        .font(.system(.body, weight: .semibold))
-                        .focused($focusedField, equals: .duration)
-                        .frame(width: 70)
-                        .textFieldStyle(.plain)
-                        .accessibilityIdentifier("durationInput")
-                        .onAppear { durationText = "\(durationBinding.wrappedValue)" }
-                        .onChange(of: durationText) { _, newValue in
-                            if let v = Int(newValue), v >= 1 && v <= 9999 {
-                                durationBinding.wrappedValue = v
-                            }
+                    SetInputTextFieldWithAccessory(
+                        text: $durationText,
+                        placeholder: "Sec",
+                        keyboardType: .numberPad,
+                        focusWhenAppear: focusedField == .duration,
+                        onDismissKeyboard: { focusedField = nil },
+                        onLogSet: { saveAndContinue() }
+                    )
+                    .frame(width: 70, height: 24)
+                    .accessibilityIdentifier("durationInput")
+                    .onAppear { durationText = "\(durationBinding.wrappedValue)" }
+                    .onChange(of: durationText) { _, newValue in
+                        if let v = Int(newValue), v >= 1 && v <= 9999 {
+                            durationBinding.wrappedValue = v
                         }
-                        .onSubmit { saveAndContinue() }
+                    }
                 }
             } else {
-                // Reps input
+                // Reps input (with keyboard Log Set accessory)
                 HStack(spacing: 6) {
                     Image(systemName: "repeat")
                         .font(.system(.caption, weight: .medium))
                         .foregroundStyle(.secondary)
-                    TextField("Reps", text: $repsText)
-                        .keyboardType(.numberPad)
-                        .font(.system(.body, weight: .semibold))
-                        .focused($focusedField, equals: .reps)
-                        .frame(width: 60)
-                        .textFieldStyle(.plain)
-                        .accessibilityIdentifier("repsInput")
-                        .onAppear { repsText = "\(reps)" }
-                        .onChange(of: repsText) { _, newValue in
-                            if let value = Int(newValue), value > 0 && value <= 1000 {
-                                reps = value
-                            }
+                    SetInputTextFieldWithAccessory(
+                        text: $repsText,
+                        placeholder: "Reps",
+                        keyboardType: .numberPad,
+                        focusWhenAppear: focusedField == .reps,
+                        onDismissKeyboard: { focusedField = nil },
+                        onLogSet: { saveAndContinue() }
+                    )
+                    .frame(width: 60, height: 24)
+                    .accessibilityIdentifier("repsInput")
+                    .onAppear { repsText = "\(reps)" }
+                    .onChange(of: repsText) { _, newValue in
+                        if let value = Int(newValue), value > 0 && value <= 1000 {
+                            reps = value
                         }
-                        .onSubmit { focusedField = .weight }
+                    }
                 }
             }
 
             Spacer()
 
             if !isTimeBased {
-                // Weight input
+                // Weight input (with keyboard Log Set accessory)
                 HStack(spacing: 4) {
-                    TextField("Weight", text: $weightText)
-                        .keyboardType(.decimalPad)
-                        .font(.system(.body, weight: .semibold))
-                        .focused($focusedField, equals: .weight)
-                        .frame(width: 70)
-                        .textFieldStyle(.plain)
-                        .accessibilityIdentifier("weightInput")
-                        .onAppear { weightText = String(format: "%.1f", weight) }
-                        .onChange(of: weightText) { _, newValue in
-                            if let value = Double(newValue), value >= 0 && value <= 10000 {
-                                weight = value
-                            }
+                    SetInputTextFieldWithAccessory(
+                        text: $weightText,
+                        placeholder: "Weight",
+                        keyboardType: .decimalPad,
+                        focusWhenAppear: focusedField == .weight,
+                        onDismissKeyboard: { focusedField = nil },
+                        onLogSet: { saveAndContinue() }
+                    )
+                    .frame(width: 70, height: 24)
+                    .accessibilityIdentifier("weightInput")
+                    .onAppear { weightText = String(format: "%.1f", weight) }
+                    .onChange(of: weightText) { _, newValue in
+                        if let value = Double(newValue), value >= 0 && value <= 10000 {
+                            weight = value
                         }
-                        .onSubmit { saveAndContinue() }
+                    }
                     Text(UnitFormatter.weightUnit)
                         .font(.system(.caption, weight: .medium))
                         .foregroundStyle(.secondary)
@@ -827,7 +915,6 @@ struct InlineAddSetView: View {
                 return
             }
             dBinding.wrappedValue = secs
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onSave()
             showMicroFeedback()
             durationText = "\(secs)"
@@ -840,7 +927,6 @@ struct InlineAddSetView: View {
                 repsText = "\(max(1, reps))"
                 return
             }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             reps = repsValue
             if let weightValue = Double(weightText), weightValue >= 0 && weightValue <= 10000 {
                 weight = weightValue

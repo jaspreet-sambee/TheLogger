@@ -10,7 +10,7 @@ import SwiftData
 
 @main
 struct TheLoggerApp: App {
-    // Configure SwiftData model container with iCloud sync
+    // Configure SwiftData model container with iCloud sync and migration plan
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Workout.self,
@@ -28,7 +28,11 @@ struct TheLoggerApp: App {
         )
         
         do {
-            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(
+                for: Workout.self, Exercise.self, WorkoutSet.self, ExerciseMemory.self, PersonalRecord.self,
+                migrationPlan: TheLoggerMigrationPlan.self,
+                configurations: modelConfiguration
+            )
             
             // Migrate existing workouts that don't have a name
             // This runs synchronously to ensure migration completes before returning
@@ -46,7 +50,6 @@ struct TheLoggerApp: App {
                         needsSave = true
                     }
                     // Migrate sets: assign sortOrder = index so display order is stable.
-                    // Use stable order (id) so we don't renumber differently each launch.
                     for exercise in workout.exercises ?? [] {
                         let ordered = (exercise.sets ?? []).sorted { $0.id.uuidString < $1.id.uuidString }
                         for (index, set) in ordered.enumerated() {
@@ -54,6 +57,15 @@ struct TheLoggerApp: App {
                                 set.sortOrder = index
                                 needsSave = true
                             }
+                        }
+                    }
+                    // Migrate exercises: assign order = index (SwiftData V2 added Exercise.order).
+                    // Use stable sort by id so we don't renumber differently each launch.
+                    let orderedExs = (workout.exercises ?? []).sorted { $0.id.uuidString < $1.id.uuidString }
+                    for (index, exercise) in orderedExs.enumerated() {
+                        if exercise.order != index {
+                            exercise.order = index
+                            needsSave = true
                         }
                     }
                 }
@@ -64,49 +76,52 @@ struct TheLoggerApp: App {
             
             return container
         } catch {
-            // If migration fails, this is likely due to a schema change
-            // Try to delete the old database and create a new one
-            print("Error creating ModelContainer: \(error)")
-            print("Attempting to reset database due to schema change...")
+            // ModelContainer creation failed. Preserve existing store by moving to recovery
+            // (never delete), then create a fresh store. CloudKit may restore data on sync.
+            print("[TheLogger] Error creating ModelContainer: \(error)")
+            print("[TheLogger] Moving store to recovery folder (data preserved for potential recovery)")
             
-            // Get the Application Support directory where SwiftData stores files
-            let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            let storeURL = appSupportURL.appendingPathComponent("default.store")
-            
-            // Try to delete all database files
             let fileManager = FileManager.default
-            let filesToDelete = [
-                storeURL,
-                storeURL.appendingPathExtension("wal"),
-                storeURL.appendingPathExtension("shm")
+            let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            let storeBase = appSupportURL.appendingPathComponent("default.store")
+            
+            // Move store files to recovery directory instead of deleting
+            let timestamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+            let recoveryDir = appSupportURL.appendingPathComponent("default.store.recovery.\(timestamp)")
+            
+            let storeFiles: [URL] = [
+                storeBase,
+                storeBase.appendingPathExtension("wal"),
+                storeBase.appendingPathExtension("shm")
             ]
             
-            for url in filesToDelete {
-                if fileManager.fileExists(atPath: url.path) {
-                    do {
-                        try fileManager.removeItem(at: url)
-                        print("Deleted: \(url.lastPathComponent)")
-                    } catch {
-                        print("Failed to delete \(url.lastPathComponent): \(error)")
+            do {
+                try fileManager.createDirectory(at: recoveryDir, withIntermediateDirectories: true)
+                for url in storeFiles {
+                    if fileManager.fileExists(atPath: url.path) {
+                        let dest = recoveryDir.appendingPathComponent(url.lastPathComponent)
+                        try? fileManager.removeItem(at: dest)
+                        try fileManager.moveItem(at: url, to: dest)
+                        print("[TheLogger] Moved to recovery: \(url.lastPathComponent)")
                     }
                 }
+            } catch let moveError {
+                print("[TheLogger] Could not move to recovery: \(moveError)")
             }
             
-            // Also try to delete the entire store directory if it exists
-            let storeDirectory = appSupportURL.appendingPathComponent("default.store")
-            if fileManager.fileExists(atPath: storeDirectory.path) {
-                try? fileManager.removeItem(at: storeDirectory)
-            }
-            
-            // Try creating again with fresh database
+            // Create fresh container; CloudKit will sync down if data exists in iCloud
             do {
-                let newContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
-                print("Successfully created new database after reset")
-                return newContainer
+                let freshContainer = try ModelContainer(
+                    for: Workout.self, Exercise.self, WorkoutSet.self, ExerciseMemory.self, PersonalRecord.self,
+                    migrationPlan: TheLoggerMigrationPlan.self,
+                    configurations: modelConfiguration
+                )
+                print("[TheLogger] Created fresh database; CloudKit may restore data")
+                return freshContainer
             } catch {
-                print("Failed to create new database after reset: \(error)")
-                // Last resort: use in-memory storage (data won't persist)
-                print("Using in-memory storage as fallback")
+                print("[TheLogger] Failed to create fresh database: \(error)")
+                // Last resort: in-memory storage
+                print("[TheLogger] Using in-memory storage as fallback")
                 let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
                 do {
                     return try ModelContainer(for: schema, configurations: [fallbackConfig])

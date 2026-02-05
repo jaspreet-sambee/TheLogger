@@ -24,15 +24,19 @@ final class Exercise: Identifiable {
     /// Position within a superset (0, 1, 2...). Used to maintain order within a group.
     var supersetOrder: Int = 0
 
+    /// Position within the workout (0, 1, 2...). SwiftData relationships don't preserve order; this ensures display order.
+    var order: Int = 0
+
     /// Indicates if sets were auto-filled from exercise memory (transient, not persisted)
     @Transient var isAutoFilled: Bool = false
 
-    init(id: UUID = UUID(), name: String, sets: [WorkoutSet] = [], supersetGroupId: UUID? = nil, supersetOrder: Int = 0) {
+    init(id: UUID = UUID(), name: String, sets: [WorkoutSet] = [], supersetGroupId: UUID? = nil, supersetOrder: Int = 0, order: Int = 0) {
         self.id = id
         self.name = name
         self.sets = sets
         self.supersetGroupId = supersetGroupId
         self.supersetOrder = supersetOrder
+        self.order = order
     }
 
     /// Whether this exercise is part of a superset

@@ -8,13 +8,22 @@
 import SwiftUI
 import SwiftData
 
+/// Data passed to the end-workout summary sheet (ensures PRs are captured before sheet opens)
+struct EndSummaryData: Identifiable {
+    let id = UUID()
+    let summary: WorkoutSummary
+    let workoutName: String
+    let workoutDate: Date
+    let prExercises: [String]
+    let prDetails: [(name: String, weight: Double, reps: Int)]
+}
+
 // MARK: - Workout Detail View
 struct WorkoutDetailView: View {
     @Bindable var workout: Workout
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Namespace private var exerciseTransition
-    @Query(sort: \ExerciseMemory.lastUpdated, order: .reverse) private var exerciseMemories: [ExerciseMemory]
     // Observe unit system changes to trigger view refresh
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
     @State private var showingAddExercise = false
@@ -24,8 +33,7 @@ struct WorkoutDetailView: View {
     @State private var showingSaveAsTemplate = false
     @State private var isEditingWorkoutName = false
     @State private var workoutNameText = ""
-    @State private var showingEndSummary = false
-    @State private var prExercises: [String] = []
+    @State private var endSummaryData: EndSummaryData?
     @FocusState private var workoutNameFocused: Bool
     @State private var emptyExercisesAppeared = false
     @State private var showingDeleteExerciseConfirmation = false
@@ -33,23 +41,9 @@ struct WorkoutDetailView: View {
     @State private var elapsedTime: TimeInterval = 0
     @State private var timerTask: Task<Void, Never>? = nil
 
-    /// PR details for summary display (name, weight, reps)
-    private var prDetailsForSummary: [(name: String, weight: Double, reps: Int)] {
-        prExercises.compactMap { name in
-            guard let pr = PersonalRecordManager.getPR(for: name, modelContext: modelContext) else { return nil }
-            return (name: name, weight: pr.weight, reps: pr.reps)
-        }
-    }
-
-    // Get recently used exercises (top 5, preserving order from @Query sort)
-    private var recentlyUsedExercises: [String] {
-        var seen = Set<String>()
-        return exerciseMemories.compactMap { memory -> String? in
-            let name = memory.name
-            if seen.contains(name) { return nil }
-            seen.insert(name)
-            return name
-        }.prefix(5).map { $0 }
+    // Smart suggestions: library exercises (by muscle group) ranked by usage frequency
+    private var suggestedExercises: [String] {
+        ExerciseSuggester.suggest(for: workout, modelContext: modelContext, limit: 5)
     }
 
     var body: some View {
@@ -57,9 +51,22 @@ struct WorkoutDetailView: View {
             .navigationTitle("Workout Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !(workout.exercises ?? []).isEmpty {
+                if workout.isActive {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        EditButton()
+                        Button("End") {
+                            showingEndWorkoutConfirmation = true
+                        }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
+                        .accessibilityIdentifier("endWorkoutButton")
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(role: .destructive) {
+                            showingDiscardConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .accessibilityLabel("Discard workout")
                     }
                 }
             }
@@ -115,19 +122,19 @@ struct WorkoutDetailView: View {
             } message: {
                 Text("Are you sure you want to delete \(pendingDeleteIndices.count == 1 ? "this exercise" : "these exercises")? This cannot be undone.")
             }
-            .sheet(isPresented: $showingEndSummary) {
-                if workout.isCompleted {
-                    WorkoutEndSummaryView(
-                        summary: workout.summary,
-                        workoutName: workout.name,
-                        workoutDate: workout.date,
-                        prExercises: prExercises,
-                        prDetails: prDetailsForSummary
-                    ) {
-                        showingEndSummary = false
-                        dismiss()
-                    }
+            .sheet(item: $endSummaryData) { data in
+                WorkoutEndSummaryView(
+                    summary: data.summary,
+                    workoutName: data.workoutName,
+                    workoutDate: data.workoutDate,
+                    prExercises: data.prExercises,
+                    prDetails: data.prDetails
+                ) {
+                    endSummaryData = nil
+                    dismiss()
                 }
+                .presentationDetents([.large])
+                .presentationBackground(Color(.systemGroupedBackground))
             }
     }
 
@@ -137,7 +144,6 @@ struct WorkoutDetailView: View {
             summarySection
             exercisesSection
             saveAsTemplateSection
-            endWorkoutSection
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -145,43 +151,6 @@ struct WorkoutDetailView: View {
         .safeAreaInset(edge: .bottom) {
             if workout.isActive {
                 addExerciseButton
-            }
-        }
-    }
-
-    private var endWorkoutSection: some View {
-        Group {
-            if workout.isActive {
-                Section {
-                    Button {
-                        showingEndWorkoutConfirmation = true
-                    } label: {
-                        Text("End Workout")
-                            .font(.system(.body, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.red)
-                    .accessibilityIdentifier("endWorkoutButton")
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-
-                    Button {
-                        showingDiscardConfirmation = true
-                    } label: {
-                        Text("Discard Workout")
-                            .font(.system(.body, weight: .medium))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.secondary)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
-                }
             }
         }
     }
@@ -400,6 +369,12 @@ struct WorkoutDetailView: View {
             if (workout.exercises ?? []).isEmpty {
                 emptyExercisesView
             } else {
+                if !suggestedExercises.isEmpty {
+                    recentExercisesQuickAdd
+                        .listRowBackground(cardBackground(variant: .neutral))
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                }
                 exercisesList
             }
         } header: {
@@ -419,7 +394,7 @@ struct WorkoutDetailView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            if !recentlyUsedExercises.isEmpty {
+            if !suggestedExercises.isEmpty {
                 recentExercisesQuickAdd
             }
         }
@@ -447,7 +422,7 @@ struct WorkoutDetailView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(recentlyUsedExercises, id: \.self) { exerciseName in
+                    ForEach(suggestedExercises, id: \.self) { exerciseName in
                         Button {
                             addExerciseWithMemory(name: exerciseName)
                             saveWorkout()
@@ -515,6 +490,10 @@ struct WorkoutDetailView: View {
                 }
             }
             .staggeredAppear(index: index, maxStagger: 5)
+            .transition(.asymmetric(
+                insertion: .move(edge: .bottom).combined(with: .opacity),
+                removal: .opacity
+            ))
         }
         .onDelete { indexSet in
             // Store indices and show confirmation
@@ -692,16 +671,16 @@ struct WorkoutDetailView: View {
     }
 
     private func deleteExercises(at indexSet: IndexSet) {
-        // The list displays exercises in reversed order, so we need to map indices
-        // Collect exercise IDs first (before any mutations)
-        let reversedExercises = Array((workout.exercises ?? []).reversed())
-        let exerciseIdsToDelete = indexSet.compactMap { index -> UUID? in
-            guard index < reversedExercises.count else { return nil }
-            return reversedExercises[index].id
+        // Map display item indices to exercise IDs (display uses exercisesGroupedForDisplay.reversed())
+        let displayItems = Array(workout.exercisesGroupedForDisplay.reversed())
+        let exerciseIdsToDelete = indexSet.flatMap { index -> [UUID] in
+            guard index < displayItems.count else { return [] }
+            return displayItems[index].allExercises.map(\.id)
         }
-        // Delete by ID to avoid index issues
-        for id in exerciseIdsToDelete {
-            workout.removeExercise(id: id)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            for id in exerciseIdsToDelete {
+                workout.removeExercise(id: id)
+            }
         }
         saveWorkout()
     }
@@ -711,7 +690,8 @@ struct WorkoutDetailView: View {
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
 
-        let exercise = Exercise(name: name)
+        let nextOrder = (workout.exercises ?? []).map(\.order).max().map { $0 + 1 } ?? 0
+        let exercise = Exercise(name: name, order: nextOrder)
         let normalizedName = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Look for exercise memory
@@ -746,12 +726,13 @@ struct WorkoutDetailView: View {
             print("Error with exercise memory: \(error)")
         }
 
-        if workout.exercises == nil {
-            workout.exercises = [exercise]
-        } else {
-            workout.exercises?.append(exercise)
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            if workout.exercises == nil {
+                workout.exercises = [exercise]
+            } else {
+                workout.exercises?.append(exercise)
+            }
         }
-        // Auto-update workout name based on exercises
         workout.updateNameFromExercises()
     }
 
@@ -769,7 +750,11 @@ struct WorkoutDetailView: View {
         saveExerciseMemory()
 
         // Capture PRs from this workout
-        prExercises = PersonalRecordManager.processWorkoutForPRs(workout: workout, modelContext: modelContext)
+        let prExercises = PersonalRecordManager.processWorkoutForPRs(workout: workout, modelContext: modelContext)
+        let prDetails = prExercises.compactMap { name -> (name: String, weight: Double, reps: Int)? in
+            guard let pr = PersonalRecordManager.getPR(for: name, modelContext: modelContext) else { return nil }
+            return (name: name, weight: pr.weight, reps: pr.reps)
+        }
 
         do {
             try modelContext.save()
@@ -779,8 +764,14 @@ struct WorkoutDetailView: View {
             Task {
                 await LiveActivityManager.shared.endActivity()
             }
-            // Show summary instead of immediate dismiss
-            showingEndSummary = true
+            // Show summary with captured PR data
+            endSummaryData = EndSummaryData(
+                summary: workout.summary,
+                workoutName: workout.name,
+                workoutDate: workout.date,
+                prExercises: prExercises,
+                prDetails: prDetails
+            )
         } catch {
             print("Error ending workout: \(error)")
         }
@@ -1046,19 +1037,18 @@ struct SupersetExerciseRow: View {
         let descriptor = FetchDescriptor<Workout>(
             predicate: #Predicate { $0.isTemplate == true && $0.name == templateName }
         )
+        let sourceExercises = workout.exercisesByOrder
         if let existing = try? modelContext.fetch(descriptor), !existing.isEmpty {
             // Template with this name already exists, update it instead
             if let existingTemplate = existing.first {
-                // Remove old exercises
                 existingTemplate.exercises = []
-                // Copy exercises with their sets
-                for exercise in (workout.exercises ?? []) {
+                for (orderIndex, exercise) in sourceExercises.enumerated() {
                     var copiedSets: [WorkoutSet] = []
                     for (index, set) in exercise.setsByOrder.enumerated() {
                         let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, durationSeconds: set.durationSeconds, setType: set.type, sortOrder: index)
                         copiedSets.append(copiedSet)
                     }
-                    let templateExercise = Exercise(name: exercise.name, sets: copiedSets)
+                    let templateExercise = Exercise(name: exercise.name, sets: copiedSets, order: orderIndex)
                     if existingTemplate.exercises == nil {
                         existingTemplate.exercises = [templateExercise]
                     } else {
@@ -1067,24 +1057,20 @@ struct SupersetExerciseRow: View {
                 }
             }
         } else {
-            // Create a new template from the current workout
             let template = Workout(name: workout.name, date: Date(), isTemplate: true)
-
-            // Copy exercises with their sets
-            for exercise in (workout.exercises ?? []) {
+            for (orderIndex, exercise) in sourceExercises.enumerated() {
                 var copiedSets: [WorkoutSet] = []
                 for (index, set) in exercise.setsByOrder.enumerated() {
                     let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, durationSeconds: set.durationSeconds, setType: set.type, sortOrder: index)
                     copiedSets.append(copiedSet)
                 }
-                let templateExercise = Exercise(name: exercise.name, sets: copiedSets)
+                let templateExercise = Exercise(name: exercise.name, sets: copiedSets, order: orderIndex)
                 if template.exercises == nil {
                     template.exercises = [templateExercise]
                 } else {
                     template.exercises?.append(templateExercise)
                 }
             }
-
             modelContext.insert(template)
         }
 

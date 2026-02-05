@@ -137,14 +137,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		46UITEST0012F300000000006 /* TheLoggerUITests */ = {
-			isa = PBXGroup;
-			children = (
-				46UITEST0012F300000000002 /* DemoScenarios.swift */,
-			);
-			path = TheLoggerUITests;
-			sourceTree = "<group>";
-		};
 		46B5F1F22F2ECAA3005CFC92 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -152,6 +144,14 @@
 				46B5F1F52F2ECAA3005CFC92 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		46UITEST0012F300000000006 /* TheLoggerUITests */ = {
+			isa = PBXGroup;
+			children = (
+				46UITEST0012F300000000002 /* DemoScenarios.swift */,
+			);
+			path = TheLoggerUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -458,7 +458,7 @@
 				CODE_SIGN_ENTITLEMENTS = TheLogger/TheLogger.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 77BC8S8T5X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -495,7 +495,7 @@
 				CODE_SIGN_ENTITLEMENTS = TheLogger/TheLogger.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 77BC8S8T5X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

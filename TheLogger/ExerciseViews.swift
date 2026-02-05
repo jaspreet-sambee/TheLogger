@@ -332,6 +332,7 @@ struct ExerciseEditView: View {
     @State private var noteText = ""
     @FocusState private var noteFocused: Bool
     @State private var keyboardVisible = false
+    @State private var restTimer = RestTimerManager.shared
 
     var body: some View {
         Form {
@@ -456,11 +457,17 @@ struct ExerciseEditView: View {
                                 g.notificationOccurred(.success)
                             }
                         )
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .opacity
+                        ))
                     }
                     .onDelete { indexSet in
-                        let ordered = exercise.setsByOrder
-                        for index in indexSet where index < ordered.count {
-                            exercise.removeSet(id: ordered[index].id)
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            let ordered = exercise.setsByOrder
+                            for index in indexSet where index < ordered.count {
+                                exercise.removeSet(id: ordered[index].id)
+                            }
                         }
                         saveChanges()
                     }
@@ -481,43 +488,26 @@ struct ExerciseEditView: View {
                         durationSeconds: exerciseIsTimeBased ? $newSetDuration : nil,
                         onSave: {
                             if exerciseIsTimeBased {
-                                exercise.addSet(reps: 0, weight: 0, durationSeconds: newSetDuration)
+                                logSet(reps: 0, weight: 0, duration: newSetDuration)
                             } else {
-                                exercise.addSet(reps: newSetReps, weight: newSetWeight)
+                                logSet(reps: newSetReps, weight: newSetWeight)
                             }
-                            saveChanges()
-                            // Sync to widget
-                            workout.syncToWidget(currentExercise: exercise)
-                            // Update Live Activity with current exercise's set count
-                            Task {
-                                await LiveActivityManager.shared.updateActivity(
-                                    exerciseName: exercise.name,
-                                    exerciseId: exercise.id,
-                                    exerciseSets: (exercise.sets ?? []).count,
-                                    lastReps: exerciseIsTimeBased ? 0 : newSetReps,
-                                    lastWeight: exerciseIsTimeBased ? 0 : newSetWeight
-                                )
-                            }
-                            // Check for PR (skip for time-based)
-                            if !exerciseIsTimeBased {
-                                checkForPR(weight: newSetWeight, reps: newSetReps)
-                            }
-                            // Offer rest option (only for active workouts)
-                            // For supersets, only offer rest after the last exercise in the group
-                            if workout.isActive && workout.isLastInSuperset(exercise) {
-                                let restDuration = Self.suggestedRestDuration(for: exercise.name)
-                                RestTimerManager.shared.offerRest(for: exercise.id, duration: restDuration, autoStart: autoStartRestTimer)
-                                newSetReps = newSetReps  // Keep same as last added
-                                newSetWeight = newSetWeight
-                            } else if !workout.isActive {
+                            // Close form for active workouts — strip handles next set
+                            if workout.isActive {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                    isAddingSet = false
+                                }
+                                focusedField = nil
+                            } else {
                                 newSetReps = 0
                                 newSetWeight = 0
                                 newSetDuration = 30
                             }
-                            // Keep form open for quick successive adds
                         },
                         onCancel: {
-                            isAddingSet = false
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                isAddingSet = false
+                            }
                             focusedField = nil
                             RestTimerManager.shared.resume()
                             if workout.isActive, let lastSet = exercise.setsByOrder.last {
@@ -534,79 +524,34 @@ struct ExerciseEditView: View {
                             }
                         }
                     )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .opacity.combined(with: .move(edge: .bottom))
+                    ))
+                } else if (exercise.sets ?? []).isEmpty {
+                    // No sets yet — simple Add Set button
+                    Button {
+                        openAddSetForm()
+                    } label: {
+                        Label("Add Set", systemImage: "plus.circle")
+                            .font(.system(.body, weight: .medium))
+                    }
+                    .buttonStyle(.borderless)
+                    .tint(.blue)
+                    .accessibilityIdentifier("addSetButton")
                 } else {
-                    HStack(spacing: 16) {
-                        // Add Set button (opens inline form)
-                        Button {
-                            RestTimerManager.shared.pause()
-                            let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                            if workout.isActive, let lastSet = exercise.setsByOrder.last {
-                                if timeBased {
-                                    newSetDuration = lastSet.durationSeconds ?? 30
-                                } else {
-                                    newSetReps = lastSet.reps
-                                    newSetWeight = lastSet.weight
-                                }
-                            } else {
-                                newSetReps = 0
-                                newSetWeight = 0
-                                newSetDuration = 30
-                            }
-                            isAddingSet = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                focusedField = timeBased ? .duration : .reps
-                            }
-                        } label: {
-                            Label("Add Set", systemImage: "plus.circle")
-                                .font(.system(.body, weight: .medium))
-                        }
-                        .buttonStyle(.borderless)
-                        .tint(.blue)
-                        .accessibilityIdentifier("addSetButton")
-
-                        // Quick Repeat button (one-tap duplicate of last set)
-                        if let lastSet = exercise.setsByOrder.last {
-                            Button {
-                                let impact = UIImpactFeedbackGenerator(style: .light)
-                                impact.impactOccurred()
-                                let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    if timeBased, let d = lastSet.durationSeconds {
-                                        exercise.addSet(reps: 0, weight: 0, durationSeconds: d)
-                                    } else {
-                                        exercise.addSet(reps: lastSet.reps, weight: lastSet.weight)
-                                    }
-                                }
-                                saveChanges()
-                                // Sync to widget
-                                workout.syncToWidget(currentExercise: exercise)
-                                // Update Live Activity with current exercise's set count
-                                Task {
-                                    await LiveActivityManager.shared.updateActivity(
-                                        exerciseName: exercise.name,
-                                        exerciseId: exercise.id,
-                                        exerciseSets: (exercise.sets ?? []).count,
-                                        lastReps: timeBased ? 0 : lastSet.reps,
-                                        lastWeight: timeBased ? 0 : lastSet.weight
-                                    )
-                                }
-                                if !timeBased {
-                                    checkForPR(weight: lastSet.weight, reps: lastSet.reps)
-                                }
-
-                                // Offer rest option (only for active workouts)
-                                // For supersets, only offer rest after the last exercise in the group
-                                if workout.isActive && workout.isLastInSuperset(exercise) {
-                                    let restDuration = Self.suggestedRestDuration(for: exercise.name)
-                                    RestTimerManager.shared.offerRest(for: exercise.id, duration: restDuration, autoStart: autoStartRestTimer)
-                                }
-                            } label: {
-                                Label("Repeat", systemImage: "arrow.counterclockwise")
-                                    .font(.system(.body, weight: .medium))
-                            }
-                            .buttonStyle(.borderless)
-                            .tint(.secondary)
-                        }
+                    // Sets exist — QuickLogStrip, hidden while rest timer is active
+                    let restVisible = workout.isActive && restTimer.shouldShowFor(exerciseId: exercise.id)
+                    if !restVisible, let lastSet = exercise.setsByOrder.last {
+                        QuickLogStrip(
+                            lastSet: lastSet,
+                            isTimeBased: ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false,
+                            onLog: { reps, weight, duration in
+                                logSet(reps: reps, weight: weight, duration: duration)
+                            },
+                            onCustom: { openAddSetForm() }
+                        )
+                        .transition(.opacity)
                     }
                 }
             } header: {
@@ -914,6 +859,65 @@ struct ExerciseEditView: View {
         }
     }
 
+    /// Log a set with all side effects (widget sync, live activity, PR check, rest offer)
+    private func logSet(reps: Int, weight: Double, duration: Int? = nil) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            if timeBased, let d = duration {
+                exercise.addSet(reps: 0, weight: 0, durationSeconds: d)
+            } else {
+                exercise.addSet(reps: reps, weight: weight)
+            }
+        }
+        saveChanges()
+        workout.syncToWidget(currentExercise: exercise)
+
+        Task {
+            await LiveActivityManager.shared.updateActivity(
+                exerciseName: exercise.name,
+                exerciseId: exercise.id,
+                exerciseSets: (exercise.sets ?? []).count,
+                lastReps: timeBased ? 0 : reps,
+                lastWeight: timeBased ? 0 : weight
+            )
+        }
+
+        if !timeBased {
+            checkForPR(weight: weight, reps: reps)
+        }
+
+        if workout.isActive && workout.isLastInSuperset(exercise) {
+            let restDuration = Self.suggestedRestDuration(for: exercise.name)
+            RestTimerManager.shared.offerRest(for: exercise.id, duration: restDuration, autoStart: autoStartRestTimer)
+        }
+    }
+
+    /// Open the inline add-set form, pre-filled from the last logged set
+    private func openAddSetForm() {
+        RestTimerManager.shared.pause()
+        let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+        if workout.isActive, let lastSet = exercise.setsByOrder.last {
+            if timeBased {
+                newSetDuration = lastSet.durationSeconds ?? 30
+            } else {
+                newSetReps = lastSet.reps
+                newSetWeight = lastSet.weight
+            }
+        } else {
+            newSetReps = 0
+            newSetWeight = 0
+            newSetDuration = 30
+        }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            isAddingSet = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            focusedField = timeBased ? .duration : .reps
+        }
+    }
+
     /// Suggest rest duration based on exercise type (uses library)
     private static func suggestedRestDuration(for exerciseName: String) -> Int {
         ExerciseLibrary.shared.restDuration(for: exerciseName)
@@ -977,5 +981,86 @@ struct ExerciseEditView: View {
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
         }
+    }
+}
+
+// MARK: - Quick Log Strip
+/// Compact row of chips below the set list: Same / −X / +X / ⋯
+/// Replaces the old Add Set + Repeat buttons when at least one set exists.
+/// Hidden while the rest timer is active; reappears once rest completes.
+struct QuickLogStrip: View {
+    let lastSet: WorkoutSet
+    let isTimeBased: Bool
+    /// Log a set: (reps, weight-in-storage-units, duration-seconds?)
+    let onLog: (Int, Double, Int?) -> Void
+    /// Open the full inline add-set form for custom values
+    let onCustom: () -> Void
+
+    @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
+
+    // Weight step in display units (lbs or kg)
+    private var weightIncrement: Double {
+        unitSystem == "Imperial" ? 5.0 : 2.5
+    }
+
+    private var incrementLabel: String {
+        unitSystem == "Imperial" ? "5" : "2.5"
+    }
+
+    /// Apply a delta (in display units) to the last set's weight, return storage value
+    private func weightWithDelta(_ delta: Double) -> Double {
+        let display = UnitFormatter.convertToDisplay(lastSet.weight)
+        let newDisplay = max(0, display + delta)
+        return UnitFormatter.convertToStorage(newDisplay)
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Same — primary action (exact repeat)
+            chipButton(label: "Same", icon: "arrow.counterclockwise", isPrimary: true) {
+                if isTimeBased {
+                    onLog(0, 0, lastSet.durationSeconds)
+                } else {
+                    onLog(lastSet.reps, lastSet.weight, nil)
+                }
+            }
+
+            // Weight adjustment chips (weight-based exercises only)
+            if !isTimeBased {
+                chipButton(label: "−\(incrementLabel)", icon: nil, isPrimary: false) {
+                    onLog(lastSet.reps, weightWithDelta(-weightIncrement), nil)
+                }
+                chipButton(label: "+\(incrementLabel)", icon: nil, isPrimary: false) {
+                    onLog(lastSet.reps, weightWithDelta(+weightIncrement), nil)
+                }
+            }
+
+            // Escape hatch — opens full form for anything the chips don't cover
+            chipButton(label: "⋯", icon: nil, isPrimary: false) {
+                onCustom()
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func chipButton(label: String, icon: String?, isPrimary: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(.caption, weight: .medium))
+                }
+                Text(label)
+                    .font(.system(.subheadline, weight: .medium))
+            }
+            .foregroundStyle(isPrimary ? Color.blue : Color.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(isPrimary ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.1))
+            )
+        }
+        .buttonStyle(.plain)
     }
 }

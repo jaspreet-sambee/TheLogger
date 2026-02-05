@@ -11,7 +11,7 @@ import Charts
 
 // MARK: - Workout End Summary View
 
-/// Summary shown after ending a workout. Requires ~5s before Done is tappable.
+/// Summary shown after ending a workout. Requires ~2s before Done is tappable.
 struct WorkoutEndSummaryView: View {
     let summary: WorkoutSummary
     let workoutName: String
@@ -46,7 +46,10 @@ struct WorkoutEndSummaryView: View {
     @State private var showButton = false
     @State private var canDismiss = false
     @State private var showConfetti = false
-    private let minDisplaySeconds: Double = 5
+    @State private var prRowsRevealed = 0
+    @State private var durationPulse = false
+    @State private var trophyBounce = false
+    private let minDisplaySeconds: Double = 2
 
     private static let workoutDateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -55,18 +58,23 @@ struct WorkoutEndSummaryView: View {
         return f
     }()
 
+    private var hasPRs: Bool { !prExercises.isEmpty }
+
     var body: some View {
         ZStack {
-            VStack(spacing: 0) {
-                Spacer().frame(height: 20)
+            // Warm, soft background (no blue boundary)
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
 
+            VStack(spacing: 0) {
                 cardContent
                     .padding(.horizontal, 32)
                     .padding(.vertical, 24)
                     .frame(maxWidth: .infinity)
                     .background(cardBackground)
                     .padding(.horizontal, 16)
-                    .scaleEffect(cardVisible ? 1 : 0.92)
+                    .padding(.top, 12)
+                    .offset(y: cardVisible ? 0 : 60)
                     .opacity(cardVisible ? 1 : 0)
 
                 Spacer()
@@ -74,7 +82,7 @@ struct WorkoutEndSummaryView: View {
             .onAppear {
                 let options = ["Nice work", "Well done", "Great session", "Solid effort", "Keep it up"]
                 affirmation = options.randomElement() ?? "Nice work"
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
                     cardVisible = true
                 }
                 if !prExercises.isEmpty {
@@ -84,6 +92,12 @@ struct WorkoutEndSummaryView: View {
                     }
                 }
                 scheduleStagger()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    trophyBounce = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    durationPulse = true
+                }
                 DispatchQueue.main.asyncAfter(deadline: .now() + minDisplaySeconds) {
                     withAnimation(.easeOut(duration: 0.3)) {
                         canDismiss = true
@@ -101,9 +115,16 @@ struct WorkoutEndSummaryView: View {
     private func scheduleStagger() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { showHeader = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) { showAffirmation = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { showDuration = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { showStats = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) { showPRs = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+            showPRs = true
+            for i in 0..<prDetails.count {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.08) {
+                    prRowsRevealed = i + 1
+                }
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { showDuration = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) { showStats = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.52) { showButton = true }
     }
 
@@ -111,27 +132,30 @@ struct WorkoutEndSummaryView: View {
         ScrollView {
             VStack(spacing: 28) {
                 headerSection
-                        .opacity(showHeader ? 1 : 0)
-                        .offset(y: showHeader ? 0 : 6)
-                        .animation(.easeOut(duration: 0.32), value: showHeader)
+                    .opacity(showHeader ? 1 : 0)
+                    .offset(y: showHeader ? 0 : 6)
+                    .animation(.easeOut(duration: 0.32), value: showHeader)
+
                 affirmationText
                     .opacity(showAffirmation ? 1 : 0)
                     .offset(y: showAffirmation ? 0 : 6)
                     .animation(.easeOut(duration: 0.32), value: showAffirmation)
+
+                prSection
+                    .opacity(showPRs ? 1 : 0)
+                    .offset(y: showPRs ? 0 : 12)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.75), value: showPRs)
+
                 durationStat
                     .opacity(showDuration ? 1 : 0)
                     .offset(y: showDuration ? 0 : 6)
                     .animation(.easeOut(duration: 0.32), value: showDuration)
+
                 secondaryStats
                     .opacity(showStats ? 1 : 0)
                     .offset(y: showStats ? 0 : 6)
                     .animation(.easeOut(duration: 0.32), value: showStats)
-                if !prExercises.isEmpty {
-                    prSection
-                        .opacity(showPRs ? 1 : 0)
-                        .offset(y: showPRs ? 0 : 6)
-                        .animation(.easeOut(duration: 0.32), value: showPRs)
-                }
+
                 dismissButton
                     .opacity(showButton ? 1 : 0)
                     .offset(y: showButton ? 0 : 6)
@@ -141,7 +165,16 @@ struct WorkoutEndSummaryView: View {
     }
 
     private var headerSection: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.green)
+                Text("Workout complete")
+                    .font(.system(.caption, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+
             if !workoutName.isEmpty {
                 Text(workoutName)
                     .font(.system(.headline, weight: .semibold))
@@ -155,96 +188,149 @@ struct WorkoutEndSummaryView: View {
     }
 
     private var affirmationText: some View {
-        Text(affirmation)
-            .font(.system(.title2, weight: .semibold))
-            .foregroundStyle(.primary)
+        HStack(spacing: 8) {
+            Image(systemName: "star.fill")
+                .font(.system(size: 22))
+                .foregroundStyle(.yellow.opacity(0.9))
+            Text(affirmation)
+                .font(.system(.title2, weight: .semibold))
+                .foregroundStyle(.primary)
+        }
     }
 
     private var durationStat: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Image(systemName: "clock.fill")
                     .font(.system(.title3, weight: .medium))
-                    .foregroundStyle(.blue.opacity(0.9))
+                    .foregroundStyle(.orange.opacity(0.9))
                 Text(summary.formattedDuration)
                     .font(.system(size: 52, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
+                    .contentTransition(.numericText())
+                    .scaleEffect(durationPulse ? 1 : 0.97)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.65), value: durationPulse)
             }
             Text("workout time")
                 .font(.system(.subheadline, weight: .medium))
                 .foregroundStyle(.secondary)
         }
+        .padding(.vertical, 16)
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.orange.opacity(0.06))
+        )
     }
 
     private var secondaryStats: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 20) {
             statItem(value: "\(summary.totalExercises)", label: "exercises", icon: "figure.strengthtraining.traditional")
-            Rectangle()
-                .fill(Color.secondary.opacity(0.25))
-                .frame(width: 1, height: 44)
             statItem(value: "\(summary.totalSets)", label: "sets", icon: "square.stack.3d.up")
-            Rectangle()
-                .fill(Color.secondary.opacity(0.25))
-                .frame(width: 1, height: 44)
             statItem(value: "\(summary.totalReps)", label: "reps", icon: "repeat")
             if summary.totalVolume > 0 {
-                Rectangle()
-                    .fill(Color.secondary.opacity(0.25))
-                    .frame(width: 1, height: 44)
                 statItem(value: summary.formattedVolume, label: "volume", icon: "scalemass")
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.secondarySystemBackground).opacity(0.8))
+        )
     }
 
     private var prSection: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 8) {
+        VStack(spacing: 16) {
+            HStack(spacing: 10) {
                 Image(systemName: "trophy.fill")
-                    .font(.system(.body, weight: .semibold))
-                    .foregroundStyle(.yellow)
-                Text("Personal Records")
-                    .font(.system(.subheadline, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(hasPRs ? .yellow : .secondary.opacity(0.7))
+                    .symbolEffect(.bounce, value: trophyBounce)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(hasPRs ? "PRs achieved this workout" : "Personal Records")
+                        .font(.system(.subheadline, weight: .bold))
+                        .foregroundStyle(.primary)
+                    if prDetails.count > 1 {
+                        Text("\(prDetails.count) new records")
+                            .font(.system(.caption2, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
             }
 
-            if prDetails.isEmpty {
+            if prDetails.isEmpty && prExercises.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "flame")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.orange.opacity(0.8))
+                    Text("No PRs this workout — keep pushing!")
+                        .font(.system(.subheadline, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            } else if prDetails.isEmpty {
                 Text(prExercises.joined(separator: ", "))
                     .font(.system(.caption, weight: .medium))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             } else {
-                VStack(spacing: 8) {
-                    ForEach(prDetails, id: \.name) { item in
-                        HStack {
+                VStack(spacing: 10) {
+                    ForEach(Array(prDetails.enumerated()), id: \.element.name) { index, item in
+                        HStack(spacing: 10) {
                             Text(item.name)
                                 .font(.system(.subheadline, weight: .medium))
                                 .foregroundStyle(.primary)
                             Spacer()
                             Text(formatPR(item))
-                                .font(.system(.subheadline, weight: .semibold))
+                                .font(.system(.subheadline, weight: .bold))
+                                .foregroundStyle(.orange)
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(.yellow)
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 10)
                         .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.yellow.opacity(0.08))
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.yellow.opacity(0.12))
                         )
+                        .opacity(index < prRowsRevealed ? 1 : 0)
+                        .offset(y: index < prRowsRevealed ? 0 : 8)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: prRowsRevealed)
                     }
                 }
             }
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 20)
         .padding(.horizontal, 20)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.yellow.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.yellow.opacity(0.35), lineWidth: 1)
-                )
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            hasPRs
+                                ? LinearGradient(
+                                    colors: [Color.yellow.opacity(0.15), Color.orange.opacity(0.08)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                : LinearGradient(
+                                    colors: [Color(.tertiarySystemFill), Color(.quaternarySystemFill)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(
+                                    hasPRs ? Color.yellow.opacity(0.35) : Color.clear,
+                                    lineWidth: 1
+                                )
+                        )
         )
     }
 
@@ -259,7 +345,7 @@ struct WorkoutEndSummaryView: View {
         VStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(.caption2, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.orange.opacity(0.8))
             Text(value)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
@@ -288,7 +374,7 @@ struct WorkoutEndSummaryView: View {
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(canDismiss ? Color.blue : Color.gray)
+                    .fill(canDismiss ? Color.orange : Color.gray)
             )
         }
         .disabled(!canDismiss)
@@ -298,11 +384,8 @@ struct WorkoutEndSummaryView: View {
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 24)
             .fill(Color(.systemBackground))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.blue.opacity(0.15), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.06), radius: 20, x: 0, y: 8)
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 }
 
