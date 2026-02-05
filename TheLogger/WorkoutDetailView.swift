@@ -632,7 +632,7 @@ struct WorkoutDetailView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.04))
+                .fill(Color.black.opacity(0.6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.white.opacity(0.06), lineWidth: 1)
@@ -919,7 +919,7 @@ struct SupersetGroupCard: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.purple.opacity(0.08))
+        .background(Color.black.opacity(0.6))
     }
 
     private var exercisesListView: some View {
@@ -966,7 +966,7 @@ struct SupersetGroupCard: View {
 
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 14)
-            .fill(Color.black.opacity(0.4))
+            .fill(Color.black.opacity(0.6))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(isActive ? Color.purple.opacity(0.04) : Color.white.opacity(0.02))

@@ -26,7 +26,7 @@ struct CardStyle: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color(.systemGray6))
+                    .fill(Color.black.opacity(0.6))
                     .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
                     .overlay(
                         RoundedRectangle(cornerRadius: cornerRadius)
@@ -85,7 +85,7 @@ struct VariantCardStyle: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color(.systemGray6))
+                    .fill(Color.black.opacity(0.6))
                     .overlay(
                         RoundedRectangle(cornerRadius: cornerRadius)
                             .fill(variant.backgroundColor)
