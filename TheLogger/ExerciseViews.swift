@@ -985,82 +985,185 @@ struct ExerciseEditView: View {
 }
 
 // MARK: - Quick Log Strip
-/// Compact row of chips below the set list: Same / −X / +X / ⋯
-/// Replaces the old Add Set + Repeat buttons when at least one set exists.
-/// Hidden while the rest timer is active; reappears once rest completes.
+/// Stepper row below the set list: shows the last set's values with live
+/// reps / weight (or duration) adjustment. Tap ✓ to log.
+/// Hidden while rest timer is active; reappears once rest completes.
 struct QuickLogStrip: View {
     let lastSet: WorkoutSet
     let isTimeBased: Bool
     /// Log a set: (reps, weight-in-storage-units, duration-seconds?)
     let onLog: (Int, Double, Int?) -> Void
-    /// Open the full inline add-set form for custom values
+    /// Open the full inline add-set form
     let onCustom: () -> Void
 
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
 
-    // Weight step in display units (lbs or kg)
-    private var weightIncrement: Double {
+    @State private var reps: Int
+    @State private var weightDisplay: Double   // display units (lbs or kg)
+    @State private var duration: Int           // seconds
+
+    init(lastSet: WorkoutSet, isTimeBased: Bool,
+         onLog: @escaping (Int, Double, Int?) -> Void,
+         onCustom: @escaping () -> Void) {
+        self.lastSet = lastSet
+        self.isTimeBased = isTimeBased
+        self.onLog = onLog
+        self.onCustom = onCustom
+        self._reps = State(initialValue: lastSet.reps)
+        self._weightDisplay = State(initialValue: UnitFormatter.convertToDisplay(lastSet.weight))
+        self._duration = State(initialValue: lastSet.durationSeconds ?? 30)
+    }
+
+    private var smallWeightStep: Double {
+        unitSystem == "Imperial" ? 2.5 : 1.25
+    }
+
+    private var largeWeightStep: Double {
         unitSystem == "Imperial" ? 5.0 : 2.5
     }
 
-    private var incrementLabel: String {
-        unitSystem == "Imperial" ? "5" : "2.5"
-    }
-
-    /// Apply a delta (in display units) to the last set's weight, return storage value
-    private func weightWithDelta(_ delta: Double) -> Double {
-        let display = UnitFormatter.convertToDisplay(lastSet.weight)
-        let newDisplay = max(0, display + delta)
-        return UnitFormatter.convertToStorage(newDisplay)
-    }
-
     var body: some View {
-        HStack(spacing: 8) {
-            // Same — primary action (exact repeat)
-            chipButton(label: "Same", icon: "arrow.counterclockwise", isPrimary: true) {
-                if isTimeBased {
-                    onLog(0, 0, lastSet.durationSeconds)
-                } else {
-                    onLog(lastSet.reps, lastSet.weight, nil)
-                }
+        HStack(spacing: 10) {
+            Image(systemName: "plus.circle")
+                .font(.system(.subheadline))
+                .foregroundStyle(.blue)
+
+            if isTimeBased {
+                durationGroup
+            } else {
+                repsGroup
+
+                Text("×")
+                    .font(.system(.subheadline, weight: .medium))
+                    .foregroundStyle(.tertiary)
+
+                weightGroup
+
+                Text(UnitFormatter.weightUnit)
+                    .font(.system(.caption, weight: .medium))
+                    .foregroundStyle(.tertiary)
             }
 
-            // Weight adjustment chips (weight-based exercises only)
-            if !isTimeBased {
-                chipButton(label: "−\(incrementLabel)", icon: nil, isPrimary: false) {
-                    onLog(lastSet.reps, weightWithDelta(-weightIncrement), nil)
-                }
-                chipButton(label: "+\(incrementLabel)", icon: nil, isPrimary: false) {
-                    onLog(lastSet.reps, weightWithDelta(+weightIncrement), nil)
-                }
-            }
+            Spacer()
 
-            // Escape hatch — opens full form for anything the chips don't cover
-            chipButton(label: "⋯", icon: nil, isPrimary: false) {
-                onCustom()
+            Button { commit() } label: {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(.subheadline))
+                    .foregroundStyle(.green)
             }
+            .buttonStyle(.plain)
+
+            Button { onCustom() } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(.caption2, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.vertical, 8)
+        .onChange(of: lastSet.id) { _, _ in
+            reps = lastSet.reps
+            weightDisplay = UnitFormatter.convertToDisplay(lastSet.weight)
+            duration = lastSet.durationSeconds ?? 30
+        }
     }
 
-    private func chipButton(label: String, icon: String?, isPrimary: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                if let icon = icon {
-                    Image(systemName: icon)
-                        .font(.system(.caption, weight: .medium))
-                }
-                Text(label)
-                    .font(.system(.subheadline, weight: .medium))
+    // MARK: - Stepper Groups
+
+    private var repsGroup: some View {
+        HStack(spacing: 0) {
+            stepButton("−") { reps = max(1, reps - 1) }
+            Text("\(reps)")
+                .font(.system(.subheadline, weight: .semibold))
+                .monospacedDigit()
+                .frame(minWidth: 20, alignment: .center)
+            stepButton("+") { reps += 1 }
+        }
+        .background(Capsule().fill(Color.secondary.opacity(0.1)))
+    }
+
+    private var weightGroup: some View {
+        HStack(spacing: 4) {
+            // Large decrease (-5)
+            iconStepButton("minus.circle.fill", size: .large) {
+                weightDisplay = max(0, weightDisplay - largeWeightStep)
             }
-            .foregroundStyle(isPrimary ? Color.blue : Color.secondary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(
-                Capsule()
-                    .fill(isPrimary ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.1))
-            )
+
+            // Small decrease (-2.5)
+            iconStepButton("minus.circle", size: .small) {
+                weightDisplay = max(0, weightDisplay - smallWeightStep)
+            }
+
+            // Weight display
+            Text(formatWeight(weightDisplay))
+                .font(.system(.subheadline, weight: .semibold))
+                .monospacedDigit()
+                .frame(minWidth: 40, alignment: .center)
+
+            // Small increase (+2.5)
+            iconStepButton("plus.circle", size: .small) {
+                weightDisplay += smallWeightStep
+            }
+
+            // Large increase (+5)
+            iconStepButton("plus.circle.fill", size: .large) {
+                weightDisplay += largeWeightStep
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(Color.secondary.opacity(0.1)))
+    }
+
+    private var durationGroup: some View {
+        HStack(spacing: 0) {
+            stepButton("−") { duration = max(5, duration - 5) }
+            Text(UnitFormatter.formatDuration(duration))
+                .font(.system(.subheadline, weight: .semibold))
+                .monospacedDigit()
+                .frame(minWidth: 34, alignment: .center)
+            stepButton("+") { duration += 5 }
+        }
+        .background(Capsule().fill(Color.secondary.opacity(0.1)))
+    }
+
+    // MARK: - Helpers
+
+    private enum ButtonSize {
+        case small, large
+    }
+
+    private func stepButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(.subheadline, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 26, height: 28)
         }
         .buttonStyle(.plain)
+    }
+
+    private func iconStepButton(_ systemName: String, size: ButtonSize = .large, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size == .large ? .body : .caption, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: size == .large ? 24 : 20, height: size == .large ? 24 : 20)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Integer when whole, one decimal otherwise
+    private func formatWeight(_ value: Double) -> String {
+        value == value.rounded() ? "\(Int(value))" : String(format: "%.1f", value)
+    }
+
+    private func commit() {
+        if isTimeBased {
+            onLog(0, 0, duration)
+        } else {
+            onLog(reps, UnitFormatter.convertToStorage(weightDisplay), nil)
+        }
     }
 }

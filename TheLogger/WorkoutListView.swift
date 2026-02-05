@@ -600,9 +600,9 @@ struct WorkoutListView: View {
             .navigationDestination(for: String.self) { workoutId in
                 // Check both workouts and templates arrays
                 if let workout = workouts.first(where: { $0.id.uuidString == workoutId }) {
-                    WorkoutDetailView(workout: workout)
+                    WorkoutDetailView(workout: workout, onLogAgain: { logAgainFrom(workout: $0) })
                 } else if let template = templates.first(where: { $0.id.uuidString == workoutId }) {
-                    WorkoutDetailView(workout: template)
+                    WorkoutDetailView(workout: template, onLogAgain: { logAgainFrom(workout: $0) })
                 }
             }
             .listStyle(.plain)
@@ -617,7 +617,10 @@ struct WorkoutListView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingWorkoutHistory) {
-                WorkoutHistoryView(workouts: workoutHistory)
+                WorkoutHistoryView(workouts: workoutHistory, onLogAgain: { workout in
+                    showingWorkoutHistory = false
+                    logAgainFrom(workout: workout)
+                })
             }
             .sheet(isPresented: $showingWorkoutSelector) {
                 WorkoutSelectorView(templates: templates) { templateWorkout in
@@ -776,7 +779,66 @@ struct WorkoutListView: View {
 
         return newWorkout
     }
-    
+
+    /// Duplicate a completed workout as a new active workout, filling sets from ExerciseMemory.
+    private func logAgainFrom(workout: Workout) {
+        // End any existing active workout first
+        if let existingActive = activeWorkout {
+            existingActive.endTime = Date()
+            try? modelContext.save()
+        }
+
+        // Create new workout with same name
+        let newWorkout = Workout(name: workout.name, date: Date(), isTemplate: false)
+
+        // Copy exercises in order, filling sets from memory (mirrors addExerciseWithMemory logic)
+        let memories = (try? modelContext.fetch(FetchDescriptor<ExerciseMemory>())) ?? []
+        for (index, exercise) in workout.exercisesByOrder.enumerated() {
+            let newExercise = Exercise(name: exercise.name, order: index)
+            let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if let memory = memories.first(where: { $0.normalizedName == normalizedName }) {
+                let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+                for _ in 0..<memory.lastSets {
+                    if isTimeBased, let d = memory.lastDuration {
+                        newExercise.addSet(reps: 0, weight: 0, durationSeconds: d)
+                    } else {
+                        newExercise.addSet(reps: memory.lastReps, weight: memory.lastWeight)
+                    }
+                }
+                newExercise.isAutoFilled = true
+            }
+
+            if newWorkout.exercises == nil {
+                newWorkout.exercises = [newExercise]
+            } else {
+                newWorkout.exercises?.append(newExercise)
+            }
+        }
+
+        // Mark as active and save
+        newWorkout.startTime = Date()
+        newWorkout.endTime = nil
+        newWorkout.isTemplate = false
+        modelContext.insert(newWorkout)
+
+        do {
+            try modelContext.save()
+            newWorkout.syncToWidget()
+            let exerciseName = newWorkout.exercises?.first?.name ?? "Workout"
+            let exerciseId = newWorkout.exercises?.first?.id ?? UUID()
+            LiveActivityManager.shared.startActivity(
+                workoutId: newWorkout.id,
+                workoutName: newWorkout.name,
+                exerciseName: exerciseName,
+                exerciseId: exerciseId
+            )
+            navigationPath.append(newWorkout.id.uuidString)
+        } catch {
+            print("Error starting workout: \(error)")
+        }
+    }
+
     private func deleteTemplates(at offsets: IndexSet) {
         for index in offsets {
             modelContext.delete(templates[index])
@@ -1332,6 +1394,7 @@ struct TemplateCardView: View {
 // MARK: - Workout History View
 struct WorkoutHistoryView: View {
     let workouts: [Workout]
+    var onLogAgain: ((Workout) -> Void)? = nil
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @State private var navigationPath = NavigationPath()
@@ -1414,7 +1477,7 @@ struct WorkoutHistoryView: View {
             }
             .navigationDestination(for: String.self) { workoutId in
                 if let workout = workouts.first(where: { $0.id.uuidString == workoutId }) {
-                    WorkoutDetailView(workout: workout)
+                    WorkoutDetailView(workout: workout, onLogAgain: onLogAgain)
                 }
             }
             .listStyle(.plain)

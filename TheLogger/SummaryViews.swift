@@ -49,7 +49,7 @@ struct WorkoutEndSummaryView: View {
     @State private var prRowsRevealed = 0
     @State private var durationPulse = false
     @State private var trophyBounce = false
-    private let minDisplaySeconds: Double = 2
+    private let minDisplaySeconds: Double = 1.0
 
     private static let workoutDateFormatter: DateFormatter = {
         let f = DateFormatter()

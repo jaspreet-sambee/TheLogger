@@ -21,6 +21,8 @@ struct EndSummaryData: Identifiable {
 // MARK: - Workout Detail View
 struct WorkoutDetailView: View {
     @Bindable var workout: Workout
+    /// Called when user taps "Log Again" on a completed workout. Parent owns navigation.
+    var onLogAgain: ((Workout) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Namespace private var exerciseTransition
@@ -29,7 +31,6 @@ struct WorkoutDetailView: View {
     @State private var showingAddExercise = false
     @State private var exerciseName = ""
     @State private var showingEndWorkoutConfirmation = false
-    @State private var showingDiscardConfirmation = false
     @State private var showingSaveAsTemplate = false
     @State private var isEditingWorkoutName = false
     @State private var workoutNameText = ""
@@ -40,6 +41,8 @@ struct WorkoutDetailView: View {
     @State private var pendingDeleteIndices: IndexSet = []
     @State private var elapsedTime: TimeInterval = 0
     @State private var timerTask: Task<Void, Never>? = nil
+    @State private var showingSettings = false
+    @State private var exerciseToNavigate: Exercise?
 
     // Smart suggestions: library exercises (by muscle group) ranked by usage frequency
     private var suggestedExercises: [String] {
@@ -51,6 +54,15 @@ struct WorkoutDetailView: View {
             .navigationTitle("Workout Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 if workout.isActive {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("End") {
@@ -60,21 +72,28 @@ struct WorkoutDetailView: View {
                         .foregroundStyle(.green)
                         .accessibilityIdentifier("endWorkoutButton")
                     }
+                } else if workout.isCompleted {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(role: .destructive) {
-                            showingDiscardConfirmation = true
-                        } label: {
-                            Image(systemName: "trash")
+                        Button("Log Again") {
+                            onLogAgain?(workout)
                         }
-                        .accessibilityLabel("Discard workout")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.blue)
                     }
                 }
             }
             .sheet(isPresented: $showingAddExercise) {
                 ExerciseSearchView { selectedName in
-                    addExerciseWithMemory(name: selectedName)
+                    let exercise = addExerciseWithMemory(name: selectedName)
                     saveWorkout()
+                    // Delay navigation to allow sheet to dismiss first
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        exerciseToNavigate = exercise
+                    }
                 }
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
             }
             .onChange(of: workout.date) {
                 saveWorkout()
@@ -87,24 +106,19 @@ struct WorkoutDetailView: View {
                 stopTimer()
             }
             .alert("End Workout", isPresented: $showingEndWorkoutConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("End", role: .destructive) {
-                    endWorkout()
-                }
                 Button("Save as Template & End") {
                     saveAsTemplate()
                     endWorkout()
                 }
-            } message: {
-                Text("Are you sure you want to end this workout?")
-            }
-            .alert("Discard Workout?", isPresented: $showingDiscardConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Discard", role: .destructive) {
+                Button("End") {
+                    endWorkout()
+                }
+                Button("Discard workout", role: .destructive) {
                     discardWorkout()
                 }
+                Button("Cancel", role: .cancel) { }
             } message: {
-                Text("This workout will be permanently deleted and cannot be recovered.")
+                Text("Are you sure you want to end this workout?")
             }
             .alert("Template Saved", isPresented: $showingSaveAsTemplate) {
                 Button("OK", role: .cancel) { }
@@ -135,6 +149,9 @@ struct WorkoutDetailView: View {
                 }
                 .presentationDetents([.large])
                 .presentationBackground(Color(.systemGroupedBackground))
+            }
+            .navigationDestination(item: $exerciseToNavigate) { exercise in
+                ExerciseEditView(exercise: exercise, workout: workout, namespace: exerciseTransition)
             }
     }
 
@@ -424,8 +441,9 @@ struct WorkoutDetailView: View {
                 HStack(spacing: 10) {
                     ForEach(suggestedExercises, id: \.self) { exerciseName in
                         Button {
-                            addExerciseWithMemory(name: exerciseName)
+                            let exercise = addExerciseWithMemory(name: exerciseName)
                             saveWorkout()
+                            exerciseToNavigate = exercise
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "plus.circle.fill")
@@ -685,7 +703,8 @@ struct WorkoutDetailView: View {
         saveWorkout()
     }
 
-    private func addExerciseWithMemory(name: String) {
+    @discardableResult
+    private func addExerciseWithMemory(name: String) -> Exercise {
         // Haptic feedback on add
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
@@ -734,6 +753,7 @@ struct WorkoutDetailView: View {
             }
         }
         workout.updateNameFromExercises()
+        return exercise
     }
 
     private func endWorkout() {

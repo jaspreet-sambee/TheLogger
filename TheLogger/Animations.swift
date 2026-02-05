@@ -662,7 +662,7 @@ struct AnimatedStatCard<Icon: View>: View {
                     )
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 76)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
@@ -788,13 +788,7 @@ struct RecentWorkoutCard: View {
                     .padding(.vertical, 4)
                     .background(
                         Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.purple, .blue],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
+                            .fill(Color.blue)
                     )
 
                 // Workout name
@@ -823,20 +817,11 @@ struct RecentWorkoutCard: View {
             .frame(width: 140, height: 110)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(.systemGray6),
-                                Color(.systemGray5).opacity(0.8)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color.black.opacity(0.6))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+                    .stroke(Color.blue.opacity(0.2), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
@@ -1254,6 +1239,114 @@ struct DepthShadow: ViewModifier {
 extension View {
     func depthShadow(color: Color = .black, radius: CGFloat = 12) -> some View {
         modifier(DepthShadow(color: color, radius: radius))
+    }
+}
+
+// MARK: - Shimmer Effect
+
+/// A shimmer sweep overlay using TimelineView for reliable infinite looping
+struct ShimmerEffect: ViewModifier {
+    func body(content: Content) -> some View {
+        content.overlay {
+            TimelineView(.animation(minimumInterval: 1/30)) { timeline in
+                GeometryReader { geo in
+                    let now = timeline.date.timeIntervalSinceReferenceDate
+                    let width = geo.size.width
+                    let shimmerWidth = width * 0.5
+                    let period = 4.0  // 3s sweep + 1s pause
+                    let t = now.truncatingRemainder(dividingBy: period)
+                    let progress = min(t / 3.0, 1.0)
+                    let offset = progress * (width + shimmerWidth) - shimmerWidth
+
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.3), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: shimmerWidth)
+                    .offset(x: offset)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+    }
+}
+
+extension View {
+    func shimmerEffect() -> some View {
+        modifier(ShimmerEffect())
+    }
+}
+
+// MARK: - Animated Gradient Border
+
+/// A RoundedRectangle border with a smoothly rotating angular gradient
+struct AnimatedGradientBorder: View {
+    let cornerRadius: CGFloat
+    let colors: [Color]
+    let lineWidth: CGFloat
+
+    init(cornerRadius: CGFloat = 12, colors: [Color] = [.blue, .cyan, .blue], lineWidth: CGFloat = 1.5) {
+        self.cornerRadius = cornerRadius
+        self.colors = colors
+        self.lineWidth = lineWidth
+    }
+
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .stroke(
+                AngularGradient(
+                    colors: colors,
+                    center: .center,
+                    startAngle: .degrees(rotation),
+                    endAngle: .degrees(rotation + 360)
+                ),
+                lineWidth: lineWidth
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
+    }
+}
+
+// MARK: - Floating Particles
+
+/// Subtle drifting background particles rendered via Canvas
+struct FloatingParticlesView: View {
+    private let particleCount = 12
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1/15)) { timeline in
+            Canvas { context, size in
+                let now = timeline.date.timeIntervalSinceReferenceDate
+
+                for i in 0..<particleCount {
+                    let seed = Double(i) * 7.31 + 1.9
+                    let cycleX = 70.0 + Double(i % 3) * 20
+                    let cycleY = 80.0 + Double(i % 4) * 15
+
+                    let baseX = size.width * (sin(seed * 3.7) + 1) / 2
+                    let baseY = size.height * (cos(seed * 2.3) + 1) / 2
+
+                    let driftX = sin(now / cycleX * .pi * 2 + seed) * 50
+                    let driftY = cos(now / cycleY * .pi * 2 + seed * 1.5) * 40
+
+                    let x = baseX + driftX
+                    let y = baseY + driftY
+                    let radius = 2.0 + seed.truncatingRemainder(dividingBy: 4.0)
+
+                    context.fill(
+                        Circle().path(in: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)),
+                        with: .color(.blue.opacity(0.04))
+                    )
+                }
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 

@@ -66,7 +66,8 @@ TheLogger is an iOS workout tracking app that emphasizes speed, simplicity, and 
 ### App Entry (`TheLogger/`)
 | File | Responsibility |
 |------|----------------|
-| `TheLoggerApp.swift` | App entry point, SwiftData container setup, migrations |
+| `TheLoggerApp.swift` | App entry point, SwiftData container setup |
+| `SchemaMigrations.swift` | VersionedSchema, SchemaMigrationPlan - required for schema changes |
 
 ## Data Model
 
@@ -197,10 +198,37 @@ When working on features, these files typically need to be read:
 - Navigation → `WorkoutListView.swift`, `TheLoggerApp.swift`
 - Settings → `SettingsView.swift`, `Workout.swift` (UnitFormatter)
 
+## SwiftData Schema Migration & Data Preservation
+
+**CRITICAL: User data must never be deleted by the app.**
+
+### Migration Infrastructure
+- **File**: `SchemaMigrations.swift`
+- **Components**: `TheLoggerSchemaV1` (VersionedSchema), `TheLoggerMigrationPlan` (SchemaMigrationPlan)
+- TheLoggerApp creates ModelContainer with `migrationPlan: TheLoggerMigrationPlan.self`
+
+### Rules
+1. **Never delete the store** - On ModelContainer failure, move store files to `default.store.recovery.<timestamp>/` instead of deleting. Preserve data for potential recovery.
+2. **Keep CloudKit enabled** - `cloudKitDatabase: .automatic` provides iCloud backup. When a fresh store is created after failure, CloudKit can restore data.
+3. **All schema changes go through VersionedSchema** - Add new schema versions in SchemaMigrations.swift; add MigrationStage for custom migrations; append to `stages` array.
+4. **Lightweight migrations** - Adding optional properties may work automatically. Changing types or removing properties requires `MigrationStage.custom(fromVersion:toVersion:willMigrate:didMigrate:)`.
+
+### Adding a New Schema Version (Future)
+1. Create `TheLoggerSchemaV2` enum conforming to VersionedSchema with `versionIdentifier = Schema.Version(2, 0, 0)`
+2. Add `migrateV1toV2 = MigrationStage.lightweight(fromVersion:toVersion:)` or `.custom(...)` for complex changes
+3. Append to `TheLoggerMigrationPlan.schemas` and `stages`
+
+### Failure Flow (TheLoggerApp)
+1. ModelContainer creation fails → Move store to recovery dir (never delete)
+2. Create fresh ModelContainer → CloudKit sync may restore data
+3. Last resort: in-memory storage
+
 ## What Not To Do
 
 - Don't add external dependencies without explicit approval
-- Don't modify the SwiftData schema without migration plan
+- Don't modify the SwiftData schema without adding to SchemaMigrations.swift and migration plan
+- Don't delete SwiftData store files - move to recovery directory instead
+- Don't disable CloudKit without explicit approval
 - Don't use `@StateObject` - use `@State` with `@Observable` instead
 - Don't add features beyond what was requested
 - Don't create new documentation files unless explicitly asked

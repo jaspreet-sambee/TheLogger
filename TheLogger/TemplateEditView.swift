@@ -61,7 +61,7 @@ struct TemplateEditView: View {
                 }
 
                 Section {
-                    let exercisesList = templateWorkout.exercises ?? []
+                    let exercisesList = templateWorkout.exercisesByOrder
                     if exercisesList.isEmpty {
                         Text("Add your first exercise to start logging")
                             .font(.system(.subheadline, weight: .regular))
