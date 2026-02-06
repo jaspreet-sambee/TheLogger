@@ -32,7 +32,7 @@ enum TheLoggerMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [TheLoggerSchemaV1.self]
     }
-    
+
     static var stages: [MigrationStage] {
         []
     }

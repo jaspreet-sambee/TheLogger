@@ -378,6 +378,7 @@ struct ExerciseEditView: View {
     @FocusState private var noteFocused: Bool
     @State private var keyboardVisible = false
     @State private var restTimer = RestTimerManager.shared
+    @State private var restTimerEnabled: Bool? = nil  // nil = global default, true/false = explicit
 
     var body: some View {
         Form {
@@ -460,6 +461,67 @@ struct ExerciseEditView: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+
+            // Rest Timer section - dedicated and visible
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "timer")
+                        .font(.system(.body))
+                        .foregroundStyle(.blue)
+                        .frame(width: 28)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Rest Timer")
+                            .font(.system(.body, weight: .medium))
+                            .foregroundStyle(.primary)
+
+                        Text("Persists across workouts")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    Spacer()
+
+                    Menu {
+                        Button {
+                            restTimerEnabled = nil
+                            saveRestTimerPreference()
+                        } label: {
+                            Label("Use Global Default", systemImage: restTimerEnabled == nil ? "checkmark" : "")
+                        }
+
+                        Button {
+                            restTimerEnabled = true
+                            saveRestTimerPreference()
+                        } label: {
+                            Label("Always Show", systemImage: restTimerEnabled == true ? "checkmark" : "")
+                        }
+
+                        Button {
+                            restTimerEnabled = false
+                            saveRestTimerPreference()
+                        } label: {
+                            Label("Never Show", systemImage: restTimerEnabled == false ? "checkmark" : "")
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(restTimerStatusText)
+                                .font(.system(.subheadline, weight: .medium))
+                                .foregroundStyle(.blue)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue.opacity(0.15))
+                        )
+                    }
+                }
+                .padding(.vertical, 2)
             }
 
             Section {
@@ -586,8 +648,11 @@ struct ExerciseEditView: View {
                     .accessibilityIdentifier("addSetButton")
                 } else {
                     // Sets exist — QuickLogStrip, hidden while rest timer is active
-                    let restVisible = workout.isActive && restTimer.shouldShowFor(exerciseId: exercise.id)
-                    if !restVisible, let lastSet = exercise.setsByOrder.last {
+                    let shouldShowRest = workout.isActive
+                        && restTimer.shouldShowFor(exerciseId: exercise.id)
+                        && shouldOfferRestTimer(for: exercise.name)
+
+                    if !shouldShowRest, let lastSet = exercise.setsByOrder.last {
                         QuickLogStrip(
                             lastSet: lastSet,
                             isTimeBased: ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false,
@@ -782,6 +847,7 @@ struct ExerciseEditView: View {
             exerciseNameText = exercise.name
             loadNote()
             loadPR()
+            loadRestTimerPreference()
         }
         .onChange(of: exercise.name) { oldValue, newValue in
             if !isEditingExerciseName {
@@ -934,8 +1000,11 @@ struct ExerciseEditView: View {
         }
 
         if workout.isActive && workout.isLastInSuperset(exercise) {
-            let restDuration = Self.suggestedRestDuration(for: exercise.name)
-            RestTimerManager.shared.offerRest(for: exercise.id, duration: restDuration, autoStart: autoStartRestTimer)
+            // Check per-exercise preference before offering rest
+            if shouldOfferRestTimer(for: exercise.name) {
+                let restDuration = Self.suggestedRestDuration(for: exercise.name)
+                RestTimerManager.shared.offerRest(for: exercise.id, duration: restDuration, autoStart: autoStartRestTimer)
+            }
         }
     }
 
@@ -966,6 +1035,30 @@ struct ExerciseEditView: View {
     /// Suggest rest duration based on exercise type (uses library)
     private static func suggestedRestDuration(for exerciseName: String) -> Int {
         ExerciseLibrary.shared.restDuration(for: exerciseName)
+    }
+
+    private var restTimerEnabledIcon: String {
+        switch restTimerEnabled {
+        case nil: return "circle.dotted"           // Using global default
+        case true: return "checkmark.circle.fill"  // Always show
+        case false: return "xmark.circle.fill"     // Never show
+        }
+    }
+
+    private var restTimerEnabledColor: Color {
+        switch restTimerEnabled {
+        case nil: return .secondary
+        case true: return .green
+        case false: return .red.opacity(0.7)
+        }
+    }
+
+    private var restTimerStatusText: String {
+        switch restTimerEnabled {
+        case nil: return "Default"
+        case true: return "Always"
+        case false: return "Never"
+        }
     }
 
     private func loadNote() {
@@ -999,6 +1092,66 @@ struct ExerciseEditView: View {
             }
         } catch {
             print("Error saving note: \(error)")
+        }
+    }
+
+    /// Determine if rest timer should be offered based on per-exercise preference
+    private func shouldOfferRestTimer(for exerciseName: String) -> Bool {
+        let normalizedName = exerciseName.lowercased().trimmingCharacters(in: .whitespaces)
+        let descriptor = FetchDescriptor<ExerciseMemory>()
+
+        guard let memories = try? modelContext.fetch(descriptor),
+              let memory = memories.first(where: { $0.normalizedName == normalizedName }) else {
+            // No memory exists - use global default
+            return UserDefaults.standard.bool(forKey: "globalRestTimerEnabled")
+        }
+
+        // Per-exercise preference takes priority over global default
+        if let enabled = memory.restTimerEnabled {
+            return enabled
+        }
+
+        // nil = use global default
+        return UserDefaults.standard.bool(forKey: "globalRestTimerEnabled")
+    }
+
+    private func loadRestTimerPreference() {
+        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespaces)
+        let descriptor = FetchDescriptor<ExerciseMemory>()
+
+        do {
+            let memories = try modelContext.fetch(descriptor)
+            if let memory = memories.first(where: { $0.normalizedName == normalizedName }) {
+                restTimerEnabled = memory.restTimerEnabled
+            }
+        } catch {
+            print("Error loading rest timer preference: \(error)")
+        }
+    }
+
+    private func saveRestTimerPreference() {
+        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespaces)
+        let descriptor = FetchDescriptor<ExerciseMemory>()
+
+        do {
+            let memories = try modelContext.fetch(descriptor)
+            if let memory = memories.first(where: { $0.normalizedName == normalizedName }) {
+                memory.updateRestTimerEnabled(restTimerEnabled)
+                try modelContext.save()
+            } else {
+                // Create new memory with rest timer preference
+                let newMemory = ExerciseMemory(
+                    name: exercise.name,
+                    restTimerEnabled: restTimerEnabled
+                )
+                modelContext.insert(newMemory)
+                try modelContext.save()
+            }
+
+            // Provide haptic feedback
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } catch {
+            print("Error saving rest timer preference: \(error)")
         }
     }
 

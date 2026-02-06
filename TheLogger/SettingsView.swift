@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
     @AppStorage("defaultRestSeconds") private var defaultRestSeconds: Int = 90
     @AppStorage("autoStartRestTimer") private var autoStartRestTimer: Bool = false
+    @AppStorage("globalRestTimerEnabled") private var globalRestTimerEnabled: Bool = false
     @AppStorage("userName") private var userName: String = ""
     @AppStorage("weeklyWorkoutGoal") private var weeklyWorkoutGoal: Int = 4
     
@@ -54,18 +55,36 @@ struct SettingsView: View {
                 
                 // Rest Timer Section
                 Section {
-                    Stepper(value: $defaultRestSeconds, in: 30...300, step: 15) {
-                        HStack {
-                            Text("Default Rest")
-                            Spacer()
-                            Text(formatSeconds(defaultRestSeconds))
+                    Toggle(isOn: $globalRestTimerEnabled) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Enable Rest Timer")
+                                .font(.system(.body, weight: .medium))
+                            Text("Shows rest timer after logging sets")
+                                .font(.caption2)
                                 .foregroundStyle(.secondary)
-                                .monospacedDigit()
                         }
                     }
 
-                    Toggle(isOn: $autoStartRestTimer) {
-                        Text("Auto-start after logging set")
+                    if globalRestTimerEnabled {
+                        Stepper(value: $defaultRestSeconds, in: 30...300, step: 15) {
+                            HStack {
+                                Text("Default Rest")
+                                Spacer()
+                                Text(formatSeconds(defaultRestSeconds))
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                        }
+
+                        Toggle(isOn: $autoStartRestTimer) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Auto-start Timer")
+                                    .font(.system(.body, weight: .medium))
+                                Text("Starts immediately after logging set")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 } header: {
                     Label("Rest Timer", systemImage: "timer")
@@ -73,7 +92,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .textCase(nil)
                 } footer: {
-                    Text("Default rest time between sets. Compound exercises automatically use longer rest periods.")
+                    Text("Global default for rest timer. You can override for specific exercises in the exercise detail view.")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }

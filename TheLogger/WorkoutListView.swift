@@ -767,9 +767,26 @@ struct WorkoutListView: View {
         let newWorkout = Workout(name: template.name, date: Date(), isTemplate: false)
         let templateExercises = template.exercisesByOrder
 
-        // Copy all exercises (templates only have exercise names, no sets)
+        // Copy all exercises with their sets from template
         for (index, exercise) in templateExercises.enumerated() {
             let newExercise = Exercise(name: exercise.name, order: index)
+
+            // Copy sets from template if they exist
+            if let templateSets = exercise.sets, !templateSets.isEmpty {
+                var copiedSets: [WorkoutSet] = []
+                for (setIndex, templateSet) in exercise.setsByOrder.enumerated() {
+                    let copiedSet = WorkoutSet(
+                        reps: templateSet.reps,
+                        weight: templateSet.weight,
+                        durationSeconds: templateSet.durationSeconds,
+                        setType: templateSet.type,
+                        sortOrder: setIndex
+                    )
+                    copiedSets.append(copiedSet)
+                }
+                newExercise.sets = copiedSets
+            }
+
             if newWorkout.exercises == nil {
                 newWorkout.exercises = [newExercise]
             } else {

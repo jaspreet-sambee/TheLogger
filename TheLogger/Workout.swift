@@ -898,8 +898,10 @@ final class ExerciseMemory {
     var lastDuration: Int?
     var lastUpdated: Date = Date()
     var note: String?
-    
-    init(name: String, lastReps: Int = 0, lastWeight: Double = 0, lastSets: Int = 1, lastDuration: Int? = nil, lastUpdated: Date = Date(), note: String? = nil) {
+    /// Per-exercise rest timer preference. nil = use global default, true/false = explicit choice
+    var restTimerEnabled: Bool?
+
+    init(name: String, lastReps: Int = 0, lastWeight: Double = 0, lastSets: Int = 1, lastDuration: Int? = nil, lastUpdated: Date = Date(), note: String? = nil, restTimerEnabled: Bool? = nil) {
         self.name = name
         self.lastReps = lastReps
         self.lastWeight = lastWeight
@@ -907,6 +909,7 @@ final class ExerciseMemory {
         self.lastDuration = lastDuration
         self.lastUpdated = lastUpdated
         self.note = note
+        self.restTimerEnabled = restTimerEnabled
     }
     
     /// Normalized name for comparison (lowercase, trimmed)
@@ -929,6 +932,12 @@ final class ExerciseMemory {
     /// Update note only
     func updateNote(_ note: String?) {
         self.note = note?.isEmpty == true ? nil : note
+        self.lastUpdated = Date()
+    }
+
+    /// Update rest timer preference
+    func updateRestTimerEnabled(_ enabled: Bool?) {
+        self.restTimerEnabled = enabled
         self.lastUpdated = Date()
     }
 }
