@@ -743,7 +743,7 @@ struct GlassMorphism: ViewModifier {
 }
 
 extension View {
-    func glassMorphism(cornerRadius: CGFloat = 16, intensity: Double = 0.8) -> some View {
+    func glassMorphism(cornerRadius: CGFloat = 12, intensity: Double = 0.8) -> some View {
         modifier(GlassMorphism(cornerRadius: cornerRadius, intensity: intensity))
     }
 }
@@ -816,11 +816,11 @@ struct RecentWorkoutCard: View {
             .padding(12)
             .frame(width: 140, height: 110)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.black.opacity(0.6))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.blue.opacity(0.2), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
