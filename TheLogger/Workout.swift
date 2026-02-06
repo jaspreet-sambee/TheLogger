@@ -549,17 +549,21 @@ struct WorkoutDataExporter {
     
     /// Generate CSV content from workout history
     static func generateCSV(from workouts: [Workout]) -> String {
-        var csv = "Workout Date,Workout Name,Exercise,Set Number,Reps,Weight (lbs)\n"
-        
+        // Get current unit system for proper header and conversion
+        let unitSystem = UnitFormatter.currentSystem
+        let weightUnit = unitSystem.weightUnit
+
+        var csv = "Workout Date,Workout Name,Exercise,Set Number,Reps,Weight (\(weightUnit))\n"
+
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .short
         dateFormatter.timeStyle = .short
-        
+
         // Only export completed workouts (not templates)
         let completedWorkouts = workouts
             .filter { !$0.isTemplate && $0.endTime != nil }
             .sorted { $0.date > $1.date }
-        
+
         for workout in completedWorkouts {
             let dateString = dateFormatter.string(from: workout.date)
             let workoutName = escapeCSV(workout.name)
@@ -569,7 +573,9 @@ struct WorkoutDataExporter {
 
                 for (index, set) in exercise.setsByOrder.enumerated() {
                     let setNumber = index + 1
-                    csv += "\(dateString),\(workoutName),\(exerciseName),\(setNumber),\(set.reps),\(set.weight)\n"
+                    // Convert weight to display units (stored in lbs, export in user's preferred unit)
+                    let displayWeight = UnitFormatter.convertToDisplay(set.weight)
+                    csv += "\(dateString),\(workoutName),\(exerciseName),\(setNumber),\(set.reps),\(displayWeight)\n"
                 }
             }
         }

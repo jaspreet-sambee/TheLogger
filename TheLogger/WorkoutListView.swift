@@ -476,7 +476,19 @@ struct WorkoutListView: View {
                     .foregroundStyle(.secondary)
                     .textCase(nil)
                 }
-                
+
+                // PR Timeline Widget (only show if user has completed workouts)
+                if !workoutHistory.isEmpty {
+                    Section {
+                        PRHomeWidgetView()
+                    } header: {
+                        EmptyView()
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+
                 // Recent Workouts Section (inline horizontal scroll)
                 if !recentWorkouts.isEmpty {
                     Section {
@@ -597,14 +609,6 @@ struct WorkoutListView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }
-            .navigationDestination(for: String.self) { workoutId in
-                // Check both workouts and templates arrays
-                if let workout = workouts.first(where: { $0.id.uuidString == workoutId }) {
-                    WorkoutDetailView(workout: workout, onLogAgain: { logAgainFrom(workout: $0) })
-                } else if let template = templates.first(where: { $0.id.uuidString == workoutId }) {
-                    WorkoutDetailView(workout: template, onLogAgain: { logAgainFrom(workout: $0) })
-                }
-            }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background {
@@ -696,6 +700,19 @@ struct WorkoutListView: View {
                         deepLinkWorkoutId = nil
                         deepLinkExerciseId = nil
                     }
+                }
+            }
+            .navigationDestination(for: String.self) { workoutId in
+                // Check both workouts and templates arrays
+                if let workout = workouts.first(where: { $0.id.uuidString == workoutId }) {
+                    let _ = print("✅ Found workout: \(workout.name)")
+                    WorkoutDetailView(workout: workout, onLogAgain: { logAgainFrom(workout: $0) })
+                } else if let template = templates.first(where: { $0.id.uuidString == workoutId }) {
+                    let _ = print("✅ Found template: \(template.name)")
+                    WorkoutDetailView(workout: template, onLogAgain: { logAgainFrom(workout: $0) })
+                } else {
+                    let _ = print("❌ No workout found for ID: \(workoutId)")
+                    Text("Workout not found")
                 }
             }
         }
