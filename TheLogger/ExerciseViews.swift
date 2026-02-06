@@ -219,6 +219,7 @@ struct ExerciseCard: View {
     let workout: Workout
     let namespace: Namespace.ID
     var isActive: Bool = false
+    var onSaveWorkout: (() -> Void)?
 
     private var setsSummary: String {
         let sets = exercise.sets ?? []
@@ -271,6 +272,11 @@ struct ExerciseCard: View {
                             )
                     }
 
+                    // Superset menu button
+                    if workout.isActive {
+                        supersetMenuButton
+                    }
+
                     // Sets count badge
                     let setsList = exercise.sets ?? []
                     if !setsList.isEmpty {
@@ -294,18 +300,57 @@ struct ExerciseCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color.black.opacity(0.6))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(isActive ? Color.blue.opacity(0.06) : Color.white.opacity(0.02))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: 12)
                         .stroke(isActive ? Color.blue.opacity(0.15) : Color.white.opacity(0.06), lineWidth: 1)
                 )
                 .matchedGeometryEffect(id: "card-\(exercise.id)", in: namespace)
         )
+    }
+
+    @ViewBuilder
+    private var supersetMenuButton: some View {
+        let otherExercises = (workout.exercises ?? []).filter { $0.id != exercise.id && !$0.isInSuperset }
+
+        Menu {
+            if exercise.isInSuperset {
+                // Show remove option if already in superset
+                Button(role: .destructive) {
+                    workout.removeFromSuperset(exerciseId: exercise.id)
+                    onSaveWorkout?()
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                } label: {
+                    Label("Remove from Superset", systemImage: "link.badge.minus")
+                }
+            } else if !otherExercises.isEmpty {
+                // Show create superset options
+                ForEach(otherExercises) { other in
+                    Button {
+                        workout.createSuperset(from: [exercise.id, other.id])
+                        onSaveWorkout?()
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    } label: {
+                        Label(other.name, systemImage: "link")
+                    }
+                }
+            } else {
+                // No other exercises available
+                Text("No other exercises to superset")
+                    .foregroundStyle(.secondary)
+            }
+        } label: {
+            Image(systemName: exercise.isInSuperset ? "link.circle.fill" : "link.circle")
+                .font(.system(.caption, weight: .medium))
+                .foregroundStyle(exercise.isInSuperset ? .blue : .secondary)
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+        }
     }
 }
 
@@ -818,11 +863,11 @@ struct ExerciseEditView: View {
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color.black.opacity(0.6))
                 .shadow(color: Color.primary.opacity(0.06), radius: 8, x: 0, y: 2)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.primary.opacity(0.06), lineWidth: 1)
                 )
                 .matchedGeometryEffect(id: "card-\(exercise.id)", in: namespace)

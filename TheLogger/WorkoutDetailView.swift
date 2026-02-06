@@ -485,7 +485,8 @@ struct WorkoutDetailView: View {
                             exercise: exercise,
                             workout: workout,
                             namespace: exerciseTransition,
-                            isActive: workout.isActive && index == 0
+                            isActive: workout.isActive && index == 0,
+                            onSaveWorkout: saveWorkout
                         )
                     }
                     .buttonStyle(.plain)
