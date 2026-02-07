@@ -303,9 +303,10 @@ struct ExerciseDetailView: View {
     private var fullHistorySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button {
-                withAnimation(.smooth) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                     showingAllWorkouts.toggle()
                 }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.5)
             } label: {
                 HStack {
                     Text("All Workouts")

@@ -377,8 +377,10 @@ struct ExerciseEditView: View {
     @State private var noteText = ""
     @FocusState private var noteFocused: Bool
     @State private var keyboardVisible = false
-    @State private var restTimer = RestTimerManager.shared
+    private let restTimer = RestTimerManager.shared
     @State private var restTimerEnabled: Bool? = nil  // nil = global default, true/false = explicit
+    @State private var quickLogStripOffset: CGFloat = 50
+    @State private var quickLogStripOpacity: Double = 0
 
     var body: some View {
         Form {
@@ -426,7 +428,9 @@ struct ExerciseEditView: View {
                             Spacer()
                             Button("Done") {
                                 saveNote()
-                                isNoteExpanded = false
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    isNoteExpanded = false
+                                }
                             }
                             .font(.caption)
                         }
@@ -434,7 +438,9 @@ struct ExerciseEditView: View {
                     .padding(.vertical, 4)
                 } else {
                     Button {
-                        isNoteExpanded = true
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            isNoteExpanded = true
+                        }
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: noteText.isEmpty ? "note.text.badge.plus" : "note.text")
@@ -568,8 +574,10 @@ struct ExerciseEditView: View {
                             insertion: .move(edge: .bottom).combined(with: .opacity),
                             removal: .opacity
                         ))
+                        .staggeredAppear(index: index, maxStagger: 8)
                     }
                     .onDelete { indexSet in
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                             let ordered = exercise.setsByOrder
                             for index in indexSet where index < ordered.count {
@@ -652,7 +660,7 @@ struct ExerciseEditView: View {
                         && restTimer.shouldShowFor(exerciseId: exercise.id)
                         && shouldOfferRestTimer(for: exercise.name)
 
-                    if !shouldShowRest, let lastSet = exercise.setsByOrder.last {
+                    if let lastSet = exercise.setsByOrder.last {
                         QuickLogStrip(
                             lastSet: lastSet,
                             isTimeBased: ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false,
@@ -661,7 +669,25 @@ struct ExerciseEditView: View {
                             },
                             onCustom: { openAddSetForm() }
                         )
-                        .transition(.opacity)
+                        .onChange(of: shouldShowRest) { oldValue, newValue in
+                            if newValue {
+                                // Rest timer showing - hide QuickLogStrip immediately (no animation)
+                                quickLogStripOffset = 80
+                                quickLogStripOpacity = 0
+                            } else {
+                                // Rest timer dismissed - animate QuickLogStrip in with bounce
+                                withAnimation(.interpolatingSpring(stiffness: 150, damping: 12)) {
+                                    quickLogStripOffset = 0
+                                    quickLogStripOpacity = 1.0
+                                }
+                            }
+                        }
+                        .offset(y: quickLogStripOffset)
+                        .opacity(quickLogStripOpacity)
+                        .onAppear {
+                            quickLogStripOffset = shouldShowRest ? 80 : 0
+                            quickLogStripOpacity = shouldShowRest ? 0 : 1.0
+                        }
                     }
                 }
             } header: {
@@ -1097,13 +1123,13 @@ struct ExerciseEditView: View {
 
     /// Determine if rest timer should be offered based on per-exercise preference
     private func shouldOfferRestTimer(for exerciseName: String) -> Bool {
-        let normalizedName = exerciseName.lowercased().trimmingCharacters(in: .whitespaces)
+        let normalizedName = exerciseName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let descriptor = FetchDescriptor<ExerciseMemory>()
+        let globalEnabled = UserDefaults.standard.bool(forKey: "globalRestTimerEnabled")
 
         guard let memories = try? modelContext.fetch(descriptor),
               let memory = memories.first(where: { $0.normalizedName == normalizedName }) else {
-            // No memory exists - use global default
-            return UserDefaults.standard.bool(forKey: "globalRestTimerEnabled")
+            return globalEnabled
         }
 
         // Per-exercise preference takes priority over global default
@@ -1111,12 +1137,11 @@ struct ExerciseEditView: View {
             return enabled
         }
 
-        // nil = use global default
-        return UserDefaults.standard.bool(forKey: "globalRestTimerEnabled")
+        return globalEnabled
     }
 
     private func loadRestTimerPreference() {
-        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespaces)
+        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let descriptor = FetchDescriptor<ExerciseMemory>()
 
         do {
@@ -1130,7 +1155,7 @@ struct ExerciseEditView: View {
     }
 
     private func saveRestTimerPreference() {
-        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespaces)
+        let normalizedName = exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let descriptor = FetchDescriptor<ExerciseMemory>()
 
         do {
@@ -1160,6 +1185,7 @@ struct ExerciseEditView: View {
     }
 
     private func checkForPR(weight: Double, reps: Int) {
+        print("[PR] checkForPR called - exercise=\(exercise.name), weight=\(weight), reps=\(reps)")
         let isNewPR = PersonalRecordManager.checkAndSavePR(
             exerciseName: exercise.name,
             weight: weight,
@@ -1167,6 +1193,7 @@ struct ExerciseEditView: View {
             workoutId: workout.id,
             modelContext: modelContext
         )
+        print("[PR] checkAndSavePR returned isNewPR=\(isNewPR)")
 
         if isNewPR {
             // Reload PR and show celebration
@@ -1199,6 +1226,8 @@ struct QuickLogStrip: View {
     @State private var reps: Int
     @State private var weightDisplay: Double   // display units (lbs or kg)
     @State private var duration: Int           // seconds
+    @State private var commitScale: CGFloat = 1.0
+    @State private var commitRotation: Double = 0
 
     init(lastSet: WorkoutSet, isTimeBased: Bool,
          onLog: @escaping (Int, Double, Int?) -> Void,
@@ -1222,39 +1251,34 @@ struct QuickLogStrip: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "plus.circle")
-                .font(.system(.subheadline))
-                .foregroundStyle(.blue)
-
             if isTimeBased {
                 durationGroup
             } else {
                 repsGroup
-
-                Text("×")
-                    .font(.system(.subheadline, weight: .medium))
-                    .foregroundStyle(.tertiary)
-
                 weightGroup
-
-                Text(UnitFormatter.weightUnit)
-                    .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(.tertiary)
             }
 
             Spacer()
 
-            Button { commit() } label: {
+            Button {
+                // Animate then commit
+                withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
+                    commitScale = 1.3
+                    commitRotation = 360
+                }
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    commit()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        commitScale = 1.0
+                    }
+                }
+            } label: {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(.subheadline))
+                    .font(.system(.title3))
                     .foregroundStyle(.green)
-            }
-            .buttonStyle(.plain)
-
-            Button { onCustom() } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(.caption2, weight: .medium))
-                    .foregroundStyle(.tertiary)
+                    .scaleEffect(commitScale)
+                    .rotationEffect(.degrees(commitRotation))
             }
             .buttonStyle(.plain)
         }
@@ -1271,10 +1295,16 @@ struct QuickLogStrip: View {
     private var repsGroup: some View {
         HStack(spacing: 0) {
             stepButton("−") { reps = max(1, reps - 1) }
-            Text("\(reps)")
-                .font(.system(.subheadline, weight: .semibold))
-                .monospacedDigit()
-                .frame(minWidth: 20, alignment: .center)
+            Button { onCustom() } label: {
+                Text("\(reps)")
+                    .font(.system(.subheadline, weight: .semibold))
+                    .monospacedDigit()
+                    .frame(minWidth: 20, alignment: .center)
+                    .contentTransition(.numericText(value: Double(reps)))
+                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: reps)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Tap to enter custom reps")
             stepButton("+") { reps += 1 }
         }
         .background(Capsule().fill(Color.secondary.opacity(0.1)))
@@ -1292,11 +1322,18 @@ struct QuickLogStrip: View {
                 weightDisplay = max(0, weightDisplay - smallWeightStep)
             }
 
-            // Weight display
-            Text(formatWeight(weightDisplay))
-                .font(.system(.subheadline, weight: .semibold))
-                .monospacedDigit()
-                .frame(minWidth: 40, alignment: .center)
+            // Weight display — tap to enter custom value
+            Button { onCustom() } label: {
+                Text(formatWeight(weightDisplay))
+                    .font(.system(.subheadline, weight: .semibold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .frame(minWidth: 56, alignment: .center)
+                    .contentTransition(.numericText(value: weightDisplay))
+                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: weightDisplay)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Tap to enter custom weight")
 
             // Small increase (+2.5)
             iconStepButton("plus.circle", size: .small) {
@@ -1316,10 +1353,14 @@ struct QuickLogStrip: View {
     private var durationGroup: some View {
         HStack(spacing: 0) {
             stepButton("−") { duration = max(5, duration - 5) }
-            Text(UnitFormatter.formatDuration(duration))
-                .font(.system(.subheadline, weight: .semibold))
-                .monospacedDigit()
-                .frame(minWidth: 34, alignment: .center)
+            Button { onCustom() } label: {
+                Text(UnitFormatter.formatDuration(duration))
+                    .font(.system(.subheadline, weight: .semibold))
+                    .monospacedDigit()
+                    .frame(minWidth: 34, alignment: .center)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Tap to enter custom duration")
             stepButton("+") { duration += 5 }
         }
         .background(Capsule().fill(Color.secondary.opacity(0.1)))
@@ -1332,7 +1373,10 @@ struct QuickLogStrip: View {
     }
 
     private func stepButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.6)
+            action()
+        } label: {
             Text(label)
                 .font(.system(.subheadline, weight: .medium))
                 .foregroundStyle(.secondary)
@@ -1342,7 +1386,10 @@ struct QuickLogStrip: View {
     }
 
     private func iconStepButton(_ systemName: String, size: ButtonSize = .large, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: size == .large ? .light : .soft).impactOccurred(intensity: size == .large ? 0.7 : 0.5)
+            action()
+        } label: {
             Image(systemName: systemName)
                 .font(.system(size == .large ? .body : .caption, weight: .medium))
                 .foregroundStyle(.secondary)

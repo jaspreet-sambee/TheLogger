@@ -169,7 +169,7 @@ struct WorkoutListView: View {
                                     .font(.system(.subheadline, weight: .regular))
                                     .foregroundStyle(.secondary)
                             } else {
-                                Text("\(greeting), \(userName)")
+                                Text("\(greeting), \(userName)!")
                                     .font(.system(.title2, weight: .bold))
                                     .foregroundStyle(.primary)
                                 Text("Ready to work out?")
@@ -217,14 +217,14 @@ struct WorkoutListView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("FITNESS LEVEL")
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .font(.system(.caption, weight: .semibold))
                                     .foregroundStyle(.secondary)
                                 LevelBadge(totalWorkouts: totalWorkouts)
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 8) {
                                 Text("WEEKLY GOAL")
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .font(.system(.caption, weight: .semibold))
                                     .foregroundStyle(.secondary)
                                 WeeklyGoalRing(current: thisWeekWorkouts, goal: weeklyWorkoutGoal, color: .green)
                             }
@@ -303,7 +303,7 @@ struct WorkoutListView: View {
                     } header: {
                         Text("Your Progress")
                             .font(.system(.subheadline, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                             .textCase(nil)
                     }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -763,15 +763,27 @@ struct WorkoutListView: View {
             try modelContext.save()
             // Sync to widget
             newWorkout.syncToWidget()
-            // Start Live Activity for lock screen logging
-            let exerciseName = newWorkout.exercises?.first?.name ?? "Workout"
-            let exerciseId = newWorkout.exercises?.first?.id ?? UUID()
-            LiveActivityManager.shared.startActivity(
-                workoutId: newWorkout.id,
-                workoutName: newWorkout.name,
-                exerciseName: exerciseName,
-                exerciseId: exerciseId
-            )
+            // Start Live Activity for lock screen logging with actual data
+            if let firstExercise = newWorkout.exercises?.first {
+                let sets = firstExercise.setsByOrder
+                let lastSet = sets.last
+                LiveActivityManager.shared.startActivity(
+                    workoutId: newWorkout.id,
+                    workoutName: newWorkout.name,
+                    exerciseName: firstExercise.name,
+                    exerciseId: firstExercise.id,
+                    exerciseSets: sets.count,
+                    lastReps: lastSet?.reps ?? 0,
+                    lastWeight: lastSet?.weight ?? 0
+                )
+            } else {
+                LiveActivityManager.shared.startActivity(
+                    workoutId: newWorkout.id,
+                    workoutName: newWorkout.name,
+                    exerciseName: "Workout",
+                    exerciseId: UUID()
+                )
+            }
             // Navigate to the workout detail view
             navigationPath.append(newWorkout.id.uuidString)
         } catch {
@@ -859,14 +871,27 @@ struct WorkoutListView: View {
         do {
             try modelContext.save()
             newWorkout.syncToWidget()
-            let exerciseName = newWorkout.exercises?.first?.name ?? "Workout"
-            let exerciseId = newWorkout.exercises?.first?.id ?? UUID()
-            LiveActivityManager.shared.startActivity(
-                workoutId: newWorkout.id,
-                workoutName: newWorkout.name,
-                exerciseName: exerciseName,
-                exerciseId: exerciseId
-            )
+            // Start Live Activity with actual exercise data
+            if let firstExercise = newWorkout.exercises?.first {
+                let sets = firstExercise.setsByOrder
+                let lastSet = sets.last
+                LiveActivityManager.shared.startActivity(
+                    workoutId: newWorkout.id,
+                    workoutName: newWorkout.name,
+                    exerciseName: firstExercise.name,
+                    exerciseId: firstExercise.id,
+                    exerciseSets: sets.count,
+                    lastReps: lastSet?.reps ?? 0,
+                    lastWeight: lastSet?.weight ?? 0
+                )
+            } else {
+                LiveActivityManager.shared.startActivity(
+                    workoutId: newWorkout.id,
+                    workoutName: newWorkout.name,
+                    exerciseName: "Workout",
+                    exerciseId: UUID()
+                )
+            }
             navigationPath.append(newWorkout.id.uuidString)
         } catch {
             print("Error starting workout: \(error)")
@@ -874,8 +899,11 @@ struct WorkoutListView: View {
     }
 
     private func deleteTemplates(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(templates[index])
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            for index in offsets {
+                modelContext.delete(templates[index])
+            }
         }
         // Save changes to persist deletion
         do {
@@ -1094,7 +1122,7 @@ struct TemplateRowView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(.separator), lineWidth: 0.5)
+                .stroke(Color.blue.opacity(0.35), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
     }
@@ -1420,7 +1448,7 @@ struct TemplateCardView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                .stroke(Color.blue.opacity(0.4), lineWidth: 1)
         )
     }
 }

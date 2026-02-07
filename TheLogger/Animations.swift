@@ -371,6 +371,10 @@ struct HapticWeightStepper: View {
 
     @State private var isDragging: Bool = false
     @State private var lastHapticValue: Double = 0
+    @State private var minusButtonScale: CGFloat = 1.0
+    @State private var plusButtonScale: CGFloat = 1.0
+    @State private var numberScale: CGFloat = 1.0
+    @State private var numberGlow: CGFloat = 0
 
     init(value: Binding<Double>, step: Double = 5.0, range: ClosedRange<Double> = 0...1000, unit: String = "lbs") {
         self._value = value
@@ -381,21 +385,29 @@ struct HapticWeightStepper: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            // Decrease button
+            // Decrease button with individual pulse
             Button {
                 adjustValue(by: -step)
+                triggerMinusButtonPulse()
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .font(.system(size: 28))
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .scaleEffect(minusButtonScale)
 
-            // Value display with scale effect
+            // Value display with multiple visual effects
             VStack(spacing: 2) {
                 Text(String(format: "%.1f", value))
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
+                    .contentTransition(.numericText(value: value))
+                    .scaleEffect(numberScale)
+                    .shadow(color: .blue.opacity(numberGlow), radius: 12)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: value)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: numberScale)
+                    .animation(.linear(duration: 0.15), value: numberGlow)
                     .scaleEffect(isDragging ? 1.1 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isDragging)
 
@@ -417,10 +429,10 @@ struct HapticWeightStepper: View {
                         let roundedValue = (clampedValue / step).rounded() * step
 
                         if roundedValue != value {
+                            let oldValue = value
                             value = roundedValue
-                            // Haptic on each step
-                            let impact = UIImpactFeedbackGenerator(style: .light)
-                            impact.impactOccurred()
+                            triggerNumberFlash()
+                            triggerWeightChangeHaptic(from: oldValue, to: roundedValue)
                         }
                     }
                     .onEnded { _ in
@@ -432,27 +444,85 @@ struct HapticWeightStepper: View {
                 lastHapticValue = value
             }
 
-            // Increase button
+            // Increase button with individual pulse
             Button {
                 adjustValue(by: step)
+                triggerPlusButtonPulse()
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 28))
                     .foregroundStyle(.blue)
             }
             .buttonStyle(.plain)
+            .scaleEffect(plusButtonScale)
         }
         .padding(.vertical, 8)
     }
 
     private func adjustValue(by delta: Double) {
+        let oldValue = value
         let newValue = value + delta
         let clampedValue = min(max(newValue, range.lowerBound), range.upperBound)
         value = clampedValue
+        triggerNumberFlash()
+        triggerWeightChangeHaptic(from: oldValue, to: clampedValue)
+    }
 
-        // Haptic feedback
-        let impact = UIImpactFeedbackGenerator(style: .light)
-        impact.impactOccurred()
+    private func triggerMinusButtonPulse() {
+        withAnimation(.spring(response: 0.15, dampingFraction: 0.4)) {
+            minusButtonScale = 1.3
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            withAnimation(.spring(response: 0.15, dampingFraction: 0.4)) {
+                minusButtonScale = 1.0
+            }
+        }
+    }
+
+    private func triggerPlusButtonPulse() {
+        withAnimation(.spring(response: 0.15, dampingFraction: 0.4)) {
+            plusButtonScale = 1.3
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            withAnimation(.spring(response: 0.15, dampingFraction: 0.4)) {
+                plusButtonScale = 1.0
+            }
+        }
+    }
+
+    private func triggerNumberFlash() {
+        // Scale up briefly
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
+            numberScale = 1.15
+        }
+        // Glow flash
+        withAnimation(.linear(duration: 0.1)) {
+            numberGlow = 0.6
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
+                numberScale = 1.0
+            }
+            withAnimation(.easeOut(duration: 0.3)) {
+                numberGlow = 0
+            }
+        }
+    }
+
+    private func triggerWeightChangeHaptic(from oldValue: Double, to newValue: Double) {
+        // Check for milestone (every 25 lbs)
+        let isMilestone = Int(newValue) % 25 == 0 && Int(oldValue) % 25 != 0
+
+        if isMilestone {
+            // Stronger haptic for milestones
+            let impact = UIImpactFeedbackGenerator(style: .medium)
+            impact.impactOccurred()
+        } else {
+            // Normal light haptic
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
+        }
     }
 }
 
@@ -520,6 +590,8 @@ struct CountingNumber: View {
 
     var body: some View {
         Text("\(displayValue)")
+            .contentTransition(.numericText(value: Double(displayValue)))
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: displayValue)
             .onAppear {
                 animateValue()
             }
@@ -682,7 +754,7 @@ struct AnimatedStatCard<Icon: View>: View {
 
 // MARK: - Staggered Appear Modifier
 
-/// Adds a staggered fade-in and slide-up animation based on index
+/// Adds a staggered fade-in and slide-up animation with spring physics
 struct StaggeredAppear: ViewModifier {
     let index: Int
     let maxStagger: Int
@@ -691,10 +763,11 @@ struct StaggeredAppear: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 10)
+            .offset(y: appeared ? 0 : 20)
+            .scaleEffect(appeared ? 1 : 0.95)
             .onAppear {
-                let delay = Double(min(index, maxStagger)) * 0.08
-                withAnimation(.easeOut(duration: 0.3).delay(delay)) {
+                let delay = Double(min(index, maxStagger)) * 0.06
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(delay)) {
                     appeared = true
                 }
             }
@@ -704,6 +777,53 @@ struct StaggeredAppear: ViewModifier {
 extension View {
     func staggeredAppear(index: Int, maxStagger: Int = 5) -> some View {
         modifier(StaggeredAppear(index: index, maxStagger: maxStagger))
+    }
+}
+
+// MARK: - Button Press Scale Modifier
+
+/// Adds a satisfying press scale effect to tappable elements
+struct ButtonPressScale: ViewModifier {
+    let scale: CGFloat
+    @State private var isPressed = false
+
+    init(scale: CGFloat = 0.97) {
+        self.scale = scale
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(isPressed ? scale : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isPressed)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !isPressed {
+                            isPressed = true
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.5)
+                        }
+                    }
+                    .onEnded { _ in
+                        isPressed = false
+                    }
+            )
+    }
+}
+
+extension View {
+    func pressScale(_ scale: CGFloat = 0.97) -> some View {
+        modifier(ButtonPressScale(scale: scale))
+    }
+}
+
+// MARK: - Smooth Content Transition
+
+/// Adds smooth content transition for changing values
+struct SmoothValueTransition: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .contentTransition(.numericText())
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: UUID())
     }
 }
 

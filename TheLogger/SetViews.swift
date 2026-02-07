@@ -320,6 +320,8 @@ struct InlineSetRowView: View {
                         Text("\(set.reps)")
                             .font(.system(.body, weight: .semibold))
                             .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
+                            .contentTransition(.numericText(value: Double(set.reps)))
+                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.reps)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 startEditingReps()
@@ -378,6 +380,8 @@ struct InlineSetRowView: View {
                                 RoundedRectangle(cornerRadius: 6)
                                     .fill(Color.blue.opacity(0.15))
                             )
+                            .contentTransition(.numericText(value: set.weight))
+                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.weight)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 // Switch to typing mode
@@ -426,6 +430,8 @@ struct InlineSetRowView: View {
                     Text("\(String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight)))")
                         .font(.system(.body, weight: .semibold))
                         .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
+                        .contentTransition(.numericText(value: set.weight))
+                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.weight)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             startEditingWeight()
@@ -804,10 +810,10 @@ struct InlineAddSetView: View {
                     )
                     .frame(width: 70, height: 24)
                     .accessibilityIdentifier("weightInput")
-                    .onAppear { weightText = String(format: "%.1f", weight) }
+                    .onAppear { weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(weight)) }
                     .onChange(of: weightText) { _, newValue in
-                        if let value = Double(newValue), value >= 0 && value <= 10000 {
-                            weight = value
+                        if let displayValue = Double(newValue), displayValue >= 0 && displayValue <= 10000 {
+                            weight = UnitFormatter.convertToStorage(displayValue)
                         }
                     }
                     Text(UnitFormatter.weightUnit)
@@ -883,7 +889,7 @@ struct InlineAddSetView: View {
         .onChange(of: focusedField) { oldValue, newValue in
             if newValue == nil && oldValue != nil {
                 repsText = "\(reps)"
-                weightText = String(format: "%.1f", weight)
+                weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(weight))
                 if isTimeBased, let dBinding = durationSeconds {
                     durationText = "\(dBinding.wrappedValue)"
                 }
@@ -901,8 +907,8 @@ struct InlineAddSetView: View {
             if let repsValue = Int(repsText), repsValue >= 1 && repsValue <= 1000 {
                 reps = repsValue
             }
-            if let weightValue = Double(weightText), weightValue >= 0 && weightValue <= 10000 {
-                weight = weightValue
+            if let displayValue = Double(weightText), displayValue >= 0 && displayValue <= 10000 {
+                weight = UnitFormatter.convertToStorage(displayValue)
             }
         }
     }

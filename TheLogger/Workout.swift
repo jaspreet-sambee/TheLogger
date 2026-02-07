@@ -973,9 +973,9 @@ final class PersonalRecord {
         return weight * (36.0 / (37.0 - Double(reps)))
     }
     
-    /// Formatted display string
+    /// Formatted display string (uses 1 decimal for weight to preserve values like 22.5)
     var displayString: String {
-        "\(UnitFormatter.formatWeightCompact(weight)) × \(reps)"
+        "\(UnitFormatter.formatWeight(weight, showUnit: false)) × \(reps)"
     }
 }
 
@@ -1384,9 +1384,24 @@ final class RestTimerManager {
     ///   - duration: Suggested rest duration in seconds (nil = use user's setting)
     ///   - autoStart: If true, timer starts immediately instead of showing option
     func offerRest(for exerciseId: UUID, duration: Int? = nil, autoStart: Bool = false) {
-        // Don't interrupt an active timer
-        guard !isActive else { return }
+        print("[RestTimer] offerRest called - isActive=\(isActive), isComplete=\(isComplete), showRestOption=\(showRestOption)")
 
+        // Don't interrupt an active timer, but allow if timer is complete (waiting to dismiss)
+        guard !isActive || isComplete else {
+            print("[RestTimer] offerRest BLOCKED by guard")
+            return
+        }
+
+        // If timer was complete, reset it first
+        if isComplete {
+            print("[RestTimer] Resetting complete timer")
+            timer?.invalidate()
+            timer = nil
+            isActive = false
+            isComplete = false
+        }
+
+        print("[RestTimer] offerRest proceeding for exercise \(exerciseId)")
         activeExerciseId = exerciseId
         // Use provided duration, or user's setting, or fallback to 90
         let userDefault = UserDefaults.standard.integer(forKey: "defaultRestSeconds")
@@ -1395,56 +1410,71 @@ final class RestTimerManager {
 
         if autoStart {
             // Start immediately
+            print("[RestTimer] autoStart=true, starting timer")
             showRestOption = false
             start()
         } else {
-            // Show option button
-            showRestOption = true
+            // Show option button with animation
+            print("[RestTimer] Setting showRestOption=true for exercise \(exerciseId)")
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                showRestOption = true
+            }
+            print("[RestTimer] showRestOption is now \(showRestOption)")
         }
     }
     
     /// Start the timer (user initiated)
     func start() {
         guard let exerciseId = activeExerciseId else { return }
-        
-        showRestOption = false
-        totalSeconds = suggestedDuration
-        remainingSeconds = suggestedDuration
-        isActive = true
-        isComplete = false
-        
+
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+            showRestOption = false
+            totalSeconds = suggestedDuration
+            remainingSeconds = suggestedDuration
+            isActive = true
+            isComplete = false
+        }
+
         startTimer()
     }
-    
+
     /// Start with specific duration
     func start(for exerciseId: UUID, duration: Int) {
         stop()
-        
-        activeExerciseId = exerciseId
-        totalSeconds = duration
-        remainingSeconds = duration
-        isActive = true
-        isComplete = false
-        showRestOption = false
-        
+
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+            activeExerciseId = exerciseId
+            totalSeconds = duration
+            remainingSeconds = duration
+            isActive = true
+            isComplete = false
+            showRestOption = false
+        }
+
         startTimer()
     }
     
     /// Stop and hide everything
     func stop() {
+        print("[RestTimer] stop() called")
         timer?.invalidate()
         timer = nil
-        isActive = false
-        isComplete = false
-        showRestOption = false
-        activeExerciseId = nil
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
+            isActive = false
+            isComplete = false
+            showRestOption = false
+            activeExerciseId = nil
+        }
+        print("[RestTimer] stop() complete - all state reset to nil/false")
     }
-    
+
     /// Dismiss rest option without starting timer
     func dismiss() {
-        showRestOption = false
-        if !isActive {
-            activeExerciseId = nil
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+            showRestOption = false
+            if !isActive {
+                activeExerciseId = nil
+            }
         }
     }
     
@@ -1474,10 +1504,12 @@ final class RestTimerManager {
     
     /// Pause timer (when user starts adding a set)
     func pause() {
+        print("[RestTimer] pause() called - isActive=\(isActive), showRestOption=\(showRestOption)")
         timer?.invalidate()
         timer = nil
         // Also hide rest option when user starts adding
         showRestOption = false
+        print("[RestTimer] pause() complete - showRestOption=\(showRestOption)")
     }
     
     /// Resume timer after pause
@@ -1488,7 +1520,9 @@ final class RestTimerManager {
     
     /// Check if should show anything for this exercise
     func shouldShowFor(exerciseId: UUID) -> Bool {
-        activeExerciseId == exerciseId && (showRestOption || isActive)
+        let result = activeExerciseId == exerciseId && (showRestOption || isActive)
+        print("[RestTimer] shouldShowFor(\(exerciseId)) - activeExerciseId=\(String(describing: activeExerciseId)), showRestOption=\(showRestOption), isActive=\(isActive) → \(result)")
+        return result
     }
     
     /// Check if timer is actively running for a specific exercise
@@ -1551,7 +1585,16 @@ final class RestTimerManager {
 
         // Auto-dismiss after 2 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self, self.isComplete else { return }
+            guard let self = self else {
+                print("[RestTimer] auto-dismiss: self is nil")
+                return
+            }
+            print("[RestTimer] auto-dismiss fired - isComplete=\(self.isComplete)")
+            guard self.isComplete else {
+                print("[RestTimer] auto-dismiss skipped (isComplete=false)")
+                return
+            }
+            print("[RestTimer] auto-dismiss calling stop()")
             self.stop()
         }
     }

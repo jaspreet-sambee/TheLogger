@@ -74,6 +74,7 @@ struct WorkoutEndSummaryView: View {
                     .background(cardBackground)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
+                    .scaleEffect(cardVisible ? 1 : 0.9)
                     .offset(y: cardVisible ? 0 : 60)
                     .opacity(cardVisible ? 1 : 0)
 
@@ -82,11 +83,20 @@ struct WorkoutEndSummaryView: View {
             .onAppear {
                 let options = ["Nice work", "Well done", "Great session", "Solid effort", "Keep it up"]
                 affirmation = options.randomElement() ?? "Nice work"
+
+                // Success haptic pattern
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
                     cardVisible = true
                 }
                 if !prExercises.isEmpty {
                     showConfetti = true
+                    // Extra celebration haptic for PRs
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                    }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                         showConfetti = false
                     }
@@ -97,6 +107,8 @@ struct WorkoutEndSummaryView: View {
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     durationPulse = true
+                    // Light haptic on duration reveal
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.5)
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + minDisplaySeconds) {
                     withAnimation(.easeOut(duration: 0.3)) {
@@ -336,7 +348,7 @@ struct WorkoutEndSummaryView: View {
 
     private func formatPR(_ item: (name: String, weight: Double, reps: Int)) -> String {
         if item.weight > 0 {
-            return "\(UnitFormatter.formatWeightCompact(item.weight)) × \(item.reps)"
+            return "\(UnitFormatter.formatWeight(item.weight, showUnit: false)) × \(item.reps)"
         }
         return "\(item.reps) reps"
     }
@@ -349,6 +361,7 @@ struct WorkoutEndSummaryView: View {
             Text(value)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
+                .contentTransition(.numericText())
             Text(label)
                 .font(.system(.caption2, weight: .medium))
                 .foregroundStyle(.secondary)

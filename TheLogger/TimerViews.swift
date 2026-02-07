@@ -10,8 +10,13 @@ import SwiftUI
 // MARK: - Rest Timer View
 struct RestTimerView: View {
     let exerciseId: UUID
-    @State private var timer = RestTimerManager.shared
+    private let timer = RestTimerManager.shared
     @State private var completeBounceTrigger = false
+    @State private var entranceScale: CGFloat = 0.8
+    @State private var entranceBlur: CGFloat = 12
+    @State private var entranceOpacity: Double = 0
+    @State private var countdownPulse: CGFloat = 1.0
+    @State private var lastSecond: Int = -1
 
     private var formattedSuggestedTime: String {
         let minutes = timer.suggestedDuration / 60
@@ -40,10 +45,47 @@ struct RestTimerView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.secondary.opacity(0.08))
             )
+            .scaleEffect(entranceScale)
+            .blur(radius: entranceBlur)
+            .opacity(entranceOpacity)
             .animation(.spring(response: 0.35, dampingFraction: 0.82), value: timer.isActive)
             .animation(.spring(response: 0.35, dampingFraction: 0.82), value: timer.isComplete)
             .onChange(of: timer.isComplete) { _, complete in
                 if !complete { completeBounceTrigger = false }
+            }
+            .onChange(of: timer.remainingSeconds) { oldValue, newValue in
+                // Pulse on each second during active countdown
+                if timer.isActive && newValue != lastSecond {
+                    lastSecond = newValue
+                    triggerCountdownPulse()
+                }
+            }
+            .onAppear {
+                // Entrance animation
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
+                    entranceScale = 1.0
+                    entranceBlur = 0
+                    entranceOpacity = 1.0
+                }
+            }
+            .onDisappear {
+                // Reset for next appearance
+                entranceScale = 0.8
+                entranceBlur = 12
+                entranceOpacity = 0
+            }
+        }
+    }
+
+    private func triggerCountdownPulse() {
+        // Subtle pulse - more intense as time runs low
+        let intensity: CGFloat = timer.remainingSeconds <= 5 ? 1.08 : 1.03
+        withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
+            countdownPulse = intensity
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                countdownPulse = 1.0
             }
         }
     }
@@ -149,9 +191,12 @@ struct RestTimerView: View {
         HStack(spacing: 16) {
             Text(timer.formattedTime)
                 .font(.system(.title3, weight: .semibold))
-                .foregroundStyle(.primary.opacity(timer.remainingSeconds < 10 ? 0.6 : 1.0))
+                .foregroundStyle(timer.remainingSeconds <= 5 ? .orange : .primary)
                 .monospacedDigit()
                 .frame(width: 50, alignment: .leading)
+                .scaleEffect(countdownPulse)
+                .contentTransition(.numericText(value: Double(timer.remainingSeconds)))
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: timer.remainingSeconds)
 
             progressBar
 

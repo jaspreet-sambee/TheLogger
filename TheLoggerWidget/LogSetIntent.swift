@@ -58,7 +58,7 @@ struct LogSetIntent: LiveActivityIntent {
         let appGroupId = "group.SDL-Tutorial.TheLogger"
         let debugDefaults = UserDefaults(suiteName: appGroupId)
 
-        // Save pending set to shared storage
+        // Save pending set to shared storage for main app to process
         let pendingSet = PendingSet(
             id: UUID().uuidString,
             workoutId: workoutId,
@@ -69,19 +69,35 @@ struct LogSetIntent: LiveActivityIntent {
         )
         PendingSetManager.addPendingSet(pendingSet)
 
-        // Save the updated set count for the Live Activity to read
         let newSetCount = currentSets + 1
         debugDefaults?.set(newSetCount, forKey: "liveActivitySetCount")
         debugDefaults?.set(exerciseId, forKey: "liveActivityExerciseId")
 
-        // Write a signal file directly (more reliable than UserDefaults file watching)
+        // FAST PATH: Update Live Activity directly from widget (no round-trip to main app)
+        for activity in Activity<WorkoutActivityAttributes>.activities {
+            if activity.attributes.workoutId == workoutId {
+                var state = activity.content.state
+                state.exerciseSets = newSetCount
+                state.lastReps = reps
+                state.lastWeight = weight
+
+                // Update immediately with stale date in past for urgency
+                await activity.update(
+                    ActivityContent(state: state, staleDate: Date(timeIntervalSinceNow: -1))
+                )
+                logger.info("Direct update: \(newSetCount) sets")
+                break
+            }
+        }
+
+        // Write signal file for main app to sync database
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) {
             let signalFile = containerURL.appendingPathComponent("update_signal.txt")
             let data = "\(newSetCount):\(Date().timeIntervalSince1970)".data(using: .utf8)
             try? data?.write(to: signalFile, options: .atomic)
         }
 
-        // Send Darwin notification as backup
+        // Darwin notification for main app to process pending sets
         let center = CFNotificationCenterGetDarwinNotifyCenter()
         CFNotificationCenterPostNotification(center, CFNotificationName(kUpdateLiveActivityNotification), nil, nil, true)
 

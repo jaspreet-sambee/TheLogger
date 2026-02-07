@@ -30,13 +30,13 @@ struct PRHomeWidgetView: View {
                 NavigationLink {
                     PRTimelineView()
                 } label: {
-                    Text("All")
-                        .font(.system(.subheadline, weight: .medium))
-                        .foregroundStyle(.blue)
-                    Image(systemName: "chevron.right")
-                        .font(.caption2)
-                        .foregroundStyle(.blue)
+                    HStack(spacing: 4) {
+                        Text("All")
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(.blue)
+                    }
                 }
+                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 16)
 

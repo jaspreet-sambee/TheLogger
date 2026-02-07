@@ -54,7 +54,7 @@ struct WorkoutDetailView: View {
             .navigationTitle("Workout Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingSettings = true
                     } label: {
@@ -62,14 +62,13 @@ struct WorkoutDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-
                 if workout.isActive {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("End") {
                             showingEndWorkoutConfirmation = true
                         }
                         .fontWeight(.semibold)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.blue)
                         .accessibilityIdentifier("endWorkoutButton")
                     }
                 } else if workout.isCompleted {
@@ -754,6 +753,23 @@ struct WorkoutDetailView: View {
             }
         }
         workout.updateNameFromExercises()
+
+        // Update LiveActivity with the new exercise
+        if workout.isActive {
+            let sets = exercise.setsByOrder
+            let lastSet = sets.last
+            Task {
+                await LiveActivityManager.shared.updateActivity(
+                    exerciseName: exercise.name,
+                    exerciseId: exercise.id,
+                    exerciseSets: sets.count,
+                    lastReps: lastSet?.reps ?? 0,
+                    lastWeight: lastSet?.weight ?? 0
+                )
+            }
+            workout.syncToWidget(currentExercise: exercise)
+        }
+
         return exercise
     }
 
@@ -931,6 +947,10 @@ struct SupersetGroupCard: View {
 
     @ViewBuilder
     private func exerciseRowWithConnector(exercise: Exercise, index: Int) -> some View {
+        let isCurrentExercise = isActive && index == 0
+        let hasSets = !(exercise.sets ?? []).isEmpty
+        let isCompleted = hasSets && !isCurrentExercise
+
         VStack(spacing: 0) {
             NavigationLink {
                 ExerciseEditView(exercise: exercise, workout: workout, namespace: namespace)
@@ -939,10 +959,17 @@ struct SupersetGroupCard: View {
                     exercise: exercise,
                     position: index + 1,
                     total: exercises.count,
-                    isActive: isActive && index == 0
+                    isActive: isCurrentExercise
                 )
             }
             .buttonStyle(.plain)
+            // Active exercise: slight scale up + glow
+            .scaleEffect(isCurrentExercise ? 1.02 : 1.0)
+            .shadow(color: isCurrentExercise ? Color.purple.opacity(0.3) : .clear, radius: 8, x: 0, y: 0)
+            // Completed exercises: fade back slightly
+            .opacity(isCompleted ? 0.7 : 1.0)
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isCurrentExercise)
+            .animation(.easeInOut(duration: 0.3), value: hasSets)
 
             if index < exercises.count - 1 {
                 connectorView
