@@ -14,6 +14,72 @@ enum SetInputField: Hashable {
     case reps, weight, duration
 }
 
+// MARK: - Simple Number Input (for auto-chaining flow)
+/// Clean sheet-based input for reps/weight/duration with auto-chaining support
+struct SimpleNumberInput: View {
+    @Binding var value: Double
+    let label: String
+    let keyboardType: UIKeyboardType
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var text: String = ""
+    @FocusState private var isFocused: Bool
+
+    init(value: Binding<Double>, label: String, isInteger: Bool = false) {
+        self._value = value
+        self.label = label
+        self.keyboardType = isInteger ? .numberPad : .decimalPad
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Enter \(label)")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            TextField(label, text: $text)
+                .keyboardType(keyboardType)
+                .textFieldStyle(.roundedBorder)
+                .multilineTextAlignment(.center)
+                .font(.system(.title2, weight: .semibold))
+                .focused($isFocused)
+                .onAppear {
+                    // Show current value if non-zero, otherwise empty for easy entry
+                    if value > 0 {
+                        if keyboardType == .numberPad {
+                            text = "\(Int(value))"
+                        } else {
+                            text = String(format: "%.1f", value)
+                        }
+                    } else {
+                        text = ""
+                    }
+                    isFocused = true
+                }
+
+            HStack(spacing: 16) {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Done") {
+                    if let v = Double(text.replacingOccurrences(of: ",", with: ".")), v >= 0 {
+                        value = v
+                    }
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(text.isEmpty)
+            }
+            .font(.body)
+        }
+        .padding(24)
+        .presentationDetents([.height(220)])
+        .presentationDragIndicator(.visible)
+    }
+}
+
 // MARK: - Select All Text Field
 /// UITextField-backed field that selects all on focus. Dismiss via tap-overlay or scroll.
 struct SelectAllTextField: UIViewRepresentable {
@@ -174,8 +240,9 @@ struct InlineSetRowView: View {
     // Observe unit system changes to trigger view refresh
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
     @State private var isEditingReps = false
+    @State private var isTypingReps = false   // True when TextField is shown for manual reps input
     @State private var isEditingWeight = false
-    @State private var isTypingWeight = false  // True when TextField is shown for manual input
+    @State private var isTypingWeight = false  // True when TextField is shown for manual weight input
     @State private var repsText = ""
     @State private var weightText = ""
     @State private var originalReps: Int = 0
@@ -185,6 +252,7 @@ struct InlineSetRowView: View {
     @State private var focusRepsWhenAppear = false
     @State private var focusWeightWhenAppear = false
     @State private var didAdjustViaButton = false
+    @State private var didAdjustRepsViaButton = false
     @State private var isEditingDuration = false
     @State private var durationText = ""
 
@@ -221,6 +289,18 @@ struct InlineSetRowView: View {
         }
 
         return nil
+    }
+
+    private var isEditing: Bool {
+        isEditingReps || isEditingWeight || isEditingDuration
+    }
+
+    private var rowBackgroundFill: Color {
+        if set.type == .working {
+            return isEditing ? Color.blue.opacity(0.08) : Color.white.opacity(0.06)
+        } else {
+            return set.type.color.opacity(isEditing ? 0.15 : 0.10)
+        }
     }
 
     private var previousDuration: Int? {
@@ -307,15 +387,60 @@ struct InlineSetRowView: View {
                         .foregroundStyle(.secondary)
 
                     if isEditingReps {
-                        SelectAllTextField(
-                            text: $repsText,
-                            focusWhenAppear: focusRepsWhenAppear,
-                            placeholder: "Reps",
-                            keyboardType: .numberPad,
-                            onFocusTriggered: { focusRepsWhenAppear = false },
-                            onCommit: { saveReps() }
-                        )
-                        .frame(width: 60, height: 24)
+                        // Step button -1
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(.red.opacity(0.8))
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                            .onTapGesture { adjustReps(-1) }
+
+                        if isTypingReps {
+                            SelectAllTextField(
+                                text: $repsText,
+                                focusWhenAppear: focusRepsWhenAppear,
+                                placeholder: "Reps",
+                                keyboardType: .numberPad,
+                                onFocusTriggered: { focusRepsWhenAppear = false },
+                                onCommit: { saveReps() }
+                            )
+                            .frame(width: 50, height: 24)
+                        } else {
+                            // Tappable value — tap to open keyboard for custom input
+                            Text(repsText)
+                                .font(.system(.body, weight: .bold))
+                                .foregroundStyle(.primary)
+                                .frame(minWidth: 30)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.blue.opacity(0.15))
+                                )
+                                .contentTransition(.numericText(value: Double(set.reps)))
+                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.reps)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    isTypingReps = true
+                                    focusRepsWhenAppear = true
+                                }
+                        }
+
+                        // Step button +1
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(.green.opacity(0.8))
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                            .onTapGesture { adjustReps(1) }
+
+                        // Done button
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(.green)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                            .onTapGesture { saveReps() }
                     } else {
                         Text("\(set.reps)")
                             .font(.system(.body, weight: .semibold))
@@ -336,26 +461,15 @@ struct InlineSetRowView: View {
             if !isTimeBased {
             HStack(spacing: 4) {
                 if isEditingWeight {
-                    // Quick adjust buttons (decrease)
-                    HStack(spacing: 0) {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.system(.title3, weight: .medium))
-                            .foregroundStyle(.red.opacity(0.8))
-                            .frame(width: 36, height: 36)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                adjustWeight(-5)
-                            }
-
-                        Image(systemName: "minus.circle")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(.orange.opacity(0.8))
-                            .frame(width: 32, height: 32)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                adjustWeight(-2.5)
-                            }
-                    }
+                    // Quick adjust button (decrease)
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(.subheadline, weight: .medium))
+                        .foregroundStyle(.red.opacity(0.8))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            adjustWeight(-5)
+                        }
 
                     if isTypingWeight {
                         // TextField for manual input
@@ -395,26 +509,15 @@ struct InlineSetRowView: View {
                         .font(.system(.caption2, weight: .medium))
                         .foregroundStyle(.secondary)
 
-                    // Quick adjust buttons (increase)
-                    HStack(spacing: 0) {
-                        Image(systemName: "plus.circle")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(.green.opacity(0.8))
-                            .frame(width: 32, height: 32)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                adjustWeight(2.5)
-                            }
-
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(.title3, weight: .medium))
-                            .foregroundStyle(.blue.opacity(0.8))
-                            .frame(width: 36, height: 36)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                adjustWeight(5)
-                            }
-                    }
+                    // Quick adjust button (increase)
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(.subheadline, weight: .medium))
+                        .foregroundStyle(.blue.opacity(0.8))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            adjustWeight(5)
+                        }
 
                     // Done button to exit editing mode
                     Image(systemName: "checkmark.circle.fill")
@@ -423,6 +526,7 @@ struct InlineSetRowView: View {
                         .frame(width: 32, height: 32)
                         .contentShape(Rectangle())
                         .onTapGesture {
+                            runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: set.type)
                             isEditingWeight = false
                             isTypingWeight = false
                         }
@@ -447,10 +551,12 @@ struct InlineSetRowView: View {
         .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(set.type == .working
-                      ? Color(.systemGray6).opacity(isEditingReps || isEditingWeight || isEditingDuration ? 0.8 : 0.5)
-                      : set.type.color.opacity(isEditingReps || isEditingWeight || isEditingDuration ? 0.15 : 0.08))
-                .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isEditingReps || isEditingWeight || isEditingDuration)
+                .fill(rowBackgroundFill)
+                .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isEditing)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(set.type == .working ? Color.white.opacity(0.06) : set.type.color.opacity(0.15), lineWidth: 1)
         )
         .overlay(alignment: .bottomLeading) {
             // Previous set indicator
@@ -530,10 +636,16 @@ struct InlineSetRowView: View {
     }
 
     private func startEditingReps() {
+        // Close weight editing first to prevent layout overflow
+        if isEditingWeight {
+            runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: set.type)
+            isEditingWeight = false
+            isTypingWeight = false
+        }
         originalReps = set.reps
         repsText = "\(set.reps)"
         isEditingReps = true
-        focusRepsWhenAppear = true
+        isTypingReps = false  // Start in button mode — no keyboard until user taps the value
     }
 
     private func startEditingDuration() {
@@ -552,6 +664,11 @@ struct InlineSetRowView: View {
     }
 
     private func startEditingWeight() {
+        // Close reps editing first to prevent layout overflow
+        if isEditingReps {
+            isEditingReps = false
+            isTypingReps = false
+        }
         originalWeight = set.weight
         weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight))
         isEditingWeight = true
@@ -559,11 +676,9 @@ struct InlineSetRowView: View {
     }
 
     private func adjustWeight(_ delta: Double) {
-        // Dismiss keyboard first to avoid race condition
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-
-        // Set flag to prevent saveWeight() from overwriting
+        // Set flag before resign to ensure saveWeight() sees it synchronously
         didAdjustViaButton = true
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 
         // Use the current weightText if user typed something, otherwise use set.weight
         let baseDisplay: Double
@@ -581,15 +696,12 @@ struct InlineSetRowView: View {
             set.weight = newStorage
             weightText = String(format: "%.1f", newDisplay)
             onUpdate(set.reps, set.weight)
-            runPRCheckAndNotify(weight: newStorage, reps: set.reps, setType: set.type)
 
             // Keep editing mode active so user can continue adjusting
             isEditingWeight = true
 
             let impact = UIImpactFeedbackGenerator(style: .light)
             impact.impactOccurred()
-
-            showMicroFeedback()
         }
     }
 
@@ -601,13 +713,50 @@ struct InlineSetRowView: View {
         if changed { onPRSet?() }
     }
 
+    private func adjustReps(_ delta: Int) {
+        let current: Int
+        if let parsed = Int(repsText.trimmingCharacters(in: .whitespaces)), parsed > 0 {
+            current = parsed
+        } else {
+            current = set.reps
+        }
+        let newReps = max(1, current + delta)
+
+        if isTypingReps {
+            // Keyboard is up — block onCommit/saveReps, dismiss keyboard, apply step
+            didAdjustRepsViaButton = true
+            isTypingReps = false
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            DispatchQueue.main.async { [self] in
+                didAdjustRepsViaButton = false
+                set.reps = newReps
+                repsText = "\(newReps)"
+                onUpdate(set.reps, set.weight)
+                isEditingReps = true
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+        } else {
+            // Button mode — no keyboard, update directly
+            set.reps = newReps
+            repsText = "\(newReps)"
+            onUpdate(set.reps, set.weight)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+    }
+
     private func saveReps() {
-        defer { isEditingReps = false }
+        if didAdjustRepsViaButton {
+            didAdjustRepsViaButton = false
+            return
+        }
+        defer { isEditingReps = false; isTypingReps = false }
         if let value = Int(repsText.trimmingCharacters(in: .whitespaces)), value > 0 && value <= 1000 {
             set.reps = value
             onUpdate(set.reps, set.weight)
             runPRCheckAndNotify(weight: set.weight, reps: value, setType: set.type)
-            showMicroFeedback()
+            if value != originalReps {
+                showMicroFeedback()
+            }
         } else {
             set.reps = originalReps
             repsText = "\(originalReps)"
