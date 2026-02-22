@@ -8,6 +8,12 @@
 import Foundation
 import SwiftData
 
+// MARK: - Notifications
+
+extension Notification.Name {
+    static let workoutEnded = Notification.Name("workoutEnded")
+}
+
 // MARK: - PR Entry Model
 
 /// Represents a personal record for display in timeline/charts
@@ -15,11 +21,16 @@ struct PREntry: Identifiable {
     let id = UUID()
     let exerciseName: String
     let displayName: String  // Original capitalization for display
-    let weight: Double       // In lbs (storage unit)
+    let weight: Double       // In lbs (storage unit); 0 = bodyweight
     let reps: Int
     let date: Date
     let workoutId: UUID
     let estimated1RM: Double
+
+    var isBodyweight: Bool { weight == 0 }
+
+    /// Comparison score: 1RM for weighted, reps for bodyweight
+    var prScore: Double { isBodyweight ? Double(reps) : estimated1RM }
 
     /// Relative time string ("2 days ago")
     var relativeTimeString: String {
@@ -71,13 +82,19 @@ struct PREntry: Identifiable {
 struct ChartDataPoint: Identifiable {
     let id = UUID()
     let date: Date
-    let weight: Double       // In lbs
+    let weight: Double       // In lbs; 0 = bodyweight
     let reps: Int
     let estimated1RM: Double
     let workoutId: UUID
 
+    var isBodyweight: Bool { weight == 0 }
+
+    /// Comparison score: 1RM for weighted, reps for bodyweight
+    var prScore: Double { isBodyweight ? Double(reps) : estimated1RM }
+
     /// Formatted display string for tooltip
     var displayString: String {
+        if isBodyweight { return "BW × \(reps)" }
         let weightStr = UnitFormatter.formatWeightCompact(weight, showUnit: true)
         return "\(weightStr) × \(reps)"
     }
@@ -151,20 +168,20 @@ class PRManager {
         guard !history.isEmpty else { return [] }
 
         var breakthroughs: [PRBreakthrough] = []
-        var currentBest1RM: Double = 0
+        var currentBestScore: Double = 0
 
         // Sort chronologically (oldest first)
         let sortedHistory = history.sorted(by: { $0.date < $1.date })
 
         for point in sortedHistory {
-            if point.estimated1RM > currentBest1RM {
+            if point.prScore > currentBestScore {
                 // This is a PR breakthrough!
                 let improvementPercent: Double?
                 let previousBest: Double?
 
-                if currentBest1RM > 0 {
-                    improvementPercent = ((point.estimated1RM - currentBest1RM) / currentBest1RM) * 100
-                    previousBest = currentBest1RM
+                if currentBestScore > 0 {
+                    improvementPercent = ((point.prScore - currentBestScore) / currentBestScore) * 100
+                    previousBest = currentBestScore
                 } else {
                     // First PR
                     improvementPercent = nil
@@ -181,7 +198,7 @@ class PRManager {
                     previousBest1RM: previousBest
                 ))
 
-                currentBest1RM = point.estimated1RM
+                currentBestScore = point.prScore
             }
         }
 
@@ -226,8 +243,8 @@ class PRManager {
                 guard let sets = exercise.sets else { continue }
 
                 for set in sets {
-                    // Only consider working sets for PRs
-                    guard set.type == .working && set.weight > 0 && set.reps > 0 else {
+                    // Only consider working sets; weight == 0 is valid for bodyweight exercises
+                    guard set.type == .working && set.reps > 0 else {
                         continue
                     }
 
@@ -250,17 +267,19 @@ class PRManager {
         var prEntries: [PREntry] = []
 
         for (normalizedName, sets) in exerciseHistory {
-            // Calculate 1RM for each set
-            let setsWithRM = sets.map { set in
-                let rm = calculateEstimated1RM(weight: set.weight, reps: set.reps)
-                return (set: set, rm: rm)
+            // Score each set: 1RM for weighted, raw reps for bodyweight
+            let setsWithScore = sets.map { set -> (set: (date: Date, weight: Double, reps: Int, workoutId: UUID, displayName: String), score: Double) in
+                let score = set.weight == 0
+                    ? Double(set.reps)
+                    : calculateEstimated1RM(weight: set.weight, reps: set.reps)
+                return (set: set, score: score)
             }
 
-            // Find max 1RM
-            guard let best = setsWithRM.max(by: { $0.rm < $1.rm }) else {
+            guard let best = setsWithScore.max(by: { $0.score < $1.score }) else {
                 continue
             }
 
+            let est1RM = best.set.weight == 0 ? 0 : best.score
             prEntries.append(PREntry(
                 exerciseName: normalizedName,
                 displayName: best.set.displayName,
@@ -268,7 +287,7 @@ class PRManager {
                 reps: best.set.reps,
                 date: best.set.date,
                 workoutId: best.set.workoutId,
-                estimated1RM: best.rm
+                estimated1RM: est1RM
             ))
         }
 
@@ -302,25 +321,28 @@ class PRManager {
                 guard exerciseNormalizedName == normalizedName else { continue }
                 guard let sets = exercise.sets else { continue }
 
-                // Find the best set (by 1RM) in this workout
-                let workingSets = sets.filter { $0.type == .working && $0.weight > 0 && $0.reps > 0 }
+                // Find the best set in this workout (1RM for weighted, reps for bodyweight)
+                let workingSets = sets.filter { $0.type == .working && $0.reps > 0 }
 
                 guard !workingSets.isEmpty else { continue }
 
-                let bestSet = workingSets.max(by: { set1, set2 in
-                    let rm1 = calculateEstimated1RM(weight: set1.weight, reps: set1.reps)
-                    let rm2 = calculateEstimated1RM(weight: set2.weight, reps: set2.reps)
-                    return rm1 < rm2
-                })
+                let bestSet = workingSets.max { set1, set2 in
+                    let score1 = set1.weight == 0
+                        ? Double(set1.reps)
+                        : calculateEstimated1RM(weight: set1.weight, reps: set1.reps)
+                    let score2 = set2.weight == 0
+                        ? Double(set2.reps)
+                        : calculateEstimated1RM(weight: set2.weight, reps: set2.reps)
+                    return score1 < score2
+                }
 
                 if let best = bestSet {
-                    let rm = calculateEstimated1RM(weight: best.weight, reps: best.reps)
-
+                    let est1RM = best.weight == 0 ? 0 : calculateEstimated1RM(weight: best.weight, reps: best.reps)
                     dataPoints.append(ChartDataPoint(
                         date: workout.date,
                         weight: best.weight,
                         reps: best.reps,
-                        estimated1RM: rm,
+                        estimated1RM: est1RM,
                         workoutId: workout.id
                     ))
                 }
@@ -330,10 +352,10 @@ class PRManager {
         return dataPoints
     }
 
-    /// Calculate estimated 1RM using Brzycki formula
+    /// Calculate estimated 1RM using Epley formula
     private func calculateEstimated1RM(weight: Double, reps: Int) -> Double {
-        guard reps > 0 && reps <= 10 else { return weight }
-        return weight * (36.0 / (37.0 - Double(reps)))
+        guard reps > 0 else { return weight }
+        return weight * (1.0 + Double(reps) / 30.0)
     }
 }
 
@@ -405,9 +427,9 @@ enum PRSort: String, CaseIterable, Identifiable {
         case .oldest:
             return prs.sorted { $0.date < $1.date }
         case .highest1RM:
-            return prs.sorted { $0.estimated1RM > $1.estimated1RM }
+            return prs.sorted { $0.prScore > $1.prScore }
         case .lowest1RM:
-            return prs.sorted { $0.estimated1RM < $1.estimated1RM }
+            return prs.sorted { $0.prScore < $1.prScore }
         case .alphabetical:
             return prs.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
         case .reverseAlphabetical:

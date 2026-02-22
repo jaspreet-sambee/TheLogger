@@ -37,7 +37,6 @@ struct WorkoutEndSummaryView: View {
     }
 
     @State private var affirmation = "Nice work"
-    @State private var cardVisible = false
     @State private var showHeader = false
     @State private var showAffirmation = false
     @State private var showDuration = false
@@ -48,7 +47,7 @@ struct WorkoutEndSummaryView: View {
     @State private var showConfetti = false
     @State private var prRowsRevealed = 0
     @State private var durationPulse = false
-    @State private var trophyBounce = false
+    @State private var medalBounce = false
     private let minDisplaySeconds: Double = 1.0
 
     private static let workoutDateFormatter: DateFormatter = {
@@ -62,38 +61,54 @@ struct WorkoutEndSummaryView: View {
 
     var body: some View {
         ZStack {
-            // Warm, soft background (no blue boundary)
-            Color(.systemGroupedBackground)
+            AppColors.background
                 .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                cardContent
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 24)
-                    .frame(maxWidth: .infinity)
-                    .background(cardBackground)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .scaleEffect(cardVisible ? 1 : 0.9)
-                    .offset(y: cardVisible ? 0 : 60)
-                    .opacity(cardVisible ? 1 : 0)
+            ScrollView {
+                VStack(spacing: 20) {
+                    headerSection
+                        .opacity(showHeader ? 1 : 0)
+                        .offset(y: showHeader ? 0 : 8)
+                        .animation(.easeOut(duration: 0.32), value: showHeader)
 
-                Spacer()
+                    affirmationText
+                        .opacity(showAffirmation ? 1 : 0)
+                        .offset(y: showAffirmation ? 0 : 6)
+                        .animation(.easeOut(duration: 0.32), value: showAffirmation)
+
+                    prSection
+                        .opacity(showPRs ? 1 : 0)
+                        .offset(y: showPRs ? 0 : 12)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.75), value: showPRs)
+
+                    durationStat
+                        .opacity(showDuration ? 1 : 0)
+                        .offset(y: showDuration ? 0 : 6)
+                        .animation(.easeOut(duration: 0.32), value: showDuration)
+
+                    secondaryStats
+                        .opacity(showStats ? 1 : 0)
+                        .offset(y: showStats ? 0 : 6)
+                        .animation(.easeOut(duration: 0.32), value: showStats)
+
+                    dismissButton
+                        .opacity(showButton ? 1 : 0)
+                        .offset(y: showButton ? 0 : 6)
+                        .animation(.easeOut(duration: 0.32), value: showButton)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 32)
+                .padding(.bottom, 40)
             }
             .onAppear {
                 let options = ["Nice work", "Well done", "Great session", "Solid effort", "Keep it up"]
                 affirmation = options.randomElement() ?? "Nice work"
 
-                // Success haptic pattern
                 let generator = UINotificationFeedbackGenerator()
                 generator.notificationOccurred(.success)
 
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
-                    cardVisible = true
-                }
                 if !prExercises.isEmpty {
                     showConfetti = true
-                    // Extra celebration haptic for PRs
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                     }
@@ -103,11 +118,10 @@ struct WorkoutEndSummaryView: View {
                 }
                 scheduleStagger()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    trophyBounce = true
+                    medalBounce = true
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     durationPulse = true
-                    // Light haptic on duration reveal
                     UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.5)
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + minDisplaySeconds) {
@@ -140,48 +154,12 @@ struct WorkoutEndSummaryView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.52) { showButton = true }
     }
 
-    private var cardContent: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                headerSection
-                    .opacity(showHeader ? 1 : 0)
-                    .offset(y: showHeader ? 0 : 6)
-                    .animation(.easeOut(duration: 0.32), value: showHeader)
-
-                affirmationText
-                    .opacity(showAffirmation ? 1 : 0)
-                    .offset(y: showAffirmation ? 0 : 6)
-                    .animation(.easeOut(duration: 0.32), value: showAffirmation)
-
-                prSection
-                    .opacity(showPRs ? 1 : 0)
-                    .offset(y: showPRs ? 0 : 12)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.75), value: showPRs)
-
-                durationStat
-                    .opacity(showDuration ? 1 : 0)
-                    .offset(y: showDuration ? 0 : 6)
-                    .animation(.easeOut(duration: 0.32), value: showDuration)
-
-                secondaryStats
-                    .opacity(showStats ? 1 : 0)
-                    .offset(y: showStats ? 0 : 6)
-                    .animation(.easeOut(duration: 0.32), value: showStats)
-
-                dismissButton
-                    .opacity(showButton ? 1 : 0)
-                    .offset(y: showButton ? 0 : 6)
-                    .animation(.easeOut(duration: 0.32), value: showButton)
-            }
-        }
-    }
-
     private var headerSection: some View {
         VStack(spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppColors.accentGold)
                 Text("Workout complete")
                     .font(.system(.caption, weight: .semibold))
                     .foregroundStyle(.secondary)
@@ -215,7 +193,7 @@ struct WorkoutEndSummaryView: View {
             HStack(spacing: 10) {
                 Image(systemName: "clock.fill")
                     .font(.system(.title3, weight: .medium))
-                    .foregroundStyle(.orange.opacity(0.9))
+                    .foregroundStyle(AppColors.accent.opacity(0.9))
                 Text(summary.formattedDuration)
                     .font(.system(size: 52, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
@@ -232,7 +210,7 @@ struct WorkoutEndSummaryView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.orange.opacity(0.06))
+                .fill(AppColors.accent.opacity(0.06))
         )
     }
 
@@ -250,17 +228,17 @@ struct WorkoutEndSummaryView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.secondarySystemBackground).opacity(0.8))
+                .fill(Color.white.opacity(0.07))
         )
     }
 
     private var prSection: some View {
         VStack(spacing: 16) {
             HStack(spacing: 10) {
-                Image(systemName: "trophy.fill")
+                Image(systemName: "medal.fill")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(hasPRs ? .yellow : .secondary.opacity(0.7))
-                    .symbolEffect(.bounce, value: trophyBounce)
+                    .symbolEffect(.bounce, value: medalBounce)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(hasPRs ? "PRs achieved this workout" : "Personal Records")
                         .font(.system(.subheadline, weight: .bold))
@@ -278,7 +256,7 @@ struct WorkoutEndSummaryView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "flame")
                         .font(.system(size: 14))
-                        .foregroundStyle(.orange.opacity(0.8))
+                        .foregroundStyle(AppColors.accent.opacity(0.8))
                     Text("No PRs this workout — keep pushing!")
                         .font(.system(.subheadline, weight: .medium))
                         .foregroundStyle(.secondary)
@@ -301,7 +279,7 @@ struct WorkoutEndSummaryView: View {
                             Spacer()
                             Text(formatPR(item))
                                 .font(.system(.subheadline, weight: .bold))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(AppColors.accent)
                             Image(systemName: "sparkles")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(.yellow)
@@ -326,12 +304,12 @@ struct WorkoutEndSummaryView: View {
                         .fill(
                             hasPRs
                                 ? LinearGradient(
-                                    colors: [Color.yellow.opacity(0.15), Color.orange.opacity(0.08)],
+                                    colors: [Color.yellow.opacity(0.15), AppColors.accent.opacity(0.08)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                                 : LinearGradient(
-                                    colors: [Color(.tertiarySystemFill), Color(.quaternarySystemFill)],
+                                    colors: [Color.white.opacity(0.06), Color.white.opacity(0.04)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -339,7 +317,7 @@ struct WorkoutEndSummaryView: View {
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
                                 .stroke(
-                                    hasPRs ? Color.yellow.opacity(0.35) : Color.clear,
+                                    hasPRs ? Color.yellow.opacity(0.35) : Color.white.opacity(0.1),
                                     lineWidth: 1
                                 )
                         )
@@ -350,14 +328,14 @@ struct WorkoutEndSummaryView: View {
         if item.weight > 0 {
             return "\(UnitFormatter.formatWeight(item.weight, showUnit: false)) × \(item.reps)"
         }
-        return "\(item.reps) reps"
+        return "BW × \(item.reps)"
     }
 
     private func statItem(value: String, label: String, icon: String) -> some View {
         VStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(.caption2, weight: .medium))
-                .foregroundStyle(.orange.opacity(0.8))
+                .foregroundStyle(AppColors.accent.opacity(0.8))
             Text(value)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
@@ -387,19 +365,13 @@ struct WorkoutEndSummaryView: View {
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(canDismiss ? Color.orange : Color.gray)
+                    .fill(canDismiss ? AppColors.accent : Color.gray)
             )
         }
         .disabled(!canDismiss)
         .padding(.top, 8)
     }
 
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 24)
-            .fill(Color(.systemBackground))
-            .shadow(color: .black.opacity(0.06), radius: 20, x: 0, y: 8)
-            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
-    }
 }
 
 // MARK: - Exercise Progress View
@@ -452,7 +424,7 @@ struct ExerciseProgressView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
             }
-            .background(Color.black)
+            .background(AppColors.background)
             .navigationTitle(exerciseName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -465,7 +437,7 @@ struct ExerciseProgressView: View {
 
     private var statsSection: some View {
         HStack(spacing: 16) {
-            statCard(title: "Max Weight", value: maxWeightEver > 0 ? String(format: "%.0f", UnitFormatter.convertToDisplay(maxWeightEver)) : "--", unit: UnitFormatter.weightUnit, icon: "arrow.up.circle.fill", color: .blue)
+            statCard(title: "Max Weight", value: maxWeightEver > 0 ? String(format: "%.0f", UnitFormatter.convertToDisplay(maxWeightEver)) : "--", unit: UnitFormatter.weightUnit, icon: "arrow.up.circle.fill", color: AppColors.accent)
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: "calendar")
@@ -485,7 +457,7 @@ struct ExerciseProgressView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(0.6))
+                    .fill(Color.white.opacity(0.06))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
             )
         }
@@ -514,7 +486,7 @@ struct ExerciseProgressView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.25), lineWidth: 1))
         )
     }
@@ -526,12 +498,12 @@ struct ExerciseProgressView: View {
                 .foregroundStyle(.secondary)
             Chart(progressData) { point in
                 LineMark(x: .value("Date", point.date), y: .value("Weight", point.maxWeight))
-                    .foregroundStyle(LinearGradient(colors: [.blue, .teal], startPoint: .leading, endPoint: .trailing))
+                    .foregroundStyle(LinearGradient(colors: AppColors.accentGradient, startPoint: .leading, endPoint: .trailing))
                     .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
                 AreaMark(x: .value("Date", point.date), y: .value("Weight", point.maxWeight))
-                    .foregroundStyle(LinearGradient(colors: [.blue.opacity(0.2), .blue.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                    .foregroundStyle(LinearGradient(colors: [AppColors.accent.opacity(0.2), AppColors.accent.opacity(0.02)], startPoint: .top, endPoint: .bottom))
                 PointMark(x: .value("Date", point.date), y: .value("Weight", point.maxWeight))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppColors.accent)
                     .symbolSize(30)
             }
             .chartXAxis {
@@ -550,8 +522,8 @@ struct ExerciseProgressView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(0.6))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.25), lineWidth: 1))
+                    .fill(Color.white.opacity(0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppColors.accent.opacity(0.25), lineWidth: 1))
             )
         }
     }
@@ -577,7 +549,7 @@ struct ExerciseProgressView: View {
         .animation(.easeOut(duration: 0.4), value: emptyChartAppeared)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
         )
         .onAppear { emptyChartAppeared = true }

@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TheLogger — A workout tracker that uses your iPhone camera to count reps automatically. Log sets in seconds, PRs tracked, no account needed.">
+  <meta property="og:title" content="TheLogger — The workout app that watches you lift">
+  <meta property="og:description" content="Your camera counts the reps. You focus on the set.">
+  <meta property="og:image" content="https://thelogger-app.netlify.app/assets/icon.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TheLogger — The workout app that watches you lift">
+  <meta name="twitter:description" content="Your camera counts the reps. You focus on the set.">
+  <title>TheLogger — The workout app that watches you lift</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0A0D1E;
+      --surface: #111827;
+      --accent:  #FF5A6B;
+      --text:    #F2F2F7;
+      --muted:   #8E8EA0;
+      --dim:     #4a4a62;
+      --border:  rgba(255,255,255,0.08);
+      --green:   #34C759;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      transition: background 0.3s, border-color 0.3s;
+      border-bottom: 1px solid transparent;
+    }
+
+    nav.scrolled {
+      background: rgba(10, 13, 30, 0.9);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-color: var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .nav-logo-img {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      object-fit: cover;
+    }
+
+    .nav-logo-text {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 9px 18px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .nav-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    /* ─── HERO ─── */
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 152px 24px 80px;
+      position: relative;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 65% 42% at 50% 0%, rgba(255,90,107,0.12), transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-intro {
+      font-size: 0.9rem;
+      color: var(--dim);
+      letter-spacing: 0.01em;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      margin-bottom: 20px;
+      max-width: 640px;
+      color: #fff;
+    }
+
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(130deg, var(--accent) 20%, #ff9aa5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      font-size: clamp(1rem, 2.4vw, 1.15rem);
+      color: var(--muted);
+      max-width: 460px;
+      margin-bottom: 10px;
+      line-height: 1.65;
+    }
+
+    .tagline-extras {
+      font-size: 0.875rem;
+      color: var(--dim);
+      max-width: 400px;
+      margin-bottom: 38px;
+      line-height: 1.6;
+    }
+
+    .cta-primary {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 15px 34px;
+      border-radius: 12px;
+      text-decoration: none;
+      box-shadow: 0 4px 24px rgba(255,90,107,0.32);
+      transition: opacity 0.15s, transform 0.15s;
+      letter-spacing: -0.01em;
+      margin-bottom: 14px;
+    }
+
+    .cta-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .cta-primary:active { transform: translateY(0); }
+
+    .hero-footnote {
+      font-size: 0.78rem;
+      color: var(--dim);
+    }
+
+    /* ─── VIDEO ─── */
+    .demo {
+      padding: 16px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .demo-caption {
+      font-size: 0.82rem;
+      color: var(--dim);
+      text-align: center;
+      max-width: 420px;
+      line-height: 1.5;
+    }
+
+    .video-wrap {
+      width: 100%;
+      max-width: 680px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #0a0a14;
+      border: 1px solid rgba(255,255,255,0.09);
+      box-shadow: 0 24px 72px rgba(0,0,0,0.55);
+    }
+
+    .video-wrap video {
+      width: 100%;
+      display: block;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+    }
+
+    .video-fallback {
+      aspect-ratio: 16 / 9;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      color: var(--dim);
+      font-size: 0.85rem;
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    .how {
+      padding: 60px 24px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .how-heading {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 24px;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 0 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: start;
+    }
+
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent);
+      padding-top: 3px;
+      opacity: 0.7;
+    }
+
+    .step-title {
+      font-size: 0.95rem;
+      font-weight: 650;
+      color: var(--text);
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+
+    .step-desc {
+      font-size: 0.84rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ─── FEATURES ─── */
+    .features {
+      padding: 60px 24px 80px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .features > h2 {
+      font-size: clamp(1.4rem, 3.2vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    .features > p {
+      font-size: 0.9rem;
+      color: var(--dim);
+      margin-bottom: 36px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 20px;
+      transition: border-color 0.2s;
+    }
+
+    .feature-card:hover { border-color: rgba(255,90,107,0.15); }
+
+    .feature-card.span-2 { grid-column: 1 / -1; }
+
+    .feature-icon {
+      font-size: 1.5rem;
+      display: block;
+      margin-bottom: 10px;
+      line-height: 1;
+    }
+
+    .feature-title {
+      font-size: 0.92rem;
+      font-weight: 650;
+      color: var(--text);
+      margin-bottom: 5px;
+      letter-spacing: -0.01em;
+    }
+
+    .feature-desc {
+      font-size: 0.835rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ─── PRIVACY ─── */
+    .privacy {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px 28px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.83rem;
+      color: var(--muted);
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+
+    /* ─── WAITLIST ─── */
+    .waitlist {
+      padding: 100px 24px;
+      max-width: 480px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .waitlist h2 {
+      font-size: clamp(1.6rem, 3.8vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      margin-bottom: 14px;
+    }
+
+    .waitlist-sub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.65;
+      margin-bottom: 32px;
+    }
+
+    .waitlist-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .waitlist-form input[type="email"] {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 15px;
+      font-size: 0.95rem;
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      min-width: 0;
+    }
+
+    .waitlist-form input[type="email"]::placeholder { color: var(--dim); }
+    .waitlist-form input[type="email"]:focus { border-color: rgba(255,90,107,0.4); }
+
+    .waitlist-form button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 22px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .waitlist-form button:hover { opacity: 0.88; transform: translateY(-1px); }
+    .waitlist-form button:active { transform: translateY(0); }
+
+    .waitlist-note { font-size: 0.77rem; color: var(--dim); }
+
+    .waitlist-success {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 20px 0;
+    }
+
+    .waitlist-success.visible { display: flex; }
+    .success-icon { font-size: 1.8rem; margin-bottom: 4px; }
+    .success-text { font-size: 1rem; font-weight: 600; }
+    .success-sub { color: var(--muted); font-size: 0.875rem; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      text-align: center;
+      padding: 24px 24px 40px;
+      border-top: 1px solid var(--border);
+    }
+
+    footer p { font-size: 0.8rem; color: var(--dim); }
+    footer a { color: var(--dim); text-decoration: none; }
+    footer a:hover { color: var(--muted); }
+
+    /* ─── SCROLL REVEAL ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 560px) {
+      nav { padding: 14px 20px; }
+      .hero { padding: 120px 20px 60px; }
+      .how, .features { padding-left: 20px; padding-right: 20px; }
+      .waitlist { padding: 72px 20px; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .feature-card.span-2 { grid-column: auto; }
+      .waitlist-form { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── NAV ── -->
+  <nav id="main-nav">
+    <a href="#" class="nav-logo">
+      <img
+        src="assets/icon.png"
+        alt="TheLogger"
+        class="nav-logo-img"
+        onerror="this.style.display='none';"
+      >
+      <span class="nav-logo-text">TheLogger</span>
+    </a>
+    <a href="#waitlist" class="nav-cta">Get early access</a>
+  </nav>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <p class="hero-intro">"How many was that? 8? 9?"</p>
+    <h1>The workout app that<br><em>watches you lift.</em></h1>
+    <p class="tagline">Point your camera at yourself. TheLogger counts the reps — automatically, on-device, no wearable needed.</p>
+    <p class="tagline-extras">Rest timer starts the moment you log. PRs get tracked across every exercise. Sets take about 2 seconds to log.</p>
+    <a href="#waitlist" class="cta-primary">Get early access →</a>
+    <p class="hero-footnote">iPhone only &nbsp;·&nbsp; free &nbsp;·&nbsp; no account needed</p>
+  </section>
+
+  <!-- ── VIDEO ── -->
+  <section class="demo">
+    <div class="video-wrap reveal">
+      <video autoplay muted loop playsinline id="demo-video">
+        <source src="assets/demo.MOV" type="video/mp4">
+      </video>
+      <div class="video-fallback" id="video-fallback">
+        <p>🎬 Demo video loading...</p>
+      </div>
+    </div>
+    <p class="demo-caption reveal">The rep counter running live. Pose detection happens entirely on your device — nothing leaves your phone.</p>
+  </section>
+
+  <!-- ── HOW IT WORKS ── -->
+  <section class="how">
+    <p class="how-heading reveal">How it works</p>
+    <div class="steps">
+      <div class="step reveal">
+        <span class="step-num">01</span>
+        <div>
+          <p class="step-title">Set up your exercise</p>
+          <p class="step-desc">Search for it or pick from your history. It remembers the weight you used last time.</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <span class="step-num">02</span>
+        <div>
+          <p class="step-title">Point your camera and lift</p>
+          <p class="step-desc">The rep counter ticks up as you move. You don't touch the phone mid-set. When you're done, the number's already there.</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <span class="step-num">03</span>
+        <div>
+          <p class="step-title">Log the set, rest</p>
+          <p class="step-desc">Two taps to confirm weight and reps. The rest timer starts immediately and shows up on your Lock Screen. If you hit a PR, you'll know.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURES ── -->
+  <section class="features">
+    <h2 class="reveal">The parts that<br>actually matter.</h2>
+    <p class="reveal">No social feed. No AI workout plans. Just the tools to track a lift properly.</p>
+    <div class="feature-grid">
+
+      <div class="feature-card span-2 reveal">
+        <span class="feature-icon">📷</span>
+        <p class="feature-title">Camera rep counting</p>
+        <p class="feature-desc">Vision framework tracks your body position frame by frame and counts full reps automatically. Works for most barbell, dumbbell, and bodyweight movements. Entirely on-device — no cloud, no subscription, no privacy tradeoff.</p>
+      </div>
+
+      <div class="feature-card reveal">
+        <span class="feature-icon">⚡</span>
+        <p class="feature-title">Log a set in 2 seconds</p>
+        <p class="feature-desc">Weight and reps sit on the row. Tap, adjust, done. Before you've sat back down.</p>
+      </div>
+
+      <div class="feature-card reveal">
+        <span class="feature-icon">🏆</span>
+        <p class="feature-title">PRs tracked silently</p>
+        <p class="feature-desc">Every set gets compared against your history. Hit a record — confetti. Miss it — nothing. No noise.</p>
+      </div>
+
+      <div class="feature-card reveal">
+        <span class="feature-icon">⏱</span>
+        <p class="feature-title">Rest timer that just goes</p>
+        <p class="feature-desc">Starts automatically after each set. Lives on your Lock Screen. You stop forgetting to start it.</p>
+      </div>
+
+      <div class="feature-card reveal">
+        <span class="feature-icon">📋</span>
+        <p class="feature-title">Your program, saved</p>
+        <p class="feature-desc">Build it once as a template. Tap it on Monday. Every session pre-loaded exactly how you set it up.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── PRIVACY ── -->
+  <div class="privacy">
+    <span class="pill"><span class="pill-dot"></span> All data on your device</span>
+    <span class="pill"><span class="pill-dot"></span> No account required</span>
+    <span class="pill"><span class="pill-dot"></span> No ads</span>
+    <span class="pill"><span class="pill-dot"></span> No subscription</span>
+  </div>
+
+  <!-- ── WAITLIST ── -->
+  <section class="waitlist" id="waitlist">
+    <h2 class="reveal">Want in early?</h2>
+    <p class="waitlist-sub reveal">
+      I'm building this solo. When the TestFlight beta opens up, I'll send one email — no newsletter, no updates, just access.<br><br>
+      Drop your email below.
+    </p>
+
+    <form
+      class="waitlist-form reveal"
+      id="waitlist-form"
+    >
+      <!-- Replace PASTE_YOUR_KEY_HERE with your Web3Forms access key -->
+      <input type="hidden" name="access_key" value="9cc64e97-56fa-464c-ac1b-a32068315f26">
+      <input type="hidden" name="subject" value="New TheLogger waitlist signup">
+      <input type="hidden" name="from_name" value="TheLogger Waitlist">
+      <input type="hidden" name="botcheck" style="display:none;">
+      <input
+        type="email"
+        name="email"
+        placeholder="you@example.com"
+        required
+        autocomplete="email"
+      >
+      <button type="submit">Join →</button>
+    </form>
+
+    <div class="waitlist-success" id="waitlist-success">
+      <span class="success-icon">👍</span>
+      <p class="success-text">You're on the list.</p>
+      <p class="success-sub">One email when beta opens. That's it.</p>
+    </div>
+
+    <p class="waitlist-note">iPhone only &nbsp;·&nbsp; free beta</p>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    <p>
+      &copy; 2026 TheLogger &nbsp;·&nbsp;
+      <a href="https://thelogger-app.netlify.app/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+    </p>
+  </footer>
+
+  <script>
+    // Sticky nav
+    const nav = document.getElementById('main-nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 24);
+    }, { passive: true });
+
+    // Scroll reveal
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -28px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Web3Forms submit
+    const form = document.getElementById('waitlist-form');
+    const successEl = document.getElementById('waitlist-success');
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      try {
+        const res = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('failed');
+      } catch (_) {
+        // Still show success — don't leave the user hanging
+      }
+      form.style.display = 'none';
+      successEl.classList.add('visible');
+    });
+
+    // Video fallback
+    const video = document.getElementById('demo-video');
+    const fallback = document.getElementById('video-fallback');
+
+    if (video) {
+      video.addEventListener('error', showFallback);
+      setTimeout(() => { if (video.readyState === 0) showFallback(); }, 3500);
+    }
+
+    function showFallback() {
+      if (video) video.style.display = 'none';
+      if (fallback) fallback.style.display = 'flex';
+    }
+  </script>
+
+</body>
+</html>

@@ -17,7 +17,7 @@ struct PRHomeWidgetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "trophy.fill")
+                Image(systemName: "medal.fill")
                     .font(.system(.subheadline, weight: .semibold))
                     .foregroundStyle(.yellow)
 
@@ -33,7 +33,7 @@ struct PRHomeWidgetView: View {
                     HStack(spacing: 4) {
                         Text("All")
                             .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                     }
                 }
                 .fixedSize(horizontal: true, vertical: false)
@@ -43,7 +43,7 @@ struct PRHomeWidgetView: View {
             if recentPRs.isEmpty {
                 // Empty state
                 VStack(spacing: 12) {
-                    Image(systemName: "trophy")
+                    Image(systemName: "medal")
                         .font(.system(size: 48))
                         .foregroundStyle(.secondary.opacity(0.5))
 
@@ -70,9 +70,12 @@ struct PRHomeWidgetView: View {
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
         )
         .onAppear {
+            loadRecentPRs()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .workoutEnded)) { _ in
             loadRecentPRs()
         }
     }
@@ -90,7 +93,7 @@ struct PRCompactCard: View {
     var body: some View {
         HStack(spacing: 12) {
             // Trophy icon
-            Image(systemName: "trophy.fill")
+            Image(systemName: "medal.fill")
                 .font(.system(.body))
                 .foregroundStyle(.yellow)
                 .frame(width: 24)
@@ -102,17 +105,23 @@ struct PRCompactCard: View {
                     .foregroundStyle(.primary)
 
                 HStack(spacing: 6) {
-                    Text(UnitFormatter.formatWeightCompact(pr.weight, showUnit: true))
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    if pr.isBodyweight {
+                        Text("BW × \(pr.reps)")
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(UnitFormatter.formatWeightCompact(pr.weight, showUnit: true))
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(.secondary)
 
-                    Text("×")
-                        .font(.system(.caption))
-                        .foregroundStyle(.tertiary)
+                        Text("×")
+                            .font(.system(.caption))
+                            .foregroundStyle(.tertiary)
 
-                    Text("\(pr.reps)")
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        Text("\(pr.reps)")
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
 
                     Text("•")
                         .font(.system(.caption))
@@ -129,7 +138,7 @@ struct PRCompactCard: View {
             if pr.isStale {
                 Image(systemName: "clock")
                     .font(.caption)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(AppColors.accent)
             }
         }
         .padding(.horizontal, 12)
@@ -137,6 +146,10 @@ struct PRCompactCard: View {
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(.systemGray6).opacity(0.3))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(.systemGray4).opacity(0.35), lineWidth: 1)
+                )
         )
     }
 }
@@ -159,7 +172,7 @@ struct PRTimelineView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 16) {
@@ -186,12 +199,12 @@ struct PRTimelineView: View {
                                 Image(systemName: "chevron.down")
                                     .font(.caption2)
                             }
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .background(
                                 Capsule()
-                                    .fill(Color.blue.opacity(0.15))
+                                    .fill(AppColors.accent.opacity(0.15))
                             )
                         }
 
@@ -216,12 +229,12 @@ struct PRTimelineView: View {
                                 Image(systemName: "chevron.down")
                                     .font(.caption2)
                             }
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .background(
                                 Capsule()
-                                    .fill(Color.blue.opacity(0.15))
+                                    .fill(AppColors.accent.opacity(0.15))
                             )
                         }
 
@@ -235,13 +248,14 @@ struct PRTimelineView: View {
                         emptyState
                     } else {
                         LazyVStack(spacing: 12) {
-                            ForEach(filteredAndSortedPRs) { pr in
+                            ForEach(Array(filteredAndSortedPRs.enumerated()), id: \.element.id) { index, pr in
                                 NavigationLink {
                                     ExerciseDetailView(exerciseName: pr.displayName)
                                 } label: {
                                     PRCard(pr: pr)
                                 }
                                 .buttonStyle(.plain)
+                                .staggeredAppear(index: index, maxStagger: 6)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -259,7 +273,7 @@ struct PRTimelineView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "trophy")
+            Image(systemName: "medal")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary.opacity(0.5))
 
@@ -295,7 +309,7 @@ struct PRCard: View {
                     .fill(Color.yellow.opacity(0.2))
                     .frame(width: 48, height: 48)
 
-                Image(systemName: "trophy.fill")
+                Image(systemName: "medal.fill")
                     .font(.system(size: 20))
                     .foregroundStyle(.yellow)
             }
@@ -307,25 +321,30 @@ struct PRCard: View {
                     .foregroundStyle(.primary)
 
                 HStack(spacing: 8) {
-                    // Weight × Reps
-                    HStack(spacing: 4) {
-                        Text(UnitFormatter.formatWeightCompact(pr.weight, showUnit: true))
+                    // Weight × Reps (or BW × Reps for bodyweight)
+                    if pr.isBodyweight {
+                        Text("BW × \(pr.reps)")
                             .font(.system(.subheadline, weight: .medium))
-                        Text("×")
-                            .font(.system(.subheadline))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        HStack(spacing: 4) {
+                            Text(UnitFormatter.formatWeightCompact(pr.weight, showUnit: true))
+                                .font(.system(.subheadline, weight: .medium))
+                            Text("×")
+                                .font(.system(.subheadline))
+                                .foregroundStyle(.tertiary)
+                            Text("\(pr.reps)")
+                                .font(.system(.subheadline, weight: .medium))
+                        }
+                        .foregroundStyle(.secondary)
+
+                        Divider()
+                            .frame(height: 12)
+
+                        Text("1RM: \(UnitFormatter.formatWeightCompact(pr.estimated1RM, showUnit: true))")
+                            .font(.system(.caption, weight: .medium))
                             .foregroundStyle(.tertiary)
-                        Text("\(pr.reps)")
-                            .font(.system(.subheadline, weight: .medium))
                     }
-                    .foregroundStyle(.secondary)
-
-                    Divider()
-                        .frame(height: 12)
-
-                    // Estimated 1RM
-                    Text("1RM: \(UnitFormatter.formatWeightCompact(pr.estimated1RM, showUnit: true))")
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.tertiary)
                 }
 
                 // Date
@@ -340,12 +359,12 @@ struct PRCard: View {
 
                     Text(pr.relativeTimeString)
                         .font(.system(.caption))
-                        .foregroundStyle(pr.isStale ? .orange : .secondary)
+                        .foregroundStyle(pr.isStale ? AppColors.accent : .secondary)
 
                     if pr.isStale {
                         Image(systemName: "clock")
                             .font(.caption2)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(AppColors.accent)
                     }
                 }
             }
@@ -361,12 +380,12 @@ struct PRCard: View {
         .padding(.vertical, 14)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
                 .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
         )
     }
 }
@@ -387,6 +406,6 @@ private struct WorkoutListViewPreview: View {
                     .padding(.horizontal, 16)
             }
         }
-        .background(Color.black)
+        .background(AppColors.background)
     }
 }

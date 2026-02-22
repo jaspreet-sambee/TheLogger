@@ -186,11 +186,11 @@ struct WorkoutListView: View {
                             } label: {
                                 Image(systemName: userName.isEmpty ? "person.crop.circle.badge.plus" : "pencil")
                                     .font(.system(.body, weight: .medium))
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(AppColors.accent)
                                     .padding(8)
                                     .background(
                                         Circle()
-                                            .fill(Color.black.opacity(0.6))
+                                            .fill(Color.white.opacity(0.08))
                                     )
                             }
                             .buttonStyle(.borderless)
@@ -204,7 +204,7 @@ struct WorkoutListView: View {
                                     .padding(8)
                                     .background(
                                         Circle()
-                                            .fill(Color.black.opacity(0.6))
+                                            .fill(Color.white.opacity(0.08))
                                     )
                             }
                             .buttonStyle(.borderless)
@@ -226,7 +226,7 @@ struct WorkoutListView: View {
                                 Text("WEEKLY GOAL")
                                     .font(.system(.caption, weight: .semibold))
                                     .foregroundStyle(.secondary)
-                                WeeklyGoalRing(current: thisWeekWorkouts, goal: weeklyWorkoutGoal, color: .green)
+                                WeeklyGoalRing(current: thisWeekWorkouts, goal: weeklyWorkoutGoal, color: AppColors.accentGold)
                             }
                         }
                         .padding(.top, 4)
@@ -245,12 +245,12 @@ struct WorkoutListView: View {
                             HStack(spacing: 12) {
                                 // Streak Card with animated flame
                                 AnimatedStatCard(
-                                    icon: AnimatedFlame(color: .orange),
+                                    icon: AnimatedFlame(color: AppColors.accent),
                                     value: workoutStreak,
                                     label: "Day Streak",
-                                    color: .orange
+                                    color: AppColors.accent
                                 )
-                                .depthShadow(color: .orange, radius: 8)
+                                .depthShadow(color: AppColors.accent, radius: 8)
                                 .staggeredAppear(index: 0, maxStagger: 3)
 
                                 // Total Workouts with milestone badge
@@ -258,10 +258,10 @@ struct WorkoutListView: View {
                                     icon: Image(systemName: "checkmark.circle.fill"),
                                     value: totalWorkouts,
                                     label: "Total",
-                                    color: .green,
+                                    color: AppColors.accentGold,
                                     badge: milestoneBadge(for: totalWorkouts)
                                 )
-                                .depthShadow(color: .green, radius: 8)
+                                .depthShadow(color: AppColors.accentGold, radius: 8)
                                 .staggeredAppear(index: 1, maxStagger: 3)
 
                                 // This Week with day dots
@@ -269,27 +269,24 @@ struct WorkoutListView: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: "calendar")
                                             .font(.system(.caption, weight: .bold))
-                                            .foregroundStyle(.blue)
+                                            .foregroundStyle(AppColors.accent)
                                         CountingNumber(value: thisWeekWorkouts)
                                             .font(.system(.title2, weight: .bold))
-                                            .foregroundStyle(.blue)
+                                            .foregroundStyle(AppColors.accent)
                                     }
                                     Text("This Week")
                                         .font(.system(.caption2, weight: .medium))
                                         .foregroundStyle(.secondary)
-                                    WeekDots(workoutDays: thisWeekWorkoutDays, accentColor: .blue)
+                                    WeekDots(workoutDays: thisWeekWorkoutDays, accentColor: AppColors.accent)
                                 }
                                 .frame(maxWidth: .infinity, minHeight: 76)
                                 .padding(.vertical, 12)
-                                .background(
+                                .glassMorphism(cornerRadius: 12)
+                                .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.blue.opacity(0.1))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.blue.opacity(0.25), lineWidth: 1)
-                                        )
+                                        .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                                 )
-                                .depthShadow(color: .blue, radius: 8)
+                                .depthShadow(color: AppColors.accent, radius: 8)
                                 .staggeredAppear(index: 2, maxStagger: 3)
                             }
 
@@ -321,7 +318,8 @@ struct WorkoutListView: View {
                             }
 
                             ActiveWorkoutRowView(workout: active)
-                                .depthShadow(color: .blue, radius: 12)
+                                .shimmerEffect()
+                                .depthShadow(color: AppColors.accent, radius: 12)
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowSeparator(.hidden)
@@ -329,7 +327,7 @@ struct WorkoutListView: View {
                     } header: {
                         HStack(spacing: 6) {
                             Circle()
-                                .fill(Color.blue)
+                                .fill(AppColors.accent)
                                 .frame(width: 8, height: 8)
                             Text("Active Workout")
                                 .font(.system(.subheadline, weight: .semibold))
@@ -359,10 +357,10 @@ struct WorkoutListView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color.blue)
+                            .background(AppColors.accent)
                             .shimmerEffect()
                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .pulsingGlow(color: .blue, radius: 10)
+                            .pulsingGlow(color: AppColors.accent, radius: 10)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("startWorkoutButton")
@@ -427,29 +425,29 @@ struct WorkoutListView: View {
                         HStack(spacing: 12) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.blue.opacity(0.1))
+                                    .fill(AppColors.accent.opacity(0.1))
                                     .frame(width: 40, height: 40)
-                                
+
                                 Image(systemName: "plus")
                                     .font(.system(.body, weight: .semibold))
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(AppColors.accent)
                             }
-                            
+
                             Text("New Template")
                                 .font(.system(.body, weight: .medium))
-                                .foregroundStyle(.blue)
-                            
+                                .foregroundStyle(AppColors.accent)
+
                             Spacer()
                         }
                         .padding(.vertical, 12)
                         .padding(.horizontal, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.blue.opacity(0.08))
+                                .fill(AppColors.accent.opacity(0.08))
                                 .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                                        .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                                 )
                         )
                     }
@@ -457,7 +455,7 @@ struct WorkoutListView: View {
                     HStack {
                         Image(systemName: "doc.text.fill")
                             .font(.system(.caption, weight: .semibold))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                         Text("Templates")
                             .font(.system(.subheadline, weight: .semibold))
                         if !templates.isEmpty {
@@ -469,7 +467,7 @@ struct WorkoutListView: View {
                                 .padding(.vertical, 2)
                                 .background(
                                     Capsule()
-                                        .fill(Color(.systemGray5))
+                                        .fill(Color.white.opacity(0.1))
                                 )
                         }
                     }
@@ -516,15 +514,15 @@ struct WorkoutListView: View {
                                     Image(systemName: "chevron.right")
                                         .font(.system(.caption, weight: .semibold))
                                 }
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(AppColors.accent)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
                                 .background(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color.blue.opacity(0.1))
+                                        .fill(AppColors.accent.opacity(0.1))
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                                .stroke(AppColors.accent.opacity(0.2), lineWidth: 1)
                                         )
                                 )
                             }
@@ -534,7 +532,7 @@ struct WorkoutListView: View {
                         HStack {
                             Image(systemName: "clock.arrow.circlepath")
                                 .font(.system(.caption, weight: .semibold))
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(AppColors.accent)
                             Text("Recent Workouts")
                                 .font(.system(.subheadline, weight: .semibold))
                             Spacer()
@@ -558,12 +556,12 @@ struct WorkoutListView: View {
                         HStack(spacing: 14) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.green.opacity(0.15))
+                                    .fill(AppColors.accentGold.opacity(0.12))
                                     .frame(width: 44, height: 44)
-                                
+
                                 Image(systemName: "square.and.arrow.up")
                                     .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(AppColors.accentGold)
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
@@ -585,12 +583,11 @@ struct WorkoutListView: View {
                         .padding(.horizontal, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.black.opacity(0.6))
-                                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+                                .fill(Color.white.opacity(0.06))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.green.opacity(0.25), lineWidth: 1)
+                                .stroke(AppColors.accentGold.opacity(0.25), lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
@@ -598,7 +595,7 @@ struct WorkoutListView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "lock.shield.fill")
                             .font(.system(.caption, weight: .semibold))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(AppColors.accentGold)
                         Text("Data & Backup")
                             .font(.system(.subheadline, weight: .semibold))
                     }
@@ -613,7 +610,7 @@ struct WorkoutListView: View {
             .scrollContentBackground(.hidden)
             .background {
                 ZStack {
-                    Color(.systemBackground)
+                    AppColors.background
                     FloatingParticlesView()
                 }
                 .ignoresSafeArea()
@@ -659,6 +656,39 @@ struct WorkoutListView: View {
                 }
             }
             .task {
+                #if DEBUG
+                // Clear all data for UI testing mode (clean state for each test)
+                if CommandLine.arguments.contains("--uitesting") && !hasCheckedActiveWorkout {
+                    do {
+                        // Delete all workouts (including templates)
+                        let workoutDescriptor = FetchDescriptor<Workout>()
+                        let allWorkouts = try modelContext.fetch(workoutDescriptor)
+                        for workout in allWorkouts {
+                            modelContext.delete(workout)
+                        }
+
+                        // Delete all exercise memories
+                        let memoryDescriptor = FetchDescriptor<ExerciseMemory>()
+                        let memories = try modelContext.fetch(memoryDescriptor)
+                        for memory in memories {
+                            modelContext.delete(memory)
+                        }
+
+                        // Delete all personal records
+                        let prDescriptor = FetchDescriptor<PersonalRecord>()
+                        let prs = try modelContext.fetch(prDescriptor)
+                        for pr in prs {
+                            modelContext.delete(pr)
+                        }
+
+                        try modelContext.save()
+                        print("[TheLogger] UI Testing: Cleared all data for clean test state")
+                    } catch {
+                        print("[TheLogger] UI Testing: Failed to clear data - \(error)")
+                    }
+                }
+                #endif
+
                 // Auto-navigate to active workout on app launch (only once)
                 if !hasCheckedActiveWorkout {
                     hasCheckedActiveWorkout = true
@@ -977,20 +1007,20 @@ struct ActiveWorkoutRowView: View {
                     Spacer()
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(Color.blue)
+                            .fill(AppColors.accent)
                             .frame(width: 6, height: 6)
                         Text("Active")
                             .font(.system(.caption, weight: .medium))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
                         Capsule()
-                            .fill(Color.blue.opacity(0.1))
+                            .fill(AppColors.accent.opacity(0.1))
                     )
                 }
-                
+
                 // Exercise count
                 HStack(spacing: 16) {
                     Label {
@@ -1011,10 +1041,10 @@ struct ActiveWorkoutRowView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "clock.fill")
                         .font(.system(.caption2, weight: .medium))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppColors.accent)
                     Text(formattedElapsedTime)
                         .font(.system(.headline, weight: .semibold))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppColors.accent)
                         .monospacedDigit()
                 }
                 Text("elapsed")
@@ -1028,8 +1058,7 @@ struct ActiveWorkoutRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+                .fill(Color.white.opacity(0.06))
         )
         .overlay(AnimatedGradientBorder())
         .onAppear {
@@ -1066,18 +1095,11 @@ struct TemplateRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Header row
-            HStack {
-                Text(template.name)
-                    .font(.system(.headline, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(.caption, weight: .semibold))
-                    .foregroundStyle(.tertiary)
-            }
+            Text(template.name)
+                .font(.system(.headline, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             // Exercise chips
             if !exercisePreview.isEmpty {
@@ -1090,7 +1112,7 @@ struct TemplateRowView: View {
                             .padding(.vertical, 5)
                             .background(
                                 Capsule()
-                                    .fill(Color(.systemGray5))
+                                    .fill(Color.white.opacity(0.1))
                             )
                             .lineLimit(1)
                     }
@@ -1103,7 +1125,7 @@ struct TemplateRowView: View {
                             .padding(.vertical, 5)
                             .background(
                                 Capsule()
-                                    .strokeBorder(Color(.systemGray4), lineWidth: 1)
+                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                             )
                     }
                 }
@@ -1118,13 +1140,12 @@ struct TemplateRowView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.35), lineWidth: 1)
+                .stroke(AppColors.accent.opacity(0.35), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
     }
 }
 
@@ -1179,21 +1200,21 @@ struct WorkoutRowView: View {
                     Spacer()
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(Color.blue)
+                            .fill(AppColors.accent)
                             .frame(width: 6, height: 6)
                         Text("Active")
                             .font(.system(.caption, weight: .medium))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
                         Capsule()
-                            .fill(Color.blue.opacity(0.1))
+                            .fill(AppColors.accent.opacity(0.1))
                     )
                 }
             }
-            
+
             if isCompact {
                 // Compact mode: single line with date and exercise count
                 Text("\(compactDateString) • \(workout.exerciseCount) \(workout.exerciseCount == 1 ? "exercise" : "exercises")")
@@ -1232,20 +1253,14 @@ struct WorkoutRowView: View {
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(0.6))
-                Group {
-                    if useBorder {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(.separator).opacity(0.5), lineWidth: 1.0)
-                    } else {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(accentColor)
-                    }
+                    .fill(Color.white.opacity(0.06))
+                if useBorder {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1.0)
                 }
-                // Active workout border highlight
                 if isActive {
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                        .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                 }
             }
         )
@@ -1261,8 +1276,8 @@ struct WorkoutSelectorView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Full screen black background
-                Color.black
+                // Full screen background
+                AppColors.background
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -1274,12 +1289,12 @@ struct WorkoutSelectorView: View {
                             VStack(spacing: 12) {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.blue.opacity(0.15))
+                                        .fill(AppColors.accent.opacity(0.15))
                                         .frame(width: 48, height: 48)
-                                    
+
                                     Image(systemName: "plus.circle.fill")
                                         .font(.system(size: 24, weight: .medium))
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(AppColors.accent)
                                 }
                                 
                                 VStack(spacing: 4) {
@@ -1296,24 +1311,24 @@ struct WorkoutSelectorView: View {
                             .padding(.horizontal, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.black.opacity(0.6))
+                                    .fill(Color.white.opacity(0.06))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                    .stroke(AppColors.accent.opacity(0.3), lineWidth: 1)
                             )
                         }
                         .buttonStyle(.plain)
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
-                        
+
                         // Templates Section
                         if !templates.isEmpty {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
                                     Image(systemName: "doc.text.fill")
                                         .font(.system(.subheadline, weight: .semibold))
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(AppColors.accent)
                                     Text("Templates")
                                         .font(.system(.title3, weight: .bold))
                                         .foregroundStyle(.primary)
@@ -1325,7 +1340,7 @@ struct WorkoutSelectorView: View {
                                         .padding(.vertical, 4)
                                         .background(
                                             Capsule()
-                                                .fill(Color(.tertiarySystemBackground))
+                                                .fill(Color.white.opacity(0.08))
                                         )
                                 }
                                 .padding(.horizontal, 16)
@@ -1373,7 +1388,7 @@ struct WorkoutSelectorView: View {
                 }
             }
         }
-        .presentationBackground(Color.black)
+        .presentationBackground(AppColors.background)
     }
 }
 
@@ -1386,12 +1401,12 @@ struct TemplateCardView: View {
             // Icon/Visual Indicator
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.blue.opacity(0.1))
+                    .fill(AppColors.accent.opacity(0.1))
                     .frame(width: 48, height: 48)
-                
+
                 Image(systemName: "doc.text.fill")
                     .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppColors.accent)
             }
             
             // Content
@@ -1443,12 +1458,11 @@ struct TemplateCardView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+                .fill(Color.white.opacity(0.06))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.4), lineWidth: 1)
+                .stroke(AppColors.accent.opacity(0.35), lineWidth: 1)
         )
     }
 }
@@ -1528,7 +1542,7 @@ struct WorkoutHistoryView: View {
                                     .padding(.vertical, 2)
                                     .background(
                                         Capsule()
-                                            .fill(Color(.systemGray5))
+                                            .fill(Color.white.opacity(0.1))
                                     )
                             }
                             .foregroundStyle(.secondary)
@@ -1544,7 +1558,7 @@ struct WorkoutHistoryView: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .background(Color.black)
+            .background(AppColors.background)
             .navigationTitle("Workout History")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1555,7 +1569,7 @@ struct WorkoutHistoryView: View {
                 }
             }
         }
-        .presentationBackground(Color.black)
+        .presentationBackground(AppColors.background)
     }
     
     private func deleteWorkouts(at offsets: IndexSet, from workoutsForDate: [Workout]) {
@@ -1623,7 +1637,7 @@ struct HistoryWorkoutRowView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "figure.strengthtraining.traditional")
                             .font(.system(.caption2, weight: .medium))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(AppColors.accent.opacity(0.7))
                         Text("\(workout.exerciseCount)")
                             .font(.system(.subheadline, weight: .semibold))
                     }
@@ -1669,14 +1683,14 @@ struct HistoryWorkoutRowView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+                .fill(Color.white.opacity(0.06))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                        .stroke(AppColors.accent.opacity(0.2), lineWidth: 1)
                 )
         )
     }
+
 }
 
 #Preview {

@@ -120,8 +120,8 @@ graph TD
 | TheLoggerApp | TheLoggerApp.swift | App entry, SwiftData container |
 | OnboardingView | OnboardingView.swift | 3-screen welcome flow |
 | WorkoutListView | WorkoutListView.swift | Home, templates, history |
-| WorkoutDetailView | ContentView.swift | Active workout editing |
-| ExerciseEditView | ContentView.swift | Exercise + sets editing |
+| WorkoutDetailView | WorkoutDetailView.swift | Active workout editing |
+| ExerciseEditView | ExerciseViews.swift | Exercise + sets editing |
 | SettingsView | SettingsView.swift | User preferences |
 
 ## State Management
@@ -279,30 +279,24 @@ TheLogger/
 │   ├── Exercise.swift            # Exercise model
 │   └── WorkoutSet.swift          # WorkoutSet model
 ├── Views
-│   ├── ContentView.swift         # WorkoutDetail + subviews
+│   ├── WorkoutDetailView.swift   # Active workout editing
 │   ├── WorkoutListView.swift     # Home + navigation
+│   ├── ExerciseViews.swift       # ExerciseCard, ExerciseRowView, ExerciseEditView
+│   ├── ExerciseSearchView.swift  # Exercise search/selection
+│   ├── ExerciseDetailView.swift  # Exercise detail
+│   ├── SetViews.swift            # InlineSetRowView, InlineAddSetView, AddSetView
+│   ├── TemplateEditView.swift    # Template creation/editing
+│   ├── TimerViews.swift          # RestTimerView, PRCelebrationView
+│   ├── SummaryViews.swift        # WorkoutEndSummaryView
 │   ├── SettingsView.swift        # Settings
 │   ├── OnboardingView.swift      # Onboarding
-│   └── PrivacyPolicyView.swift   # Privacy policy
-└── Components
-    ├── Components.swift          # UI components
-    └── Animations.swift          # Animation components
+│   ├── PrivacyPolicyView.swift   # Privacy policy
+│   └── ContentView.swift         # AddWorkoutView (legacy, supporting views)
+├── CameraRepCounter/             # Camera-based rep counting
+├── Components
+│   ├── Components.swift          # UI components
+│   └── Animations.swift          # Animation components
+└── Extensions
+    ├── PRManager.swift           # PR detection logic
+    └── LiveActivityManager.swift # Live Activity handling
 ```
-
-## Future Refactoring
-
-ContentView.swift (~4000 lines) should be split into:
-
-| New File | Contents |
-|----------|----------|
-| Views/WorkoutDetailView.swift | Main workout screen |
-| Views/ExerciseViews.swift | ExerciseCard, ExerciseRowView, ExerciseSearchView |
-| Views/SetViews.swift | InlineSetRowView, AddSetView, EditSetView |
-| Views/TimerViews.swift | RestTimerView, PRCelebrationView |
-| Views/SummaryViews.swift | WorkoutEndSummaryView |
-| Views/TemplateViews.swift | TemplateEditView, AddWorkoutView |
-
-This refactoring will improve:
-- Code navigation and maintainability
-- Build times (smaller files = faster incremental builds)
-- Collaboration (less merge conflicts)

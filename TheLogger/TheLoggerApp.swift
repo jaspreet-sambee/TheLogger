@@ -73,7 +73,13 @@ struct TheLoggerApp: App {
                     try? context.save()
                 }
             }
-            
+
+            #if DEBUG
+            if CommandLine.arguments.contains("--seed-data") {
+                DebugHelpers.populateSampleData(modelContext: context)
+            }
+            #endif
+
             return container
         } catch {
             // ModelContainer creation failed. Preserve existing store by moving to recovery
@@ -138,6 +144,21 @@ struct TheLoggerApp: App {
     // Deep link state for widget navigation
     @State private var deepLinkWorkoutId: UUID?
     @State private var deepLinkExerciseId: UUID?
+
+    init() {
+        #if DEBUG
+        if CommandLine.arguments.contains("--uitesting") {
+            // Reset UserDefaults for clean test state
+            let defaults = UserDefaults.standard
+            defaults.set(true, forKey: "hasCompletedOnboarding")
+            // Disable rest timer by default so demos aren't interrupted between sets.
+            // Use --enable-rest-timer alongside --uitesting to override (for rest timer demo).
+            let enableRestTimer = CommandLine.arguments.contains("--enable-rest-timer")
+            defaults.set(enableRestTimer, forKey: "globalRestTimerEnabled")
+            defaults.synchronize()
+        }
+        #endif
+    }
 
     var body: some Scene {
         WindowGroup {

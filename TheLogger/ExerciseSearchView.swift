@@ -54,7 +54,7 @@ struct ExerciseSearchView: View {
                 searchField
                 resultsList
             }
-            .background(Color.black)
+            .background(AppColors.background)
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -63,7 +63,7 @@ struct ExerciseSearchView: View {
                 }
             }
         }
-        .presentationBackground(Color.black)
+        .presentationBackground(AppColors.background)
         .onAppear { isSearchFocused = true }
     }
 
@@ -92,9 +92,9 @@ struct ExerciseSearchView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color.black.opacity(0.6))
+        .background(Color.white.opacity(0.06))
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.25), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppColors.accent.opacity(0.25), lineWidth: 1))
         .padding(.horizontal, 16)
         .padding(.top, 16)
     }
@@ -128,7 +128,7 @@ struct ExerciseSearchView: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "plus.circle.fill")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppColors.accent)
                 Text("Add \"\(searchText.trimmingCharacters(in: .whitespaces))\"")
                     .foregroundStyle(.primary)
                 Spacer()
@@ -137,7 +137,7 @@ struct ExerciseSearchView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .listRowBackground(Color.black.opacity(0.6))
+        .listRowBackground(Color.white.opacity(0.06))
     }
 
     private var userExercisesSection: some View {
@@ -159,7 +159,7 @@ struct ExerciseSearchView: View {
                     }
                 }
                 .accessibilityIdentifier("exerciseResult_\(memory.name)")
-                .listRowBackground(Color.black.opacity(0.6))
+                .listRowBackground(Color.white.opacity(0.06))
             }
         } header: {
             Text("Recent")
@@ -215,7 +215,7 @@ struct ExerciseSearchView: View {
             }
         }
         .accessibilityIdentifier("exerciseResult_\(exercise.name)")
-        .listRowBackground(Color.black.opacity(0.6))
+        .listRowBackground(Color.white.opacity(0.06))
     }
 
     private func selectExercise(_ name: String) {

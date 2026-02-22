@@ -170,7 +170,7 @@ struct RestTimerView: View {
                                 .foregroundStyle(sel ? .primary : .secondary)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(Capsule().fill(sel ? Color.secondary.opacity(0.2) : Color.clear))
+                                .background(Capsule().fill(sel ? AppColors.accent.opacity(0.15) : Color.clear))
                         }
                         .buttonStyle(.plain)
                     }
@@ -191,7 +191,7 @@ struct RestTimerView: View {
         HStack(spacing: 16) {
             Text(timer.formattedTime)
                 .font(.system(.title3, weight: .semibold))
-                .foregroundStyle(timer.remainingSeconds <= 5 ? .orange : .primary)
+                .foregroundStyle(timer.remainingSeconds <= 5 ? AppColors.accent : .primary)
                 .monospacedDigit()
                 .frame(width: 50, alignment: .leading)
                 .scaleEffect(countdownPulse)
@@ -230,7 +230,7 @@ struct RestTimerView: View {
         HStack {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(.caption, weight: .medium))
-                .foregroundStyle(.green.opacity(0.8))
+                .foregroundStyle(AppColors.accentGold.opacity(0.9))
                 .symbolEffect(.bounce, value: completeBounceTrigger)
 
             Text("Rest complete")
@@ -251,7 +251,7 @@ struct PRCelebrationView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "trophy.fill")
+            Image(systemName: "medal.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(.yellow)
                 .symbolEffect(.bounce, value: bounceTrigger)

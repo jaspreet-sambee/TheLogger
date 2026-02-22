@@ -967,23 +967,36 @@ final class PersonalRecord {
         self.workoutId = workoutId
     }
     
-    /// Estimated 1RM using Brzycki formula
+    /// True when the PR was set without added weight (bodyweight exercises like pull-ups)
+    var isBodyweight: Bool { weight == 0 }
+
+    /// Estimated 1RM using Epley formula. Returns 0 for bodyweight sets (use prScore instead).
     var estimated1RM: Double {
-        guard reps > 0 && reps <= 10 else { return weight }
-        return weight * (36.0 / (37.0 - Double(reps)))
+        guard weight > 0, reps > 0 else { return 0 }
+        return weight * (1.0 + Double(reps) / 30.0)
     }
-    
-    /// Formatted display string (uses 1 decimal for weight to preserve values like 22.5)
+
+    /// Comparison score used to rank PRs.
+    /// Weighted sets: estimated 1RM. Bodyweight sets: raw reps (more = better).
+    var prScore: Double {
+        isBodyweight ? Double(reps) : estimated1RM
+    }
+
+    /// Formatted display string
     var displayString: String {
-        "\(UnitFormatter.formatWeight(weight, showUnit: false)) × \(reps)"
+        if isBodyweight {
+            return "BW × \(reps)"
+        }
+        return "\(UnitFormatter.formatWeight(weight, showUnit: false)) × \(reps)"
     }
 }
 
 /// Manager for detecting and saving personal records
 struct PersonalRecordManager {
     
-    /// Check if a set is a new PR and save it if so
-    /// Returns true if a new PR was set
+    /// Check if a set is a new PR and save it if so.
+    /// Returns true only when a genuine cross-workout PR is beaten (triggers celebration).
+    /// First-time records and within-workout improvements are saved silently (return false).
     @discardableResult
     static func checkAndSavePR(
         exerciseName: String,
@@ -994,47 +1007,53 @@ struct PersonalRecordManager {
         setType: SetType = .working
     ) -> Bool {
         let normalizedName = exerciseName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Only consider valid working sets (weight > 0, reps > 0, not warmup)
-        guard weight > 0, reps > 0, setType == .working else {
+
+        // Only consider valid working sets (reps > 0, not warmup).
+        // weight == 0 is allowed for bodyweight exercises (pull-ups, dips, etc.).
+        guard reps > 0, setType == .working else {
             #if DEBUG
-            print("[PR] checkAndSavePR SKIP guard weight=\(weight) reps=\(reps) setType=\(setType)")
+            print("[PR] checkAndSavePR SKIP guard reps=\(reps) setType=\(setType)")
             #endif
             return false
         }
-        
+
         // Fetch existing PR for this exercise
         let descriptor = FetchDescriptor<PersonalRecord>(
             predicate: #Predicate { $0.exerciseName == normalizedName }
         )
-        
+
         let existingPRs = (try? modelContext.fetch(descriptor)) ?? []
-        
-        // Calculate estimated 1RM for new set
-        let newEstimated1RM = calculateEstimated1RM(weight: weight, reps: reps)
-        
-        // Check if this beats existing PR
+
+        // Score for comparison: 1RM for weighted sets, raw reps for bodyweight
+        let newScore = prScore(weight: weight, reps: reps)
+
         if let existingPR = existingPRs.first {
-            let existing1RM = existingPR.estimated1RM
-            
-            if newEstimated1RM > existing1RM {
-                // New PR! Update the record
+            let existingScore = existingPR.prScore
+
+            if newScore > existingScore {
+                // Capture BEFORE updating, so we can check if this is a cross-workout improvement
+                let previousWorkoutId = existingPR.workoutId
+
                 existingPR.weight = weight
                 existingPR.reps = reps
                 existingPR.date = Date()
                 existingPR.workoutId = workoutId
-                
                 try? modelContext.save()
+
+                // Only celebrate when beating a record from a PREVIOUS workout.
+                // Same-workout improvements (e.g. set 3 beats set 1) are saved silently.
+                let fromPreviousWorkout = previousWorkoutId != workoutId
                 #if DEBUG
-                print("[PR] checkAndSavePR UPDATED \(normalizedName) -> \(weight)x\(reps) 1RM \(existing1RM)->\(newEstimated1RM)")
+                print("[PR] checkAndSavePR UPDATED \(normalizedName) -> \(weight)x\(reps) score \(existingScore)->\(newScore) celebrate=\(fromPreviousWorkout)")
                 #endif
-                return true
+                return fromPreviousWorkout
             }
             #if DEBUG
-            print("[PR] checkAndSavePR NO beat \(normalizedName) new1RM=\(newEstimated1RM) existing1RM=\(existing1RM)")
+            print("[PR] checkAndSavePR NO beat \(normalizedName) newScore=\(newScore) existingScore=\(existingScore)")
             #endif
         } else {
-            // First time logging this exercise - create PR
+            // First time ever logging this exercise — establish baseline record silently.
+            // There is no previous record to beat, so no celebration is warranted.
             let newPR = PersonalRecord(
                 exerciseName: normalizedName,
                 weight: weight,
@@ -1044,12 +1063,18 @@ struct PersonalRecordManager {
             modelContext.insert(newPR)
             try? modelContext.save()
             #if DEBUG
-            print("[PR] checkAndSavePR NEW \(normalizedName) \(weight)x\(reps) 1RM=\(newEstimated1RM)")
+            print("[PR] checkAndSavePR BASELINE \(normalizedName) \(weight)x\(reps) score=\(newScore)")
             #endif
-            return true
+            return false
         }
-        
+
         return false
+    }
+
+    /// PR comparison score: 1RM for weighted sets, raw reps for bodyweight.
+    private static func prScore(weight: Double, reps: Int) -> Double {
+        if weight == 0 { return Double(reps) }
+        return calculateEstimated1RM(weight: weight, reps: reps)
     }
     
     /// Recalculate PR for an exercise by scanning all workouts. Use when a set is edited
@@ -1073,10 +1098,11 @@ struct PersonalRecordManager {
             for exercise in (workout.exercises ?? []) {
                 guard exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName else { continue }
                 for set in (exercise.sets ?? []) {
-                    guard set.weight > 0, set.reps > 0, set.type == .working else { continue }
-                    let est1RM = calculateEstimated1RM(weight: set.weight, reps: set.reps)
-                    if est1RM > best1RM {
-                        best1RM = est1RM
+                    // Allow weight == 0 for bodyweight exercises; require reps > 0 and working type
+                    guard set.reps > 0, set.type == .working else { continue }
+                    let score = prScore(weight: set.weight, reps: set.reps)
+                    if score > best1RM {
+                        best1RM = score
                         bestSet = (set.weight, set.reps, workout.id)
                     }
                 }
@@ -1137,10 +1163,10 @@ struct PersonalRecordManager {
         return try? modelContext.fetch(descriptor).first
     }
     
-    /// Calculate estimated 1RM using Brzycki formula
+    /// Calculate estimated 1RM using Epley formula
     private static func calculateEstimated1RM(weight: Double, reps: Int) -> Double {
-        guard reps > 0 && reps <= 10 else { return weight }
-        return weight * (36.0 / (37.0 - Double(reps)))
+        guard reps > 0 else { return weight }
+        return weight * (1.0 + Double(reps) / 30.0)
     }
     
     /// Check all sets in a workout for PRs (call when workout ends)

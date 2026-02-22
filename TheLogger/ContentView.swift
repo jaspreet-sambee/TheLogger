@@ -126,12 +126,12 @@ struct AddWorkoutView: View {
                                             .padding(.vertical, 12)
                                             .background(
                                                 exerciseExists
-                                                    ? Color.blue.opacity(0.15)
+                                                    ? AppColors.accent.opacity(0.15)
                                                     : Color(.systemGray5)
                                             )
                                             .foregroundColor(
                                                 exerciseExists
-                                                    ? .blue
+                                                    ? AppColors.accent
                                                     : .primary
                                             )
                                             .cornerRadius(10)
@@ -139,7 +139,7 @@ struct AddWorkoutView: View {
                                                 RoundedRectangle(cornerRadius: 10)
                                                     .stroke(
                                                         exerciseExists
-                                                            ? Color.blue.opacity(0.25)
+                                                            ? AppColors.accent.opacity(0.25)
                                                             : Color.clear,
                                                         lineWidth: 1
                                                     )
@@ -217,7 +217,7 @@ struct AddWorkoutView: View {
                                 Label("Add Set", systemImage: "plus.circle")
                                     .font(.system(.body, weight: .medium))
                             }
-                            .tint(.blue)
+                            .tint(AppColors.accent)
                         } header: {
                             Text(exercise.name)
                                 .font(.system(.caption, weight: .medium))
@@ -248,7 +248,7 @@ struct AddWorkoutView: View {
                         Label("Add Exercise", systemImage: "plus.circle")
                             .font(.system(.body, weight: .medium))
                     }
-                    .tint(.blue)
+                    .tint(AppColors.accent)
                 } header: {
                     Text("Exercises")
                         .font(.system(.caption, weight: .medium))
@@ -258,7 +258,7 @@ struct AddWorkoutView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .background(Color(.systemBackground))
+            .background(AppColors.background)
             .navigationTitle(preFilledWorkout != nil ? "Repeat Workout" : "New Workout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -283,7 +283,7 @@ struct AddWorkoutView: View {
                             modelContext.delete(newWorkout)
                         }
                     }
-                    .tint(.blue)
+                    .tint(AppColors.accent)
                 }
             }
             .sheet(isPresented: $showingAddExercise) {

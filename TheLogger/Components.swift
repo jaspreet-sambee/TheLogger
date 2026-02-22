@@ -7,6 +7,16 @@
 
 import SwiftUI
 
+// MARK: - App Color Tokens
+
+/// Centralized color tokens for Midnight Lift theming (deep navy + electric coral)
+enum AppColors {
+    static let accent: Color = Color(red: 1.0, green: 0.35, blue: 0.42)        // midnight coral
+    static let accentGold: Color = Color(red: 1.0, green: 0.72, blue: 0.3)     // warm amber (success/PR)
+    static let accentGradient: [Color] = [Color(red: 1.0, green: 0.25, blue: 0.38), Color(red: 1.0, green: 0.45, blue: 0.55)]
+    static let background: Color = Color(red: 0.04, green: 0.05, blue: 0.12)   // midnight navy
+}
+
 // MARK: - Card Style Modifier
 
 /// A reusable card style modifier that provides consistent styling across the app.
@@ -16,7 +26,7 @@ struct CardStyle: ViewModifier {
     var fillOpacity: Double
     var cornerRadius: CGFloat
 
-    init(borderColor: Color = .blue, fillOpacity: Double = 0.6, cornerRadius: CGFloat = 12) {
+    init(borderColor: Color = AppColors.accent, fillOpacity: Double = 0.06, cornerRadius: CGFloat = 12) {
         self.borderColor = borderColor
         self.fillOpacity = fillOpacity
         self.cornerRadius = cornerRadius
@@ -26,8 +36,7 @@ struct CardStyle: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.black.opacity(0.6))
-                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+                    .fill(Color.white.opacity(fillOpacity))
                     .overlay(
                         RoundedRectangle(cornerRadius: cornerRadius)
                             .stroke(borderColor.opacity(0.25), lineWidth: 1)
@@ -38,12 +47,12 @@ struct CardStyle: ViewModifier {
 
 extension View {
     /// Applies the standard card style with customizable border color
-    func cardStyle(borderColor: Color = .blue) -> some View {
+    func cardStyle(borderColor: Color = AppColors.accent) -> some View {
         modifier(CardStyle(borderColor: borderColor))
     }
 
     /// Applies card style with custom parameters
-    func cardStyle(borderColor: Color = .blue, fillOpacity: Double = 0.6, cornerRadius: CGFloat = 12) -> some View {
+    func cardStyle(borderColor: Color = AppColors.accent, fillOpacity: Double = 0.06, cornerRadius: CGFloat = 12) -> some View {
         modifier(CardStyle(borderColor: borderColor, fillOpacity: fillOpacity, cornerRadius: cornerRadius))
     }
 }
@@ -59,19 +68,19 @@ enum CardVariant {
 
     var backgroundColor: Color {
         switch self {
-        case .neutral:  return Color.white.opacity(0.03)
-        case .active:   return Color.blue.opacity(0.06)
-        case .success:  return Color.green.opacity(0.05)
-        case .stats:    return Color.purple.opacity(0.04)
+        case .neutral:  return Color.white.opacity(0.05)
+        case .active:   return AppColors.accent.opacity(0.06)
+        case .success:  return AppColors.accentGold.opacity(0.06)
+        case .stats:    return AppColors.accentGold.opacity(0.05)
         }
     }
 
     var borderColor: Color {
         switch self {
-        case .neutral:  return Color.white.opacity(0.08)
-        case .active:   return Color.blue.opacity(0.15)
-        case .success:  return Color.green.opacity(0.12)
-        case .stats:    return Color.purple.opacity(0.10)
+        case .neutral:  return Color.white.opacity(0.14)
+        case .active:   return AppColors.accent.opacity(0.15)
+        case .success:  return AppColors.accentGold.opacity(0.18)
+        case .stats:    return AppColors.accentGold.opacity(0.20)
         }
     }
 }
@@ -85,7 +94,7 @@ struct VariantCardStyle: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.black.opacity(0.6))
+                    .fill(Color.white.opacity(0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: cornerRadius)
                             .fill(variant.backgroundColor)

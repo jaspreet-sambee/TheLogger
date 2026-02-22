@@ -28,10 +28,13 @@ struct WorkoutDetailView: View {
     @Namespace private var exerciseTransition
     // Observe unit system changes to trigger view refresh
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
+    @AppStorage("autoPopulateSetsFromHistory") private var autoPopulateSets: Bool = true
     @State private var showingAddExercise = false
     @State private var exerciseName = ""
     @State private var showingEndWorkoutConfirmation = false
     @State private var showingSaveAsTemplate = false
+    @State private var showingOverwriteTemplateAlert = false
+    @State private var pendingEndAfterSave = false
     @State private var isEditingWorkoutName = false
     @State private var workoutNameText = ""
     @State private var endSummaryData: EndSummaryData?
@@ -68,7 +71,7 @@ struct WorkoutDetailView: View {
                             showingEndWorkoutConfirmation = true
                         }
                         .fontWeight(.semibold)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppColors.accent)
                         .accessibilityIdentifier("endWorkoutButton")
                     }
                 } else if workout.isCompleted {
@@ -77,7 +80,7 @@ struct WorkoutDetailView: View {
                             onLogAgain?(workout)
                         }
                         .fontWeight(.semibold)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppColors.accent)
                     }
                 }
             }
@@ -106,8 +109,7 @@ struct WorkoutDetailView: View {
             }
             .alert("End Workout", isPresented: $showingEndWorkoutConfirmation) {
                 Button("Save as Template & End") {
-                    saveAsTemplate()
-                    endWorkout()
+                    saveAsTemplate(thenEnd: true)
                 }
                 Button("End") {
                     endWorkout()
@@ -123,6 +125,16 @@ struct WorkoutDetailView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text("Your workout has been saved as a template.")
+            }
+            .alert("Overwrite Template?", isPresented: $showingOverwriteTemplateAlert) {
+                Button("Overwrite", role: .destructive) {
+                    performSaveAsTemplate(thenEnd: pendingEndAfterSave)
+                }
+                Button("Cancel", role: .cancel) {
+                    pendingEndAfterSave = false
+                }
+            } message: {
+                Text("A template named \"\(workout.name)\" already exists. Do you want to overwrite it?")
             }
             .alert("Delete Exercise", isPresented: $showingDeleteExerciseConfirmation) {
                 Button("Cancel", role: .cancel) {
@@ -147,7 +159,7 @@ struct WorkoutDetailView: View {
                     dismiss()
                 }
                 .presentationDetents([.large])
-                .presentationBackground(Color(.systemGroupedBackground))
+                .presentationBackground(AppColors.background)
             }
             .navigationDestination(item: $exerciseToNavigate) { exercise in
                 ExerciseEditView(exercise: exercise, workout: workout, namespace: exerciseTransition)
@@ -163,7 +175,7 @@ struct WorkoutDetailView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
+        .background(AppColors.background)
         .safeAreaInset(edge: .bottom) {
             if workout.isActive {
                 addExerciseButton
@@ -177,7 +189,6 @@ struct WorkoutDetailView: View {
                 Section {
                     Button {
                         saveAsTemplate()
-                        showingSaveAsTemplate = true
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.down")
@@ -189,7 +200,7 @@ struct WorkoutDetailView: View {
                         .padding(.vertical, 12)
                     }
                     .buttonStyle(.bordered)
-                    .tint(.blue)
+                    .tint(AppColors.accent)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -254,7 +265,7 @@ struct WorkoutDetailView: View {
                 } label: {
                     Image(systemName: "pencil")
                         .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppColors.accent)
                         .padding(6)
                 }
             }
@@ -264,17 +275,17 @@ struct WorkoutDetailView: View {
     private var activeBadge: some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(Color.blue)
+                .fill(AppColors.accent)
                 .frame(width: 6, height: 6)
             Text("Active")
                 .font(.system(.caption2, weight: .semibold))
-                .foregroundStyle(.blue)
+                .foregroundStyle(AppColors.accent)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
             Capsule()
-                .fill(Color.blue.opacity(0.12))
+                .fill(AppColors.accent.opacity(0.12))
         )
     }
 
@@ -286,7 +297,7 @@ struct WorkoutDetailView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "timer")
                             .font(.system(.caption, weight: .semibold))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                         Text(formatElapsedTime(elapsedTime))
                             .font(.system(size: 20, weight: .bold, design: .monospaced))
                             .foregroundStyle(.primary)
@@ -295,7 +306,7 @@ struct WorkoutDetailView: View {
                     .padding(.vertical, 6)
                     .background(
                         Capsule()
-                            .fill(Color.blue.opacity(0.12))
+                            .fill(AppColors.accent.opacity(0.12))
                     )
                 }
             } else {
@@ -349,11 +360,7 @@ struct WorkoutDetailView: View {
 
     private func cardBackground(variant: CardVariant) -> some View {
         RoundedRectangle(cornerRadius: 12)
-            .fill(Color.black.opacity(0.5))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(variant.backgroundColor)
-            )
+            .fill(Color.white.opacity(0.06))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(variant.borderColor, lineWidth: 1)
@@ -369,7 +376,7 @@ struct WorkoutDetailView: View {
                 }
             }
             .padding(.vertical, 8)
-            .listRowBackground(cardBackground(variant: .stats))
+            .listRowBackground(cardBackground(variant: workout.isActive ? .active : .neutral))
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         } header: {
@@ -450,15 +457,15 @@ struct WorkoutDetailView: View {
                                 Text(exerciseName)
                                     .font(.system(.subheadline, weight: .medium))
                             }
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                             .background(
                                 Capsule()
-                                    .fill(Color.blue.opacity(0.12))
+                                    .fill(AppColors.accent.opacity(0.12))
                                     .overlay(
                                         Capsule()
-                                            .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                                            .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                                     )
                             )
                         }
@@ -472,7 +479,10 @@ struct WorkoutDetailView: View {
     }
 
     private var exercisesList: some View {
-        let displayItems = workout.exercisesGroupedForDisplay.reversed()
+        // Active workouts: newest exercise at top (reversed) so current work is always visible.
+        // Templates and completed workouts: natural ascending order matches creation/template order.
+        let ordered = workout.exercisesGroupedForDisplay
+        let displayItems = workout.isActive ? Array(ordered.reversed()) : ordered
         return ForEach(Array(displayItems.enumerated()), id: \.element.id) { index, item in
             Group {
                 switch item {
@@ -526,6 +536,17 @@ struct WorkoutDetailView: View {
     @ViewBuilder
     private func exerciseContextMenu(for exercise: Exercise) -> some View {
         if workout.isActive {
+            // Set as Current — moves this exercise to the top of the active list
+            let maxOrder = (workout.exercises ?? []).map(\.order).max() ?? 0
+            let isAlreadyCurrent = exercise.order == maxOrder
+            if !isAlreadyCurrent {
+                Button {
+                    setAsCurrent(exercise: exercise)
+                } label: {
+                    Label("Set as Current", systemImage: "arrow.up.circle")
+                }
+            }
+
             // Superset options
             let otherExercises = (workout.exercises ?? []).filter { $0.id != exercise.id && !$0.isInSuperset }
 
@@ -557,6 +578,13 @@ struct WorkoutDetailView: View {
         }
     }
 
+    private func setAsCurrent(exercise: Exercise) {
+        let maxOrder = (workout.exercises ?? []).map(\.order).max() ?? 0
+        exercise.order = maxOrder + 1
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        saveWorkout()
+    }
+
     private var exercisesSectionHeader: some View {
         HStack {
             Text("Exercises")
@@ -570,7 +598,7 @@ struct WorkoutDetailView: View {
                     .padding(.vertical, 2)
                     .background(
                         Capsule()
-                            .fill(Color(.systemGray5))
+                            .fill(Color.white.opacity(0.12))
                     )
             }
         }
@@ -582,12 +610,15 @@ struct WorkoutDetailView: View {
         Button {
             showingAddExercise = true
         } label: {
-            Label("Add Exercise", systemImage: "plus.circle")
-                .font(.system(.body, weight: .medium))
+            Label("Add Exercise", systemImage: "plus.circle.fill")
+                .font(.system(.body, weight: .semibold))
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .frame(height: 50)
+                .background(AppColors.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.plain)
         .accessibilityIdentifier("addExerciseButton")
         .padding(.horizontal)
         .padding(.bottom, 8)
@@ -617,7 +648,7 @@ struct WorkoutDetailView: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(.body, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppColors.accent.opacity(0.7))
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(value)
@@ -632,10 +663,10 @@ struct WorkoutDetailView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.black.opacity(0.6))
+                .fill(AppColors.accent.opacity(0.08))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                 )
         )
     }
@@ -654,6 +685,7 @@ struct WorkoutDetailView: View {
             DatePicker("", selection: $workout.date, displayedComponents: [.date, .hourAndMinute])
                 .labelsHidden()
                 .datePickerStyle(.compact)
+                .environment(\.colorScheme, .dark)
         }
         .padding(.top, 4)
     }
@@ -689,8 +721,9 @@ struct WorkoutDetailView: View {
     }
 
     private func deleteExercises(at indexSet: IndexSet) {
-        // Map display item indices to exercise IDs (display uses exercisesGroupedForDisplay.reversed())
-        let displayItems = Array(workout.exercisesGroupedForDisplay.reversed())
+        // Map display item indices to exercise IDs (must match the order used in exercisesList)
+        let ordered = workout.exercisesGroupedForDisplay
+        let displayItems = workout.isActive ? Array(ordered.reversed()) : ordered
         let exerciseIdsToDelete = indexSet.flatMap { index -> [UUID] in
             guard index < displayItems.count else { return [] }
             return displayItems[index].allExercises.map(\.id)
@@ -721,15 +754,17 @@ struct WorkoutDetailView: View {
 
             // Find matching exercise memory
             if let memory = memories.first(where: { $0.normalizedName == normalizedName }) {
-                let isTimeBased = ExerciseLibrary.shared.find(name: name)?.isTimeBased ?? false
-                for _ in 0..<memory.lastSets {
-                    if isTimeBased, let d = memory.lastDuration {
-                        exercise.addSet(reps: 0, weight: 0, durationSeconds: d)
-                    } else {
-                        exercise.addSet(reps: memory.lastReps, weight: memory.lastWeight)
+                if autoPopulateSets {
+                    let isTimeBased = ExerciseLibrary.shared.find(name: name)?.isTimeBased ?? false
+                    for _ in 0..<memory.lastSets {
+                        if isTimeBased, let d = memory.lastDuration {
+                            exercise.addSet(reps: 0, weight: 0, durationSeconds: d)
+                        } else {
+                            exercise.addSet(reps: memory.lastReps, weight: memory.lastWeight)
+                        }
                     }
+                    exercise.isAutoFilled = true
                 }
-                exercise.isAutoFilled = true
             } else {
                 // Create new exercise memory immediately so it appears in search
                 let newMemory = ExerciseMemory(
@@ -795,6 +830,9 @@ struct WorkoutDetailView: View {
 
         do {
             try modelContext.save()
+            // Invalidate PR cache and notify so Recent PRs section updates
+            PRManager.shared.invalidateCache()
+            NotificationCenter.default.post(name: .workoutEnded, object: nil)
             // Clear widget data since workout ended
             WidgetDataManager.clear()
             // End Live Activity
@@ -826,11 +864,21 @@ struct WorkoutDetailView: View {
             await LiveActivityManager.shared.endActivity()
         }
 
+        // Collect exercise names before deletion — live PR checks may have written PRs
+        // using this workout's sets. After deletion those sets are gone, so we must
+        // re-scan history to restore the true previous best.
+        let affectedExerciseNames = (workout.exercises ?? []).map { $0.name }
+
         // Delete the workout
         modelContext.delete(workout)
 
         do {
             try modelContext.save()
+            // Workout and its sets are now gone from the store.
+            // Recalculate PRs so they reflect the true best across remaining history.
+            for name in affectedExerciseNames {
+                PersonalRecordManager.recalculatePR(exerciseName: name, modelContext: modelContext)
+            }
             dismiss()
         } catch {
             print("Error discarding workout: \(error)")
@@ -925,10 +973,10 @@ struct SupersetGroupCard: View {
         HStack(spacing: 8) {
             Image(systemName: "link")
                 .font(.system(.caption, weight: .bold))
-                .foregroundStyle(.purple)
+                .foregroundStyle(AppColors.accentGold)
             Text(groupLabel)
                 .font(.system(.caption, weight: .bold))
-                .foregroundStyle(.purple)
+                .foregroundStyle(AppColors.accentGold)
             Spacer()
             Text("\(totalSets) sets · \(totalReps) reps")
                 .font(.system(.caption2, weight: .medium))
@@ -936,7 +984,7 @@ struct SupersetGroupCard: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.black.opacity(0.6))
+        .background(Color.white.opacity(0.05))
     }
 
     private var exercisesListView: some View {
@@ -965,7 +1013,7 @@ struct SupersetGroupCard: View {
             .buttonStyle(.plain)
             // Active exercise: slight scale up + glow
             .scaleEffect(isCurrentExercise ? 1.02 : 1.0)
-            .shadow(color: isCurrentExercise ? Color.purple.opacity(0.3) : .clear, radius: 8, x: 0, y: 0)
+            .shadow(color: isCurrentExercise ? AppColors.accentGold.opacity(0.25) : .clear, radius: 8, x: 0, y: 0)
             // Completed exercises: fade back slightly
             .opacity(isCompleted ? 0.7 : 1.0)
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isCurrentExercise)
@@ -980,13 +1028,13 @@ struct SupersetGroupCard: View {
     private var connectorView: some View {
         HStack(spacing: 8) {
             Rectangle()
-                .fill(Color.purple.opacity(0.3))
+                .fill(AppColors.accentGold.opacity(0.3))
                 .frame(width: 2, height: 16)
                 .padding(.leading, 20)
 
             Image(systemName: "arrow.down")
                 .font(.system(.caption2, weight: .medium))
-                .foregroundStyle(.purple.opacity(0.5))
+                .foregroundStyle(AppColors.accentGold.opacity(0.5))
 
             Spacer()
         }
@@ -994,14 +1042,14 @@ struct SupersetGroupCard: View {
 
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 14)
-            .fill(Color.black.opacity(0.6))
+            .fill(Color.white.opacity(0.05))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(isActive ? Color.purple.opacity(0.04) : Color.white.opacity(0.02))
+                    .fill(isActive ? AppColors.accentGold.opacity(0.06) : Color.white.opacity(0.02))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(isActive ? Color.purple.opacity(0.2) : Color.purple.opacity(0.12), lineWidth: 1)
+                    .stroke(isActive ? AppColors.accentGold.opacity(0.25) : AppColors.accentGold.opacity(0.12), lineWidth: 1)
             )
     }
 }
@@ -1025,11 +1073,11 @@ struct SupersetExerciseRow: View {
             // Position indicator
             ZStack {
                 Circle()
-                    .fill(isActive ? Color.purple.opacity(0.2) : Color.white.opacity(0.06))
+                    .fill(isActive ? AppColors.accentGold.opacity(0.2) : Color.white.opacity(0.06))
                     .frame(width: 28, height: 28)
                 Text("\(position)")
                     .font(.system(.caption, weight: .bold))
-                    .foregroundStyle(isActive ? .purple : .secondary)
+                    .foregroundStyle(isActive ? AppColors.accentGold : .secondary)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -1041,12 +1089,12 @@ struct SupersetExerciseRow: View {
                     if isActive {
                         Text("Current")
                             .font(.system(.caption2, weight: .medium))
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(AppColors.accentGold)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
                                 Capsule()
-                                    .fill(Color.purple.opacity(0.12))
+                                    .fill(AppColors.accentGold.opacity(0.12))
                             )
                     }
                 }
@@ -1063,9 +1111,10 @@ struct SupersetExerciseRow: View {
                 Text("\((exercise.sets ?? []).count)")
                     .font(.system(.caption2, weight: .bold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 20, height: 20)
+                    .padding(.horizontal, 6)
+                    .frame(minWidth: 20, minHeight: 20)
                     .background(
-                        Circle()
+                        Capsule()
                             .fill(Color.white.opacity(0.06))
                     )
             }
@@ -1079,16 +1128,33 @@ struct SupersetExerciseRow: View {
     }
 }
 
-    private func saveAsTemplate() {
-        // Check if a template with this name already exists
-        let templateName = workout.name
-        let descriptor = FetchDescriptor<Workout>(
-            predicate: #Predicate { $0.isTemplate == true && $0.name == templateName }
-        )
+    private func saveAsTemplate(thenEnd: Bool = false) {
+        let trimmedName = workout.name.trimmingCharacters(in: .whitespaces).lowercased()
+        do {
+            let allWorkouts = try modelContext.fetch(FetchDescriptor<Workout>())
+            let hasDuplicate = allWorkouts.contains { t in
+                t.isTemplate && t.name.trimmingCharacters(in: .whitespaces).lowercased() == trimmedName
+            }
+            if hasDuplicate {
+                pendingEndAfterSave = thenEnd
+                showingOverwriteTemplateAlert = true
+                return
+            }
+        } catch {
+            print("Error checking for duplicate template: \(error)")
+        }
+        performSaveAsTemplate(thenEnd: thenEnd)
+    }
+
+    private func performSaveAsTemplate(thenEnd: Bool = false) {
         let sourceExercises = workout.exercisesByOrder
-        if let existing = try? modelContext.fetch(descriptor), !existing.isEmpty {
-            // Template with this name already exists, update it instead
-            if let existingTemplate = existing.first {
+        let trimmedName = workout.name.trimmingCharacters(in: .whitespaces).lowercased()
+
+        do {
+            let allWorkouts = try modelContext.fetch(FetchDescriptor<Workout>())
+            if let existingTemplate = allWorkouts.first(where: {
+                $0.isTemplate && $0.name.trimmingCharacters(in: .whitespaces).lowercased() == trimmedName
+            }) {
                 existingTemplate.exercises = []
                 for (orderIndex, exercise) in sourceExercises.enumerated() {
                     var copiedSets: [WorkoutSet] = []
@@ -1096,36 +1162,28 @@ struct SupersetExerciseRow: View {
                         let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, durationSeconds: set.durationSeconds, setType: set.type, sortOrder: index)
                         copiedSets.append(copiedSet)
                     }
-                    let templateExercise = Exercise(name: exercise.name, sets: copiedSets, order: orderIndex)
-                    if existingTemplate.exercises == nil {
-                        existingTemplate.exercises = [templateExercise]
-                    } else {
-                        existingTemplate.exercises?.append(templateExercise)
+                    existingTemplate.exercises?.append(Exercise(name: exercise.name, sets: copiedSets, order: orderIndex))
+                }
+            } else {
+                let template = Workout(name: workout.name, date: Date(), isTemplate: true)
+                for (orderIndex, exercise) in sourceExercises.enumerated() {
+                    var copiedSets: [WorkoutSet] = []
+                    for (index, set) in exercise.setsByOrder.enumerated() {
+                        let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, durationSeconds: set.durationSeconds, setType: set.type, sortOrder: index)
+                        copiedSets.append(copiedSet)
                     }
+                    template.exercises?.append(Exercise(name: exercise.name, sets: copiedSets, order: orderIndex))
                 }
+                modelContext.insert(template)
             }
-        } else {
-            let template = Workout(name: workout.name, date: Date(), isTemplate: true)
-            for (orderIndex, exercise) in sourceExercises.enumerated() {
-                var copiedSets: [WorkoutSet] = []
-                for (index, set) in exercise.setsByOrder.enumerated() {
-                    let copiedSet = WorkoutSet(reps: set.reps, weight: set.weight, durationSeconds: set.durationSeconds, setType: set.type, sortOrder: index)
-                    copiedSets.append(copiedSet)
-                }
-                let templateExercise = Exercise(name: exercise.name, sets: copiedSets, order: orderIndex)
-                if template.exercises == nil {
-                    template.exercises = [templateExercise]
-                } else {
-                    template.exercises?.append(templateExercise)
-                }
-            }
-            modelContext.insert(template)
-        }
-
-        do {
             try modelContext.save()
         } catch {
             print("Error saving template: \(error)")
+        }
+
+        showingSaveAsTemplate = true
+        if thenEnd {
+            endWorkout()
         }
     }
 }

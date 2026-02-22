@@ -29,7 +29,7 @@ struct PrivacyPolicyView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.shield.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(AppColors.accentGold)
                         Text("Privacy First")
                             .font(.system(.headline, weight: .semibold))
                     }
@@ -42,7 +42,7 @@ struct PrivacyPolicyView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.green.opacity(0.1))
+                        .fill(AppColors.accentGold.opacity(0.08))
                 )
                 
                 // Sections
@@ -148,7 +148,7 @@ struct PrivacyPolicyView: View {
             }
             .padding(20)
         }
-        .background(Color.black)
+        .background(AppColors.background)
         .navigationTitle("Privacy Policy")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -158,12 +158,12 @@ struct PrivacyPolicyView: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(.subheadline, weight: .semibold))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppColors.accent)
                 Text(title)
                     .font(.system(.headline, weight: .semibold))
                     .foregroundStyle(.primary)
             }
-            
+
             Text(content)
                 .font(.system(.subheadline, weight: .regular))
                 .foregroundStyle(.secondary)
@@ -173,10 +173,10 @@ struct PrivacyPolicyView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                        .stroke(AppColors.accent.opacity(0.15), lineWidth: 1)
                 )
         )
     }
@@ -187,5 +187,6 @@ struct PrivacyPolicyView: View {
         PrivacyPolicyView()
     }
 }
+
 
 

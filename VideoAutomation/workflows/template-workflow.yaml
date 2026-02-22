@@ -1,0 +1,17 @@
+name: "Template Demo"
+description: "Create a workout from template - instant start with pre-loaded exercises"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 12
+
+output:
+  filename: "template-workflow"
+  twitter_optimized: true
+  include_device_frame: true
+  background_color: "#1a1a1a"
+  caption: "Start your workout instantly with templates"
+  hashtags: ["workout", "template", "productivity"]

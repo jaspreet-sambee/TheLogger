@@ -18,6 +18,7 @@ struct TemplateEditView: View {
     @State private var exerciseName: String = ""
     @State private var showingEditName = false
     @State private var editedName: String = ""
+    @State private var showingDuplicateNameAlert = false
     private var isNewTemplate: Bool
 
     init(template: Workout?) {
@@ -50,7 +51,7 @@ struct TemplateEditView: View {
                             Image(systemName: "pencil")
                                 .font(.system(.body, weight: .medium))
                         }
-                        .tint(.blue)
+                        .tint(AppColors.accent)
                     }
                     .padding(.vertical, 4)
                 } header: {
@@ -93,7 +94,7 @@ struct TemplateEditView: View {
                         Label("Add Exercise", systemImage: "plus.circle")
                             .font(.system(.body, weight: .medium))
                     }
-                    .tint(.blue)
+                    .tint(AppColors.accent)
                 } header: {
                     Text("Exercises")
                         .font(.system(.caption, weight: .medium))
@@ -103,7 +104,7 @@ struct TemplateEditView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .background(Color(.systemBackground))
+            .background(AppColors.background)
             .navigationTitle(template == nil ? "New Template" : "Edit Template")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -137,6 +138,14 @@ struct TemplateEditView: View {
                 }
             } message: {
                 Text("Enter the name of the exercise")
+            }
+            .alert("Duplicate Template Name", isPresented: $showingDuplicateNameAlert) {
+                Button("Save Anyway", role: .destructive) {
+                    performSave()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("A template named \"\(templateWorkout.name)\" already exists. Saving will create a second template with the same name.")
             }
             .alert("Edit Template Name", isPresented: $showingEditName) {
                 TextField("Template Name", text: $editedName)
@@ -189,12 +198,32 @@ struct TemplateEditView: View {
     }
 
     private func saveTemplate() {
-        // Ensure it's marked as a template
+        let trimmedName = templateWorkout.name
+            .trimmingCharacters(in: .whitespaces)
+            .lowercased()
+
+        do {
+            let allWorkouts = try modelContext.fetch(FetchDescriptor<Workout>())
+            let hasDuplicate = allWorkouts.contains { t in
+                t.isTemplate &&
+                t.id != templateWorkout.id &&
+                t.name.trimmingCharacters(in: .whitespaces).lowercased() == trimmedName
+            }
+            if hasDuplicate {
+                showingDuplicateNameAlert = true
+                return
+            }
+        } catch {
+            print("Error checking for duplicate template name: \(error)")
+        }
+        performSave()
+    }
+
+    private func performSave() {
         templateWorkout.isTemplate = true
         templateWorkout.startTime = nil
         templateWorkout.endTime = nil
 
-        // For new templates, make sure it's in the context
         if isNewTemplate {
             let descriptor = FetchDescriptor<Workout>()
             if let workouts = try? modelContext.fetch(descriptor),
@@ -208,7 +237,6 @@ struct TemplateEditView: View {
             dismiss()
         } catch {
             print("Error saving template: \(error)")
-            // If save failed and it's a new template, remove it from context
             if isNewTemplate {
                 modelContext.delete(templateWorkout)
             }

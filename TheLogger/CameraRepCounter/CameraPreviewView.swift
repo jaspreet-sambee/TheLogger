@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import CoreMotion
 import Vision
 
 /// SwiftUI wrapper for camera preview with pose detection
@@ -19,6 +20,7 @@ struct CameraPreviewView: UIViewControllerRepresentable {
     let exerciseType: ExerciseType
     let repCounter: RepCounter
     @Binding var showSkeleton: Bool
+    @Binding var isTooFlat: Bool
 
     func makeUIViewController(context: Context) -> CameraViewController {
         let controller = CameraViewController()
@@ -74,6 +76,12 @@ struct CameraPreviewView: UIViewControllerRepresentable {
                 self.parent.detectedPose = nil
             }
         }
+
+        func cameraViewController(_ controller: CameraViewController, didChangeTooFlat isTooFlat: Bool) {
+            DispatchQueue.main.async {
+                self.parent.isTooFlat = isTooFlat
+            }
+        }
     }
 }
 
@@ -83,6 +91,7 @@ protocol CameraViewControllerDelegate: AnyObject {
     func cameraViewController(_ controller: CameraViewController, didDetectAngle angle: Double)
     func cameraViewController(_ controller: CameraViewController, didDetectPose pose: DetectedPose)
     func cameraViewControllerDidLoseTracking(_ controller: CameraViewController)
+    func cameraViewController(_ controller: CameraViewController, didChangeTooFlat isTooFlat: Bool)
 }
 
 // MARK: - Camera View Controller
@@ -117,6 +126,12 @@ final class CameraViewController: UIViewController {
 
     private let videoQueue = DispatchQueue(label: "com.thelogger.videoQueue", qos: .userInteractive)
 
+    // MARK: - Motion / Orientation
+
+    private let motionManager = CMMotionManager()
+    /// Whether the phone is too flat for reliable pose detection
+    private var deviceIsTooFlat = false
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
@@ -129,11 +144,13 @@ final class CameraViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         startSession()
+        startMotionUpdates()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         stopSession()
+        motionManager.stopDeviceMotionUpdates()
     }
 
     override func viewDidLayoutSubviews() {
@@ -213,12 +230,36 @@ final class CameraViewController: UIViewController {
             self?.captureSession?.stopRunning()
         }
     }
+
+    private func startMotionUpdates() {
+        guard motionManager.isDeviceMotionAvailable else { return }
+        motionManager.deviceMotionUpdateInterval = 0.1
+        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+            guard let self, let gravity = motion?.gravity else { return }
+            self.updateOrientationFromGravity(gravity)
+        }
+    }
+
+    /// Detects whether the phone is too flat for pose detection using device gravity.
+    private func updateOrientationFromGravity(_ gravity: CMAcceleration) {
+        // |gravity.z| > 0.65 means the phone is >40° from vertical (approaching flat on the floor).
+        // Vision's body pose model needs depth separation between joints; flat angle collapses this.
+        let tooFlat = abs(gravity.z) > 0.65
+
+        if tooFlat != deviceIsTooFlat {
+            deviceIsTooFlat = tooFlat
+            delegate?.cameraViewController(self, didChangeTooFlat: tooFlat)
+        }
+    }
 }
 
 // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
 
 extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        guard !deviceIsTooFlat else { return }
+        // Pixel buffer is already portrait + mirrored by videoRotationAngle=90 and isVideoMirrored=true,
+        // so Vision always receives a correctly-oriented frame with .up.
         poseDetector.processFrame(sampleBuffer)
     }
 }
@@ -286,8 +327,11 @@ final class PoseOverlayView: UIView {
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
 
+        // Coral brand color matching AppColors.accent
+        let coralColor = UIColor(red: 1.0, green: 0.35, blue: 0.42, alpha: 1.0).cgColor
+
         // Draw connections (skeleton lines)
-        ctx.setStrokeColor(UIColor.systemGreen.cgColor)
+        ctx.setStrokeColor(coralColor)
         ctx.setLineWidth(4)
 
         for (joint1, joint2) in connections {
@@ -304,7 +348,7 @@ final class PoseOverlayView: UIView {
         }
         ctx.strokePath()
 
-        // Draw joint points
+        // Draw joint points (white fill)
         ctx.setFillColor(UIColor.white.cgColor)
 
         for (_, point) in pose.joints {
@@ -313,8 +357,8 @@ final class PoseOverlayView: UIView {
             ctx.fillEllipse(in: dotRect)
         }
 
-        // Draw green border around joints
-        ctx.setStrokeColor(UIColor.systemGreen.cgColor)
+        // Draw coral border around joints
+        ctx.setStrokeColor(coralColor)
         ctx.setLineWidth(2)
 
         for (_, point) in pose.joints {

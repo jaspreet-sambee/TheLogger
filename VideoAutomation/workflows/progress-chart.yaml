@@ -1,0 +1,17 @@
+name: "Progress Charts Demo"
+description: "Beautiful progress tracking with estimated 1RM charts"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 15
+
+output:
+  filename: "progress-chart"
+  twitter_optimized: true
+  include_device_frame: true
+  background_color: "#f5f5f5"
+  caption: "Track your strength gains visually"
+  hashtags: ["progresstracking", "datavisualization", "fitness"]

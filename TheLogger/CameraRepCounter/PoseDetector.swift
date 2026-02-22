@@ -64,13 +64,15 @@ final class PoseDetector {
     // MARK: - Public Methods
 
     /// Process a camera frame for pose detection
-    /// - Parameter sampleBuffer: The camera frame to process
-    func processFrame(_ sampleBuffer: CMSampleBuffer) {
+    /// - Parameters:
+    ///   - sampleBuffer: The camera frame to process
+    ///   - orientation: The image orientation derived from device gravity (default: .up)
+    func processFrame(_ sampleBuffer: CMSampleBuffer, orientation: CGImagePropertyOrientation = .up) {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return
         }
 
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up, options: [:])
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:])
 
         do {
             try handler.perform([poseRequest])
@@ -81,9 +83,11 @@ final class PoseDetector {
     }
 
     /// Process a CIImage for pose detection
-    /// - Parameter image: The image to process
-    func processImage(_ image: CIImage) {
-        let handler = VNImageRequestHandler(ciImage: image, orientation: .up, options: [:])
+    /// - Parameters:
+    ///   - image: The image to process
+    ///   - orientation: The image orientation derived from device gravity (default: .up)
+    func processImage(_ image: CIImage, orientation: CGImagePropertyOrientation = .up) {
+        let handler = VNImageRequestHandler(ciImage: image, orientation: orientation, options: [:])
 
         do {
             try handler.perform([poseRequest])
@@ -151,24 +155,70 @@ final class PoseDetector {
     }
 
     private func calculateAngle(from observation: VNHumanBodyPoseObservation) -> Double? {
-        // Get the three joints needed for angle calculation
-        guard let point1 = try? observation.recognizedPoint(configuration.joint1),
-              let point2 = try? observation.recognizedPoint(configuration.joint2),
-              let point3 = try? observation.recognizedPoint(configuration.joint3),
+        let primary = tryAngle(j1: configuration.joint1,
+                               j2: configuration.joint2,
+                               j3: configuration.joint3,
+                               from: observation)
+
+        let mirrored: Double?
+        if let m1 = Self.mirrorJointName(configuration.joint1),
+           let m2 = Self.mirrorJointName(configuration.joint2),
+           let m3 = Self.mirrorJointName(configuration.joint3) {
+            mirrored = tryAngle(j1: m1, j2: m2, j3: m3, from: observation)
+        } else {
+            mirrored = nil
+        }
+
+        switch (primary, mirrored) {
+        case let (p?, m?): return min(p, m)  // Pick the more active (flexed) arm
+        case let (p?, nil): return p
+        case let (nil, m?): return m
+        case (nil, nil): return nil
+        }
+    }
+
+    /// Attempt to compute the angle for a given joint triple; returns nil if any joint is below confidence threshold.
+    private func tryAngle(
+        j1: VNHumanBodyPoseObservation.JointName,
+        j2: VNHumanBodyPoseObservation.JointName,
+        j3: VNHumanBodyPoseObservation.JointName,
+        from observation: VNHumanBodyPoseObservation
+    ) -> Double? {
+        guard let point1 = try? observation.recognizedPoint(j1),
+              let point2 = try? observation.recognizedPoint(j2),
+              let point3 = try? observation.recognizedPoint(j3),
               point1.confidence > JointConfiguration.minimumConfidence,
               point2.confidence > JointConfiguration.minimumConfidence,
               point3.confidence > JointConfiguration.minimumConfidence else {
             return nil
         }
 
-        // Calculate angle at joint2 (the vertex)
-        let angle = angleBetweenPoints(
+        return angleBetweenPoints(
             p1: point1.location,
             vertex: point2.location,
             p2: point3.location
         )
+    }
 
-        return angle
+    /// Returns the mirror-side joint for bilateral tracking, or nil if the joint has no mirror.
+    private static func mirrorJointName(
+        _ joint: VNHumanBodyPoseObservation.JointName
+    ) -> VNHumanBodyPoseObservation.JointName? {
+        switch joint {
+        case .rightShoulder: return .leftShoulder
+        case .rightElbow:    return .leftElbow
+        case .rightWrist:    return .leftWrist
+        case .rightHip:      return .leftHip
+        case .rightKnee:     return .leftKnee
+        case .rightAnkle:    return .leftAnkle
+        case .leftShoulder:  return .rightShoulder
+        case .leftElbow:     return .rightElbow
+        case .leftWrist:     return .rightWrist
+        case .leftHip:       return .rightHip
+        case .leftKnee:      return .rightKnee
+        case .leftAnkle:     return .rightAnkle
+        default:             return nil
+        }
     }
 
     /// Calculate the angle at the vertex point between two lines

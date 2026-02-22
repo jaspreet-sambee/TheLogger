@@ -23,11 +23,11 @@ struct ExerciseDetailView: View {
 
     // Computed properties for stats
     private var currentPR: ChartDataPoint? {
-        chartData.max(by: { $0.estimated1RM < $1.estimated1RM })
+        chartData.max(by: { $0.prScore < $1.prScore })
     }
 
     private var allTimeBest: ChartDataPoint? {
-        chartData.max(by: { $0.estimated1RM < $1.estimated1RM })
+        chartData.max(by: { $0.prScore < $1.prScore })
     }
 
     private var totalWorkouts: Int {
@@ -37,8 +37,9 @@ struct ExerciseDetailView: View {
     private var averageGain: Double? {
         guard chartData.count >= 2 else { return nil }
         let sorted = chartData.sorted(by: { $0.date < $1.date })
-        let first = sorted.first!.estimated1RM
-        let last = sorted.last!.estimated1RM
+        let first = sorted.first!.prScore
+        let last = sorted.last!.prScore
+        guard first > 0 else { return nil }
         return ((last - first) / first) * 100
     }
 
@@ -48,33 +49,39 @@ struct ExerciseDetailView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 20) {
                     // Time Range Selector
                     timeRangeSelector
+                        .staggeredAppear(index: 0)
 
                     // Chart Hero Section
                     if !filteredChartData.isEmpty {
                         chartSection
+                            .staggeredAppear(index: 1)
                     } else {
                         emptyChartState
+                            .staggeredAppear(index: 1)
                     }
 
                     // Stats Cards Grid
                     if !chartData.isEmpty {
                         statsCardsGrid
+                            .staggeredAppear(index: 2)
                     }
 
                     // PR History Timeline
                     if !prBreakthroughs.isEmpty {
                         prHistorySection
+                            .staggeredAppear(index: 3)
                     }
 
                     // Full Workout History (Collapsible)
                     if !chartData.isEmpty {
                         fullHistorySection
+                            .staggeredAppear(index: 4)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -116,12 +123,12 @@ struct ExerciseDetailView: View {
                 Image(systemName: "chevron.down")
                     .font(.caption2)
             }
-            .foregroundStyle(.blue)
+            .foregroundStyle(AppColors.accent)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(
                 Capsule()
-                    .fill(Color.blue.opacity(0.15))
+                    .fill(AppColors.accent.opacity(0.15))
             )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -131,7 +138,8 @@ struct ExerciseDetailView: View {
 
     private var chartSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Estimated 1RM Progress")
+            let isBodyweightExercise = filteredChartData.allSatisfy { $0.isBodyweight }
+            Text(isBodyweightExercise ? "Max Reps Progress" : "Estimated 1RM Progress")
                 .font(.system(.headline, weight: .semibold))
                 .foregroundStyle(.primary)
 
@@ -139,11 +147,11 @@ struct ExerciseDetailView: View {
                 // Area gradient
                 AreaMark(
                     x: .value("Date", point.date),
-                    y: .value("1RM", point.estimated1RM)
+                    y: .value(isBodyweightExercise ? "Reps" : "1RM", point.prScore)
                 )
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [Color.blue.opacity(0.3), Color.blue.opacity(0.05)],
+                        colors: [AppColors.accent.opacity(0.3), AppColors.accent.opacity(0.05)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -153,18 +161,18 @@ struct ExerciseDetailView: View {
                 // Line
                 LineMark(
                     x: .value("Date", point.date),
-                    y: .value("1RM", point.estimated1RM)
+                    y: .value(isBodyweightExercise ? "Reps" : "1RM", point.prScore)
                 )
-                .foregroundStyle(.blue)
+                .foregroundStyle(AppColors.accent)
                 .lineStyle(StrokeStyle(lineWidth: 3))
                 .interpolationMethod(.catmullRom)
 
                 // Points
                 PointMark(
                     x: .value("Date", point.date),
-                    y: .value("1RM", point.estimated1RM)
+                    y: .value(isBodyweightExercise ? "Reps" : "1RM", point.prScore)
                 )
-                .foregroundStyle(.blue)
+                .foregroundStyle(AppColors.accent)
                 .symbolSize(80)
             }
             .frame(height: 280)
@@ -183,18 +191,24 @@ struct ExerciseDetailView: View {
                         .foregroundStyle(.secondary.opacity(0.3))
                     AxisValueLabel {
                         if let doubleValue = value.as(Double.self) {
-                            Text(UnitFormatter.formatWeightCompact(doubleValue, showUnit: false))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            if isBodyweightExercise {
+                                Text("\(Int(doubleValue))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text(UnitFormatter.formatWeightCompact(doubleValue, showUnit: false))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
             }
-            .chartYAxisLabel(UnitFormatter.currentSystem.weightUnit, alignment: .leading)
+            .chartYAxisLabel(isBodyweightExercise ? "reps" : UnitFormatter.currentSystem.weightUnit, alignment: .leading)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(0.6))
+                    .fill(Color.white.opacity(0.06))
             )
         }
     }
@@ -218,7 +232,7 @@ struct ExerciseDetailView: View {
         .frame(height: 280)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
         )
     }
 
@@ -232,11 +246,11 @@ struct ExerciseDetailView: View {
             // Current PR
             if let pr = currentPR {
                 StatCard(
-                    icon: "trophy.fill",
+                    icon: "medal.fill",
                     iconColor: .yellow,
                     title: "Current PR",
-                    value: "\(UnitFormatter.formatWeightCompact(pr.weight, showUnit: true)) × \(pr.reps)",
-                    subtitle: "1RM: \(UnitFormatter.formatWeightCompact(pr.estimated1RM, showUnit: true))"
+                    value: pr.displayString,
+                    subtitle: pr.isBodyweight ? "Max reps" : "1RM: \(UnitFormatter.formatWeightCompact(pr.estimated1RM, showUnit: true))"
                 )
             }
 
@@ -253,10 +267,12 @@ struct ExerciseDetailView: View {
             if let best = allTimeBest {
                 StatCard(
                     icon: "star.fill",
-                    iconColor: .orange,
+                    iconColor: AppColors.accent,
                     title: "All-Time Best",
-                    value: "\(UnitFormatter.formatWeightCompact(best.estimated1RM, showUnit: true))",
-                    subtitle: "\(UnitFormatter.formatWeightCompact(best.weight, showUnit: true)) × \(best.reps)"
+                    value: best.isBodyweight
+                        ? "\(best.reps) reps"
+                        : UnitFormatter.formatWeightCompact(best.estimated1RM, showUnit: true),
+                    subtitle: best.displayString
                 )
             }
 
@@ -264,7 +280,7 @@ struct ExerciseDetailView: View {
             if let gain = averageGain {
                 StatCard(
                     icon: "chart.line.uptrend.xyaxis",
-                    iconColor: .blue,
+                    iconColor: AppColors.accent,
                     title: "Total Gain",
                     value: String(format: "%+.1f%%", gain),
                     subtitle: "Since start"
@@ -317,7 +333,7 @@ struct ExerciseDetailView: View {
 
                     Image(systemName: showingAllWorkouts ? "chevron.up" : "chevron.down")
                         .font(.system(.subheadline, weight: .semibold))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppColors.accent)
                 }
             }
             .buttonStyle(.plain)
@@ -391,7 +407,7 @@ struct StatCard: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
         )
     }
 }
@@ -402,7 +418,7 @@ struct PRBreakthroughCard: View {
     var body: some View {
         HStack(spacing: 12) {
                 // Trophy icon
-                Image(systemName: "trophy.fill")
+                Image(systemName: "medal.fill")
                     .font(.system(.body))
                     .foregroundStyle(.yellow)
                     .frame(width: 24)
@@ -414,17 +430,22 @@ struct PRBreakthroughCard: View {
                         .foregroundStyle(.primary)
 
                     HStack(spacing: 6) {
-                        Text("\(UnitFormatter.formatWeightCompact(breakthrough.weight, showUnit: true)) × \(breakthrough.reps)")
+                        let btLabel = breakthrough.weight == 0
+                            ? "BW × \(breakthrough.reps)"
+                            : "\(UnitFormatter.formatWeightCompact(breakthrough.weight, showUnit: true)) × \(breakthrough.reps)"
+                        Text(btLabel)
                             .font(.system(.caption, weight: .medium))
                             .foregroundStyle(.secondary)
 
-                        Text("•")
-                            .font(.system(.caption))
-                            .foregroundStyle(.tertiary)
+                        if breakthrough.weight > 0 {
+                            Text("•")
+                                .font(.system(.caption))
+                                .foregroundStyle(.tertiary)
 
-                        Text("1RM: \(UnitFormatter.formatWeightCompact(breakthrough.estimated1RM, showUnit: true))")
-                            .font(.system(.caption))
-                            .foregroundStyle(.tertiary)
+                            Text("1RM: \(UnitFormatter.formatWeightCompact(breakthrough.estimated1RM, showUnit: true))")
+                                .font(.system(.caption))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
 
@@ -434,12 +455,12 @@ struct PRBreakthroughCard: View {
                 if let improvement = breakthrough.improvementPercent {
                     Text(String(format: "+%.1f%%", improvement))
                         .font(.system(.caption, weight: .semibold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppColors.accentGold)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(
                             Capsule()
-                                .fill(Color.green.opacity(0.2))
+                                .fill(AppColors.accentGold.opacity(0.15))
                         )
                 }
 
@@ -451,7 +472,7 @@ struct PRBreakthroughCard: View {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray6).opacity(0.3))
+                    .fill(Color.white.opacity(0.07))
             )
     }
 }
@@ -476,13 +497,15 @@ struct WorkoutHistoryCard: View {
 
             // Performance
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(UnitFormatter.formatWeightCompact(dataPoint.weight, showUnit: true)) × \(dataPoint.reps)")
+                Text(dataPoint.displayString)
                     .font(.system(.subheadline, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                Text("1RM: \(UnitFormatter.formatWeightCompact(dataPoint.estimated1RM, showUnit: true))")
-                    .font(.system(.caption2))
-                    .foregroundStyle(.tertiary)
+                if !dataPoint.isBodyweight {
+                    Text("1RM: \(UnitFormatter.formatWeightCompact(dataPoint.estimated1RM, showUnit: true))")
+                        .font(.system(.caption2))
+                        .foregroundStyle(.tertiary)
+                }
             }
 
             Image(systemName: "chevron.right")
@@ -493,7 +516,7 @@ struct WorkoutHistoryCard: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.systemGray6).opacity(0.2))
+                .fill(Color.white.opacity(0.05))
         )
     }
 }

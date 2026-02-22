@@ -8,7 +8,6 @@
 import ActivityKit
 import WidgetKit
 import SwiftUI
-import AppIntents
 
 // MARK: - Activity Attributes (must match main app exactly)
 
@@ -32,13 +31,13 @@ struct WorkoutActivityAttributes: ActivityAttributes {
 struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
-            // Lock Screen UI
+            // Lock Screen UI - Read-only, tap to open app
             LockScreenView(context: context)
                 .activityBackgroundTint(.black.opacity(0.85))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded
+                // Expanded - Read-only display
                 DynamicIslandExpandedRegion(.leading) {
                     Label(context.state.exerciseName, systemImage: "dumbbell.fill")
                         .font(.system(size: 14, weight: .semibold))
@@ -60,37 +59,30 @@ struct WorkoutLiveActivity: Widget {
                                 .foregroundStyle(.secondary)
                         }
 
-                        Divider().frame(height: 36)
+                        Divider().frame(height: 40)
 
-                        // Last set
-                        VStack(spacing: 2) {
-                            Text(context.state.lastSetSummary)
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("last set")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                        // Last set info
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Last Set")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.tertiary)
+
+                            HStack(spacing: 6) {
+                                Text(context.state.formattedWeight)
+                                    .font(.system(size: 14, weight: .semibold))
+
+                                Text("×")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+
+                                Text("\(context.state.lastReps)")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
                         }
 
                         Spacer()
-
-                        // Log Set button
-                        Button(intent: LogSetIntent(
-                            workoutId: context.attributes.workoutId,
-                            exerciseId: context.state.exerciseId,
-                            currentSets: context.state.exerciseSets,
-                            reps: context.state.lastReps,
-                            weight: context.state.lastWeight
-                        )) {
-                            Text("+ Set")
-                                .font(.system(size: 14, weight: .bold))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.blue)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 8)
                 }
             } compactLeading: {
                 Image(systemName: "dumbbell.fill")
@@ -129,55 +121,45 @@ struct LockScreenView: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Stats + Button
+            // Stats - Clean read-only display
             HStack(spacing: 16) {
-                // Sets for this exercise
+                // Sets completed
                 VStack(spacing: 2) {
                     Text("\(context.state.exerciseSets)")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
                         .contentTransition(.numericText())
                     Text("sets")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
-                .frame(minWidth: 60)
 
                 Divider()
-                    .frame(height: 40)
+                    .frame(height: 60)
 
                 // Last set info
-                VStack(spacing: 2) {
-                    Text(context.state.lastSetSummary)
-                        .font(.system(size: 18, weight: .semibold))
-                    Text("last set")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Last Set")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.tertiary)
+
+                    HStack(spacing: 8) {
+                        Text(context.state.formattedWeight)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.primary)
+
+                        Text("×")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.secondary)
+
+                        Text("\(context.state.lastReps)")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.primary)
+                    }
+                    .contentTransition(.numericText())
                 }
 
                 Spacer()
-
-                // Log Set Button
-                Button(intent: LogSetIntent(
-                    workoutId: context.attributes.workoutId,
-                    exerciseId: context.state.exerciseId,
-                    currentSets: context.state.exerciseSets,
-                    reps: context.state.lastReps,
-                    weight: context.state.lastWeight
-                )) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                        Text("Log Set")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(Color.blue)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .buttonStyle(.plain)
             }
         }
         .padding(16)

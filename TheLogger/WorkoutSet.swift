@@ -28,9 +28,9 @@ enum SetType: String, Codable, CaseIterable {
 
     var color: Color {
         switch self {
-        case .warmup: return .orange
-        case .working: return .blue
-        case .dropSet: return .purple
+        case .warmup: return .yellow
+        case .working: return AppColors.accent
+        case .dropSet: return AppColors.accent
         case .failure: return .red
         case .pause: return .teal
         }

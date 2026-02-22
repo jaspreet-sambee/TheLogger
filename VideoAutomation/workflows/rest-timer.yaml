@@ -1,0 +1,40 @@
+name: "Rest Timer Demo"
+description: "Smart rest timer with customizable durations per exercise"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 12
+
+output:
+  filename: "rest-timer"
+  twitter_optimized: true
+  include_device_frame: true
+  background_color: "#1a1a1a"
+  caption: "Never miss your rest periods again"
+  hashtags: ["resttimer", "workout", "recovery"]
+
+effects:
+  music: true
+  music_volume: 0.25
+  speed_ramp:
+    start: 6.0         # timer counting down begins
+    end: 17.0          # 5 seconds before finish so we can show the countdown
+    speed: 3.0         # 3x speed through the middle section
+  zoom_moments:
+    - time: 5.5        # timer UI appears
+      scale: 1.25
+      duration: 0.5
+      anchor: "center"
+  text_overlays:
+    - text: "Built-in rest timer"
+      start: 5.0
+      end: 9.0
+      position: "top"
+    - text: "Know exactly when to go again"
+      start: 19.0
+      end: 22.0
+      position: "bottom"
+  flash_moments: []

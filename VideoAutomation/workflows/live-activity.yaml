@@ -1,0 +1,17 @@
+name: "Live Activity Demo"
+description: "Log sets from lock screen with Live Activity"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 18
+
+output:
+  filename: "live-activity"
+  twitter_optimized: true
+  include_device_frame: true
+  background_color: "#0a0a0a"
+  caption: "Log sets without unlocking your phone"
+  hashtags: ["iOS17", "LiveActivity", "lockscreen"]

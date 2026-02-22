@@ -18,7 +18,7 @@ Issues that significantly impact user experience.
 
 ### Weight +/- Buttons Race Condition
 **Status:** Open
-**Location:** `ContentView.swift` - InlineAddSetView / weight stepper views
+**Location:** `SetViews.swift` - InlineAddSetView / weight stepper views
 **Description:** When rapidly tapping +/- buttons while TextField is focused, the value may not update correctly due to a race condition between TextField's onChange and button action.
 **Workaround:** Tap outside TextField to dismiss keyboard before using +/- buttons.
 **Fix approach:** Dismiss keyboard on button tap before updating value, or use a debounced update mechanism.
@@ -60,7 +60,7 @@ Reference for previously fixed bugs.
 
 ### Force Unwrap Crash in saveExerciseMemory
 **Fixed:** 2026-01-xx
-**Location:** `ContentView.swift`
+**Location:** `ExerciseViews.swift` / model context usage
 **Description:** Force unwrap of optional `modelContext` caused crash when saving exercise memory.
 **Fix:** Changed to `guard let` with early return.
 
@@ -77,7 +77,7 @@ for index in indexSet.sorted(by: >) {
 
 ### Recent Exercises Order Lost
 **Fixed:** 2026-01-xx
-**Location:** `ContentView.swift` - recentlyUsedExercises
+**Location:** `ExerciseSuggester` / recent exercises logic
 **Description:** Recent exercises weren't sorted by lastUpdated date.
 **Fix:** Use `@Query` with sort descriptor instead of manual sorting.
 

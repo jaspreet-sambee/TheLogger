@@ -13,7 +13,7 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Page content
@@ -22,7 +22,7 @@ struct OnboardingView: View {
                         pageIndex: 0,
                         currentPage: currentPage,
                         icon: "figure.strengthtraining.traditional",
-                        iconColor: .blue,
+                        iconColor: AppColors.accent,
                         title: "Track Your Lifts",
                         description: "Log exercises, sets, and weights with minimal friction. Built for speed in the gym."
                     )
@@ -32,7 +32,7 @@ struct OnboardingView: View {
                         pageIndex: 1,
                         currentPage: currentPage,
                         icon: "chart.line.uptrend.xyaxis",
-                        iconColor: .green,
+                        iconColor: AppColors.accentGold,
                         title: "See Your Progress",
                         description: "View personal records and track your gains over time. Automatic progress comparison."
                     )
@@ -42,7 +42,7 @@ struct OnboardingView: View {
                         pageIndex: 2,
                         currentPage: currentPage,
                         icon: "lock.shield.fill",
-                        iconColor: .purple,
+                        iconColor: AppColors.accent,
                         title: "Your Data, Your Device",
                         description: "All data stays on your device. No accounts, no cloud, no tracking. Just you and your gains."
                     )
@@ -54,7 +54,7 @@ struct OnboardingView: View {
                 HStack(spacing: 8) {
                     ForEach(0..<3, id: \.self) { index in
                         Circle()
-                            .fill(currentPage == index ? Color.blue : Color.secondary.opacity(0.3))
+                            .fill(currentPage == index ? AppColors.accent : Color.secondary.opacity(0.3))
                             .frame(width: 8, height: 8)
                             .animation(.easeInOut(duration: 0.2), value: currentPage)
                     }
@@ -76,7 +76,7 @@ struct OnboardingView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.blue)
+                        .background(AppColors.accent)
                         .cornerRadius(12)
                 }
                 .padding(.horizontal, 24)
@@ -182,5 +182,6 @@ struct OnboardingPage: View {
 #Preview {
     OnboardingView()
 }
+
 
 

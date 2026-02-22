@@ -60,22 +60,22 @@ xcodebuild -project TheLogger.xcodeproj \
 ```
 TheLogger/
 ├── TheLoggerApp.swift       # App entry point, SwiftData setup
-├── Models/
-│   ├── Workout.swift        # Workout model + helpers
-│   ├── Exercise.swift       # Exercise model
-│   └── WorkoutSet.swift     # Set model
-├── Views/
-│   ├── ContentView.swift    # Workout detail + editing views
-│   ├── WorkoutListView.swift # Home screen
-│   ├── SettingsView.swift   # Settings
-│   ├── OnboardingView.swift # Onboarding
-│   └── PrivacyPolicyView.swift
-├── Components/
-│   ├── Components.swift     # Reusable UI components
-│   └── Animations.swift     # Custom animations
+├── Workout.swift            # Workout model + UnitFormatter, ExerciseLibrary, RestTimerManager
+├── Exercise.swift           # Exercise model
+├── WorkoutSet.swift         # Set model
+├── WorkoutDetailView.swift  # Active workout editing
+├── WorkoutListView.swift    # Home screen
+├── ExerciseViews.swift      # Exercise cards and edit view
+├── SetViews.swift           # Set input and display
+├── TimerViews.swift         # Rest timer, PR celebration
+├── SummaryViews.swift       # Workout summary
+├── SettingsView.swift       # Settings
+├── OnboardingView.swift     # Onboarding
+├── Components.swift         # Reusable UI components
+├── Animations.swift         # Custom animations
 └── docs/
     ├── ARCHITECTURE.md      # Technical architecture
-    ├── TESTING.md           # Test checklist
+    ├── TESTING.md           # Testing guide
     └── KNOWN_BUGS.md        # Bug tracking
 ```
 
@@ -138,7 +138,7 @@ The project includes rules for AI assistants:
 
 ### Testing
 
-See [docs/TESTING.md](docs/TESTING.md) for the manual testing checklist.
+See [docs/TESTING.md](docs/TESTING.md) for automated and manual testing.
 
 ### Known Issues
 

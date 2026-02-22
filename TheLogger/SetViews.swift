@@ -295,9 +295,14 @@ struct InlineSetRowView: View {
         isEditingReps || isEditingWeight || isEditingDuration
     }
 
+    private var isLogged: Bool {
+        self.set.reps > 0 && !isEditingReps && !isEditingWeight && !isEditingDuration
+    }
+
     private var rowBackgroundFill: Color {
         if set.type == .working {
-            return isEditing ? Color.blue.opacity(0.08) : Color.white.opacity(0.06)
+            if isLogged { return AppColors.accentGold.opacity(0.05) }
+            return isEditing ? AppColors.accent.opacity(0.08) : Color.white.opacity(0.06)
         } else {
             return set.type.color.opacity(isEditing ? 0.15 : 0.10)
         }
@@ -328,7 +333,10 @@ struct InlineSetRowView: View {
             Menu {
                 ForEach(SetType.allCases, id: \.self) { type in
                     Button {
-                        set.type = type
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            set.type = type
+                        }
                         onUpdate(set.reps, set.weight)
                         runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: type)
                     } label: {
@@ -340,15 +348,18 @@ struct InlineSetRowView: View {
                     Circle()
                         .fill(set.type.color.opacity(0.15))
                         .frame(width: 32, height: 32)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.type)
 
                     if set.type == .working {
                         Text("\(setNumber)")
                             .font(.system(.caption, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(isLogged ? AppColors.accentGold : .secondary)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isLogged)
                     } else {
                         Image(systemName: set.type.icon)
                             .font(.system(.caption2, weight: .semibold))
                             .foregroundStyle(set.type.color)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.type)
                     }
                 }
             }
@@ -387,60 +398,66 @@ struct InlineSetRowView: View {
                         .foregroundStyle(.secondary)
 
                     if isEditingReps {
-                        // Step button -1
-                        Image(systemName: "minus.circle.fill")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(.red.opacity(0.8))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                            .onTapGesture { adjustReps(-1) }
-
-                        if isTypingReps {
-                            SelectAllTextField(
-                                text: $repsText,
-                                focusWhenAppear: focusRepsWhenAppear,
-                                placeholder: "Reps",
-                                keyboardType: .numberPad,
-                                onFocusTriggered: { focusRepsWhenAppear = false },
-                                onCommit: { saveReps() }
-                            )
-                            .frame(width: 50, height: 24)
-                        } else {
-                            // Tappable value — tap to open keyboard for custom input
-                            Text(repsText)
-                                .font(.system(.body, weight: .bold))
-                                .foregroundStyle(.primary)
-                                .frame(minWidth: 30)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.blue.opacity(0.15))
-                                )
-                                .contentTransition(.numericText(value: Double(set.reps)))
-                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.reps)
+                        HStack(spacing: 6) {
+                            // Step button -1
+                            Image(systemName: "minus.circle.fill")
+                                .font(.system(.subheadline, weight: .medium))
+                                .foregroundStyle(.red.opacity(0.8))
+                                .frame(width: 28, height: 28)
                                 .contentShape(Rectangle())
-                                .onTapGesture {
-                                    isTypingReps = true
-                                    focusRepsWhenAppear = true
-                                }
+                                .onTapGesture { adjustReps(-1) }
+
+                            if isTypingReps {
+                                SelectAllTextField(
+                                    text: $repsText,
+                                    focusWhenAppear: focusRepsWhenAppear,
+                                    placeholder: "Reps",
+                                    keyboardType: .numberPad,
+                                    onFocusTriggered: { focusRepsWhenAppear = false },
+                                    onCommit: { saveReps() }
+                                )
+                                .frame(width: 50, height: 24)
+                            } else {
+                                // Tappable value — tap to open keyboard for custom input
+                                Text(repsText)
+                                    .font(.system(.body, weight: .bold))
+                                    .foregroundStyle(.primary)
+                                    .frame(minWidth: 30)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(AppColors.accent.opacity(0.15))
+                                    )
+                                    .contentTransition(.numericText(value: Double(set.reps)))
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.reps)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        isTypingReps = true
+                                        focusRepsWhenAppear = true
+                                    }
+                            }
+
+                            // Step button +1
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(.subheadline, weight: .medium))
+                                .foregroundStyle(AppColors.accent.opacity(0.8))
+                                .frame(width: 28, height: 28)
+                                .contentShape(Rectangle())
+                                .onTapGesture { adjustReps(1) }
+
+                            // Done button
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(.subheadline, weight: .medium))
+                                .foregroundStyle(AppColors.accentGold)
+                                .frame(width: 28, height: 28)
+                                .contentShape(Rectangle())
+                                .onTapGesture { saveReps() }
                         }
-
-                        // Step button +1
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(.green.opacity(0.8))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                            .onTapGesture { adjustReps(1) }
-
-                        // Done button
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(.green)
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                            .onTapGesture { saveReps() }
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.9, anchor: .leading).combined(with: .opacity),
+                            removal: .scale(scale: 0.9, anchor: .leading).combined(with: .opacity)
+                        ))
                     } else {
                         Text("\(set.reps)")
                             .font(.system(.body, weight: .semibold))
@@ -451,6 +468,7 @@ struct InlineSetRowView: View {
                             .onTapGesture {
                                 startEditingReps()
                             }
+                            .transition(.opacity)
                     }
                 }
             }
@@ -461,88 +479,99 @@ struct InlineSetRowView: View {
             if !isTimeBased {
             HStack(spacing: 4) {
                 if isEditingWeight {
-                    // Quick adjust button (decrease)
-                    Image(systemName: "minus.circle.fill")
-                        .font(.system(.subheadline, weight: .medium))
-                        .foregroundStyle(.red.opacity(0.8))
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            adjustWeight(-5)
+                    HStack(spacing: 4) {
+                        // Quick adjust button (decrease)
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(.red.opacity(0.8))
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                adjustWeight(-5)
+                            }
+
+                        if isTypingWeight {
+                            // TextField for manual input
+                            SelectAllTextField(
+                                text: $weightText,
+                                focusWhenAppear: focusWeightWhenAppear,
+                                placeholder: "Weight",
+                                keyboardType: .decimalPad,
+                                onFocusTriggered: { focusWeightWhenAppear = false },
+                                onCommit: { saveWeight() }
+                            )
+                            .frame(width: 70, height: 24)
+                        } else {
+                            // Tappable value - tap to type custom value
+                            Text(String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight)))
+                                .font(.system(.body, weight: .bold))
+                                .foregroundStyle(.primary)
+                                .frame(minWidth: 50)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(AppColors.accent.opacity(0.15))
+                                )
+                                .contentTransition(.numericText(value: set.weight))
+                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.weight)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    // Switch to typing mode
+                                    weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight))
+                                    isTypingWeight = true
+                                    focusWeightWhenAppear = true
+                                }
                         }
 
-                    if isTypingWeight {
-                        // TextField for manual input
-                        SelectAllTextField(
-                            text: $weightText,
-                            focusWhenAppear: focusWeightWhenAppear,
-                            placeholder: "Weight",
-                            keyboardType: .decimalPad,
-                            onFocusTriggered: { focusWeightWhenAppear = false },
-                            onCommit: { saveWeight() }
-                        )
-                        .frame(width: 70, height: 24)
-                    } else {
-                        // Tappable value - tap to type custom value
-                        Text(String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight)))
-                            .font(.system(.body, weight: .bold))
-                            .foregroundStyle(.primary)
-                            .frame(minWidth: 50)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.blue.opacity(0.15))
-                            )
+                        Text(UnitFormatter.weightUnit)
+                            .font(.system(.caption2, weight: .medium))
+                            .foregroundStyle(.secondary)
+
+                        // Quick adjust button (increase)
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(AppColors.accent.opacity(0.8))
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                adjustWeight(5)
+                            }
+
+                        // Done button to exit editing mode
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(.body, weight: .medium))
+                            .foregroundStyle(AppColors.accentGold)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: set.type)
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                    isEditingWeight = false
+                                    isTypingWeight = false
+                                }
+                            }
+                    }
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.9, anchor: .trailing).combined(with: .opacity),
+                        removal: .scale(scale: 0.9, anchor: .trailing).combined(with: .opacity)
+                    ))
+                } else {
+                    HStack(spacing: 4) {
+                        Text("\(String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight)))")
+                            .font(.system(.body, weight: .semibold))
+                            .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
                             .contentTransition(.numericText(value: set.weight))
                             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.weight)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                // Switch to typing mode
-                                weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight))
-                                isTypingWeight = true
-                                focusWeightWhenAppear = true
+                                startEditingWeight()
                             }
+                        Text(UnitFormatter.weightUnit)
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(.secondary)
                     }
-
-                    Text(UnitFormatter.weightUnit)
-                        .font(.system(.caption2, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    // Quick adjust button (increase)
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(.subheadline, weight: .medium))
-                        .foregroundStyle(.blue.opacity(0.8))
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            adjustWeight(5)
-                        }
-
-                    // Done button to exit editing mode
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(.body, weight: .medium))
-                        .foregroundStyle(.green)
-                        .frame(width: 32, height: 32)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: set.type)
-                            isEditingWeight = false
-                            isTypingWeight = false
-                        }
-                } else {
-                    Text("\(String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight)))")
-                        .font(.system(.body, weight: .semibold))
-                        .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
-                        .contentTransition(.numericText(value: set.weight))
-                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.weight)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            startEditingWeight()
-                        }
-                    Text(UnitFormatter.weightUnit)
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    .transition(.opacity)
                 }
             }
             }
@@ -553,10 +582,16 @@ struct InlineSetRowView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(rowBackgroundFill)
                 .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isEditing)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isLogged)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(set.type == .working ? Color.white.opacity(0.06) : set.type.color.opacity(0.15), lineWidth: 1)
+                .stroke(
+                    set.type == .working
+                        ? (isLogged ? AppColors.accentGold.opacity(0.25) : AppColors.accent.opacity(0.2))
+                        : set.type.color.opacity(0.15),
+                    lineWidth: 1
+                )
         )
         .overlay(alignment: .bottomLeading) {
             // Previous set indicator
@@ -570,6 +605,7 @@ struct InlineSetRowView: View {
                 .foregroundStyle(.tertiary)
                 .padding(.leading, 48)
                 .padding(.bottom, 2)
+                .transition(.opacity.combined(with: .offset(y: 2)))
             } else if let previous = previousSet, !isEditingReps && !isEditingWeight {
                 HStack(spacing: 4) {
                     Image(systemName: "clock.arrow.circlepath")
@@ -580,6 +616,7 @@ struct InlineSetRowView: View {
                 .foregroundStyle(.tertiary)
                 .padding(.leading, 48)
                 .padding(.bottom, 2)
+                .transition(.opacity.combined(with: .offset(y: 2)))
             }
         }
         .overlay(alignment: .trailing) {
@@ -587,7 +624,7 @@ struct InlineSetRowView: View {
                 HStack(spacing: 3) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppColors.accentGold)
                         .symbolEffect(.bounce, value: showFeedback)
                     Text(feedbackMessage)
                         .font(.system(.caption2, weight: .medium))
@@ -597,7 +634,7 @@ struct InlineSetRowView: View {
                 .padding(.vertical, 3)
                 .background(
                     Capsule()
-                        .fill(Color(.systemBackground).opacity(0.95))
+                        .fill(Color.white.opacity(0.18))
                         .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
                 )
                 .padding(.trailing, 4)
@@ -639,12 +676,16 @@ struct InlineSetRowView: View {
         // Close weight editing first to prevent layout overflow
         if isEditingWeight {
             runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: set.type)
-            isEditingWeight = false
-            isTypingWeight = false
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                isEditingWeight = false
+                isTypingWeight = false
+            }
         }
         originalReps = set.reps
         repsText = "\(set.reps)"
-        isEditingReps = true
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            isEditingReps = true
+        }
         isTypingReps = false  // Start in button mode — no keyboard until user taps the value
     }
 
@@ -666,12 +707,16 @@ struct InlineSetRowView: View {
     private func startEditingWeight() {
         // Close reps editing first to prevent layout overflow
         if isEditingReps {
-            isEditingReps = false
-            isTypingReps = false
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                isEditingReps = false
+                isTypingReps = false
+            }
         }
         originalWeight = set.weight
         weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight))
-        isEditingWeight = true
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            isEditingWeight = true
+        }
         focusWeightWhenAppear = true
     }
 
@@ -749,7 +794,6 @@ struct InlineSetRowView: View {
             didAdjustRepsViaButton = false
             return
         }
-        defer { isEditingReps = false; isTypingReps = false }
         if let value = Int(repsText.trimmingCharacters(in: .whitespaces)), value > 0 && value <= 1000 {
             set.reps = value
             onUpdate(set.reps, set.weight)
@@ -761,6 +805,10 @@ struct InlineSetRowView: View {
             set.reps = originalReps
             repsText = "\(originalReps)"
         }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            isEditingReps = false
+            isTypingReps = false
+        }
     }
 
     private func saveWeight() {
@@ -771,8 +819,6 @@ struct InlineSetRowView: View {
             return
         }
 
-        defer { isEditingWeight = false }
-
         let trimmed = weightText.trimmingCharacters(in: .whitespaces)
         guard let displayValue = parseWeight(trimmed), displayValue >= 0 && displayValue <= 10000 else {
             #if DEBUG
@@ -780,6 +826,9 @@ struct InlineSetRowView: View {
             #endif
             set.weight = originalWeight
             weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(originalWeight))
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                isEditingWeight = false
+            }
             return
         }
         let storageValue = UnitFormatter.convertToStorage(displayValue)
@@ -790,6 +839,9 @@ struct InlineSetRowView: View {
         #endif
         runPRCheckAndNotify(weight: storageValue, reps: set.reps, setType: set.type)
         showMicroFeedback()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            isEditingWeight = false
+        }
     }
 
     /// Parse weight string; accepts both "." and "," as decimal separator.
@@ -838,7 +890,7 @@ struct AddExerciseNameView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .background(Color(.systemBackground))
+            .background(AppColors.background)
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -855,7 +907,7 @@ struct AddExerciseNameView: View {
                         dismiss()
                     }
                     .font(.system(.body, weight: .semibold))
-                    .tint(.blue)
+                    .tint(AppColors.accent)
                     .disabled(exerciseName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
@@ -889,11 +941,11 @@ struct InlineAddSetView: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.12))
+                    .fill(AppColors.accent.opacity(0.12))
                     .frame(width: 32, height: 32)
                 Image(systemName: "plus")
                     .font(.system(.caption, weight: .semibold))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppColors.accent)
             }
 
             if isTimeBased, let durationBinding = durationSeconds {
@@ -988,7 +1040,7 @@ struct InlineAddSetView: View {
 
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(.title2, weight: .medium))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppColors.accentGold)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .accessibilityIdentifier("saveSetButton")
@@ -1005,10 +1057,10 @@ struct InlineAddSetView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.blue.opacity(0.08))
+                .fill(AppColors.accent.opacity(0.08))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                        .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                 )
         )
         .overlay(alignment: .trailing) {
@@ -1016,7 +1068,7 @@ struct InlineAddSetView: View {
                 HStack(spacing: 3) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppColors.accentGold)
                         .symbolEffect(.bounce, value: showFeedback)
                     Text(feedbackMessage)
                         .font(.system(.caption2, weight: .medium))
@@ -1026,7 +1078,7 @@ struct InlineAddSetView: View {
                 .padding(.vertical, 3)
                 .background(
                     Capsule()
-                        .fill(Color(.systemBackground).opacity(0.95))
+                        .fill(Color.white.opacity(0.18))
                         .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
                 )
                 .padding(.trailing, 4)
@@ -1238,7 +1290,7 @@ struct AddSetView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .background(Color(.systemBackground))
+            .background(AppColors.background)
             .navigationTitle("Add Set")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1254,7 +1306,7 @@ struct AddSetView: View {
                         onAdd()
                         dismiss()
                     }
-                    .tint(.blue)
+                    .tint(AppColors.accent)
                 }
             }
         }
@@ -1412,7 +1464,7 @@ struct EditSetView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .background(Color(.systemBackground))
+            .background(AppColors.background)
             .navigationTitle("Edit Set")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1428,7 +1480,7 @@ struct EditSetView: View {
                         onSave()
                         dismiss()
                     }
-                    .tint(.blue)
+                    .tint(AppColors.accent)
                 }
             }
         }

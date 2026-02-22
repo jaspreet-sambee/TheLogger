@@ -204,6 +204,42 @@ enum ExerciseType: String, CaseIterable {
         }
     }
 
+    /// Short note shown in the calibration overlay describing which limb(s) are tracked
+    var trackingNote: String {
+        switch self {
+        case .bicepCurl, .tricepExtension, .lateralRaise,
+             .bentOverRow, .chestFly, .shoulderPress:
+            return "Either arm counts"
+        case .pushUp, .tricepDip, .pullUp:
+            return "Both arms tracked"
+        case .lunge, .legExtension, .legCurl:
+            return "Either leg counts"
+        case .squat, .romanianDeadlift, .calfRaise:
+            return "Both legs tracked"
+        }
+    }
+
+    /// Phone placement tip shown in the calibration overlay
+    var setupTip: String {
+        switch self {
+        case .squat:             return "Phone propped at waist height, ~6 ft away, portrait"
+        case .pushUp:            return "Phone on the floor to your side, portrait, ~3 ft away"
+        case .bicepCurl:         return "Phone against wall in front of you, portrait"
+        case .shoulderPress:     return "Phone propped at chest height, facing you"
+        case .lunge:             return "Phone propped at waist height, ~6 ft away, portrait"
+        case .tricepExtension:   return "Phone propped at chest height, facing you, portrait"
+        case .lateralRaise:      return "Phone propped in front, chest height, portrait"
+        case .bentOverRow:       return "Phone to your side at hip height, portrait"
+        case .chestFly:          return "Phone propped facing you, chest height"
+        case .tricepDip:         return "Phone to your side facing you, portrait"
+        case .legExtension:      return "Phone to your side facing your legs, portrait"
+        case .legCurl:           return "Phone to your side facing your legs, portrait"
+        case .romanianDeadlift:  return "Phone to your side, ~4 ft away, portrait"
+        case .calfRaise:         return "Phone propped facing you, ~3 ft away"
+        case .pullUp:            return "Phone mounted facing you, above chest height"
+        }
+    }
+
     /// System image for UI display
     var systemImage: String {
         switch self {

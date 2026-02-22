@@ -14,6 +14,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		468E90582F382103001E0A97 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4678C6502F07164200E5B779 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4678C6572F07164200E5B779;
+			remoteInfo = TheLogger;
+		};
 		46B5F2012F2ECAA4005CFC92 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 4678C6502F07164200E5B779 /* Project object */;
@@ -46,6 +53,7 @@
 
 /* Begin PBXFileReference section */
 		4678C6582F07164200E5B779 /* TheLogger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheLogger.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		468E90542F382103001E0A97 /* TheLoggerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheLoggerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TheLoggerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		46B5F1F32F2ECAA3005CFC92 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		46B5F1F52F2ECAA3005CFC92 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -79,6 +87,11 @@
 			path = TheLogger;
 			sourceTree = "<group>";
 		};
+		468E90552F382103001E0A97 /* TheLoggerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TheLoggerTests;
+			sourceTree = "<group>";
+		};
 		46B5F1F72F2ECAA3005CFC92 /* TheLoggerWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -91,6 +104,13 @@
 
 /* Begin PBXFrameworksBuildPhase section */
 		4678C6552F07164200E5B779 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		468E90512F382103001E0A97 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,6 +142,7 @@
 				4678C65A2F07164200E5B779 /* TheLogger */,
 				46B5F1F72F2ECAA3005CFC92 /* TheLoggerWidget */,
 				46UITEST0012F300000000006 /* TheLoggerUITests */,
+				468E90552F382103001E0A97 /* TheLoggerTests */,
 				46B5F1F22F2ECAA3005CFC92 /* Frameworks */,
 				4678C6592F07164200E5B779 /* Products */,
 			);
@@ -133,6 +154,7 @@
 				4678C6582F07164200E5B779 /* TheLogger.app */,
 				46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */,
 				46UITEST0012F300000000004 /* TheLoggerUITests.xctest */,
+				468E90542F382103001E0A97 /* TheLoggerTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -180,6 +202,29 @@
 			productName = TheLogger;
 			productReference = 4678C6582F07164200E5B779 /* TheLogger.app */;
 			productType = "com.apple.product-type.application";
+		};
+		468E90532F382103001E0A97 /* TheLoggerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 468E905A2F382103001E0A97 /* Build configuration list for PBXNativeTarget "TheLoggerTests" */;
+			buildPhases = (
+				468E90502F382103001E0A97 /* Sources */,
+				468E90512F382103001E0A97 /* Frameworks */,
+				468E90522F382103001E0A97 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				468E90592F382103001E0A97 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				468E90552F382103001E0A97 /* TheLoggerTests */,
+			);
+			name = TheLoggerTests;
+			packageProductDependencies = (
+			);
+			productName = TheLoggerTests;
+			productReference = 468E90542F382103001E0A97 /* TheLoggerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		46B5F1F02F2ECAA3005CFC92 /* TheLoggerWidgetExtension */ = {
 			isa = PBXNativeTarget;
@@ -236,6 +281,10 @@
 					4678C6572F07164200E5B779 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
+					468E90532F382103001E0A97 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 4678C6572F07164200E5B779;
+					};
 					46B5F1F02F2ECAA3005CFC92 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
@@ -262,12 +311,20 @@
 				4678C6572F07164200E5B779 /* TheLogger */,
 				46B5F1F02F2ECAA3005CFC92 /* TheLoggerWidgetExtension */,
 				46UITEST0012F300000000007 /* TheLoggerUITests */,
+				468E90532F382103001E0A97 /* TheLoggerTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		4678C6562F07164200E5B779 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		468E90522F382103001E0A97 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -298,6 +355,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		468E90502F382103001E0A97 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		46B5F1ED2F2ECAA3005CFC92 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -316,6 +380,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		468E90592F382103001E0A97 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4678C6572F07164200E5B779 /* TheLogger */;
+			targetProxy = 468E90582F382103001E0A97 /* PBXContainerItemProxy */;
+		};
 		46B5F2022F2ECAA4005CFC92 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 46B5F1F02F2ECAA3005CFC92 /* TheLoggerWidgetExtension */;
@@ -524,6 +593,50 @@
 			};
 			name = Release;
 		};
+		468E905B2F382103001E0A97 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 77BC8S8T5X;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLoggerTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TheLogger.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TheLogger";
+			};
+			name = Debug;
+		};
+		468E905C2F382103001E0A97 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 77BC8S8T5X;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLoggerTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TheLogger.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TheLogger";
+			};
+			name = Release;
+		};
 		46B5F2062F2ECAA4005CFC92 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -653,6 +766,15 @@
 			buildConfigurations = (
 				4678C6642F07164400E5B779 /* Debug */,
 				4678C6652F07164400E5B779 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		468E905A2F382103001E0A97 /* Build configuration list for PBXNativeTarget "TheLoggerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				468E905B2F382103001E0A97 /* Debug */,
+				468E905C2F382103001E0A97 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

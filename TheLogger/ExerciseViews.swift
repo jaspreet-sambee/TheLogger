@@ -106,7 +106,7 @@ struct ExerciseRowView: View {
                     // Active indicator
                     if isActive {
                         Circle()
-                            .fill(Color.blue)
+                            .fill(AppColors.accent)
                             .frame(width: 6, height: 6)
                     }
 
@@ -238,18 +238,18 @@ struct ExerciseCard: View {
         // Compound exercises (warm tones)
         let compounds = ["squat", "deadlift", "bench", "press", "row", "pull-up", "pullup", "chin-up", "dip"]
         if compounds.contains(where: { name.contains($0) }) {
-            return Color.orange.opacity(0.7)
+            return AppColors.accent.opacity(0.7)
         }
         // Default (neutral)
-        return Color.white.opacity(0.3)
+        return Color.white.opacity(0.6)
     }
 
     var body: some View {
         HStack(spacing: 0) {
             // Left accent bar
             RoundedRectangle(cornerRadius: 2)
-                .fill(isActive ? Color.blue : accentColor)
-                .frame(width: 3)
+                .fill(isActive ? AppColors.accent : accentColor)
+                .frame(width: 4)
                 .padding(.vertical, 8)
 
             VStack(alignment: .leading, spacing: 8) {
@@ -263,12 +263,12 @@ struct ExerciseCard: View {
                     if isActive {
                         Text("Current")
                             .font(.system(.caption2, weight: .medium))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(
                                 Capsule()
-                                    .fill(Color.blue.opacity(0.12))
+                                    .fill(AppColors.accent.opacity(0.12))
                             )
                     }
 
@@ -301,17 +301,30 @@ struct ExerciseCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isActive ? Color.blue.opacity(0.06) : Color.white.opacity(0.02))
+                        .fill(isFullyLogged ? AppColors.accentGold.opacity(0.05) : (isActive ? AppColors.accent.opacity(0.06) : Color.white.opacity(0.02)))
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isActive ? Color.blue.opacity(0.15) : Color.white.opacity(0.06), lineWidth: 1)
-                )
+                .overlay {
+                    if isFullyLogged {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(AppColors.accentGold.opacity(0.4), lineWidth: 1.5)
+                    } else if isActive {
+                        AnimatedGradientBorder(cornerRadius: 12,
+                            colors: AppColors.accentGradient + [AppColors.accentGradient[0]], lineWidth: 1)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1)
+                    }
+                }
                 .matchedGeometryEffect(id: "card-\(exercise.id)", in: namespace)
         )
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isFullyLogged)
+    }
+
+    private var isFullyLogged: Bool {
+        let sets = exercise.sets ?? []
+        return !sets.isEmpty && sets.allSatisfy { $0.reps > 0 }
     }
 
     @ViewBuilder
@@ -347,7 +360,7 @@ struct ExerciseCard: View {
         } label: {
             Image(systemName: exercise.isInSuperset ? "link.circle.fill" : "link.circle")
                 .font(.system(.caption, weight: .medium))
-                .foregroundStyle(exercise.isInSuperset ? .blue : .secondary)
+                .foregroundStyle(exercise.isInSuperset ? .purple : .secondary)
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }
@@ -381,9 +394,11 @@ struct ExerciseEditView: View {
     @State private var restTimerEnabled: Bool? = nil  // nil = global default, true/false = explicit
     @State private var quickLogStripOffset: CGFloat = 50
     @State private var quickLogStripOpacity: Double = 0
+    @State private var showCameraRepCounter = false  // Camera-based rep counting
+    @State private var showingCameraUnsupported = false
 
     var body: some View {
-        Form {
+        List {
             if let ns = namespace {
                 Section {
                     exerciseDetailMatchedHeader(namespace: ns)
@@ -436,6 +451,16 @@ struct ExerciseEditView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.06))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                            )
+                    )
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 } else {
                     Button {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -445,7 +470,7 @@ struct ExerciseEditView: View {
                         HStack(spacing: 8) {
                             Image(systemName: noteText.isEmpty ? "note.text.badge.plus" : "note.text")
                                 .font(.system(.subheadline))
-                                .foregroundStyle(noteText.isEmpty ? Color.secondary : Color.blue)
+                                .foregroundStyle(noteText.isEmpty ? Color.secondary : AppColors.accent)
 
                             if noteText.isEmpty {
                                 Text("Add note")
@@ -466,6 +491,16 @@ struct ExerciseEditView: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.06))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                            )
+                    )
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 }
             }
 
@@ -474,7 +509,7 @@ struct ExerciseEditView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "timer")
                         .font(.system(.body))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppColors.accent)
                         .frame(width: 28)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -514,7 +549,7 @@ struct ExerciseEditView: View {
                         HStack(spacing: 4) {
                             Text(restTimerStatusText)
                                 .font(.system(.subheadline, weight: .medium))
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(AppColors.accent)
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
@@ -523,11 +558,21 @@ struct ExerciseEditView: View {
                         .padding(.vertical, 6)
                         .background(
                             Capsule()
-                                .fill(Color.blue.opacity(0.15))
+                                .fill(AppColors.accent.opacity(0.15))
                         )
                     }
                 }
                 .padding(.vertical, 2)
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        )
+                )
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             }
 
             Section {
@@ -542,6 +587,8 @@ struct ExerciseEditView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
+                    .listRowBackground(Color.white.opacity(0.06))
+                    .listRowSeparator(.hidden)
                 } else {
                     let orderedSets = exercise.setsByOrder
                     ForEach(Array(orderedSets.enumerated()), id: \.element.id) { index, set in
@@ -557,6 +604,7 @@ struct ExerciseEditView: View {
                                     set.weight = newWeight
                                 }
                                 saveChanges()
+                                loadPR()
                             },
                             onPRSet: {
                                 // Defer fetch to next run loop so context has processed save
@@ -570,11 +618,14 @@ struct ExerciseEditView: View {
                                 g.notificationOccurred(.success)
                             }
                         )
+                        .id(set.id)
                         .transition(.asymmetric(
-                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            insertion: .push(from: .bottom).combined(with: .opacity),
                             removal: .opacity
                         ))
                         .staggeredAppear(index: index, maxStagger: 8)
+                        .listRowBackground(Color.white.opacity(0.06))
+                        .listRowSeparator(.hidden)
                     }
                     .onDelete { indexSet in
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -585,75 +636,114 @@ struct ExerciseEditView: View {
                             }
                         }
                         saveChanges()
+                        // Recalculate PR in case the deleted set was the PR set
+                        PersonalRecordManager.recalculatePR(exerciseName: exercise.name, modelContext: modelContext)
+                        loadPR()
+                        // Sync widget + live activity after deletion
+                        if workout.isActive {
+                            workout.syncToWidget(currentExercise: exercise)
+                            let lastSet = exercise.setsByOrder.last
+                            let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+                            Task {
+                                await LiveActivityManager.shared.updateActivity(
+                                    exerciseName: exercise.name,
+                                    exerciseId: exercise.id,
+                                    exerciseSets: (exercise.sets ?? []).count,
+                                    lastReps: timeBased ? 0 : (lastSet?.reps ?? 0),
+                                    lastWeight: timeBased ? 0 : (lastSet?.weight ?? 0)
+                                )
+                            }
+                        }
                     }
 
                     // Rest timer (shows below sets when active)
                     if workout.isActive {
                         RestTimerView(exerciseId: exercise.id)
+                            .listRowBackground(Color.white.opacity(0.06))
+                            .listRowSeparator(.hidden)
                     }
                 }
 
                 if isAddingSet {
+                    // Show QuickLogStrip for adding sets — pre-fill from last set if available, else 0/0
                     let exerciseIsTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                    InlineAddSetView(
-                        reps: $newSetReps,
-                        weight: $newSetWeight,
-                        focusedField: $focusedField,
-                        exerciseName: exercise.name,
-                        durationSeconds: exerciseIsTimeBased ? $newSetDuration : nil,
-                        onSave: {
-                            if exerciseIsTimeBased {
-                                logSet(reps: 0, weight: 0, duration: newSetDuration)
-                            } else {
-                                logSet(reps: newSetReps, weight: newSetWeight)
+                    let setsEmpty = (exercise.sets ?? []).isEmpty
+                    HStack(spacing: 6) {
+                        // Camera button alongside strip when adding the first set
+                        if workout.isActive && !exerciseIsTimeBased && setsEmpty {
+                            Button {
+                                if ExerciseType.from(exerciseName: exercise.name) != nil {
+                                    showCameraRepCounter = true
+                                } else {
+                                    showingCameraUnsupported = true
+                                }
+                            } label: {
+                                Image(systemName: "camera.viewfinder")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 36, height: 36)
+                                    .background(RoundedRectangle(cornerRadius: 8).fill(AppColors.accent.opacity(0.8)))
                             }
-                            // Close form for active workouts — strip handles next set
-                            if workout.isActive {
+                            .buttonStyle(.plain)
+                        }
+                        QuickLogStrip(
+                            lastSet: exercise.setsByOrder.last,  // nil when no sets exist → 0/0 defaults
+                            isTimeBased: exerciseIsTimeBased,
+                            onLog: { reps, weight, duration in
+                                if exerciseIsTimeBased {
+                                    logSet(reps: 0, weight: 0, duration: duration)
+                                } else {
+                                    logSet(reps: reps, weight: weight)
+                                }
+                                // Close strip after logging
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                     isAddingSet = false
                                 }
-                                focusedField = nil
-                            } else {
-                                newSetReps = 0
-                                newSetWeight = 0
-                                newSetDuration = 30
-                            }
-                        },
-                        onCancel: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                isAddingSet = false
-                            }
-                            focusedField = nil
-                            RestTimerManager.shared.resume()
-                            if workout.isActive, let lastSet = exercise.setsByOrder.last {
-                                if exerciseIsTimeBased {
-                                    newSetDuration = lastSet.durationSeconds ?? 30
-                                } else {
-                                    newSetReps = lastSet.reps
-                                    newSetWeight = lastSet.weight
-                                }
-                            } else {
-                                newSetReps = 0
-                                newSetWeight = 0
-                                newSetDuration = 30
-                            }
-                        }
-                    )
+                            },
+                            onCustom: nil  // No custom form needed - auto-chain handles everything
+                        )
+                    }
                     .transition(.asymmetric(
                         insertion: .move(edge: .bottom).combined(with: .opacity),
                         removal: .opacity.combined(with: .move(edge: .bottom))
                     ))
+                    .listRowBackground(Color.white.opacity(0.06))
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 10))
                 } else if (exercise.sets ?? []).isEmpty {
-                    // No sets yet — simple Add Set button
-                    Button {
-                        openAddSetForm()
-                    } label: {
-                        Label("Add Set", systemImage: "plus.circle")
-                            .font(.system(.body, weight: .medium))
+                    // No sets yet — Add Set + camera button
+                    let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+                    HStack(spacing: 10) {
+                        if workout.isActive && !isTimeBased {
+                            Button {
+                                if ExerciseType.from(exerciseName: exercise.name) != nil {
+                                    showCameraRepCounter = true
+                                } else {
+                                    showingCameraUnsupported = true
+                                }
+                            } label: {
+                                Image(systemName: "camera.viewfinder")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 44, height: 44)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(AppColors.accent.opacity(0.8)))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                isAddingSet = true
+                            }
+                        } label: {
+                            Label("Add Set", systemImage: "plus.circle")
+                                .font(.system(.body, weight: .medium))
+                        }
+                        .buttonStyle(.borderless)
+                        .tint(AppColors.accent)
+                        .accessibilityIdentifier("addSetButton")
                     }
-                    .buttonStyle(.borderless)
-                    .tint(.blue)
-                    .accessibilityIdentifier("addSetButton")
+                    .listRowBackground(Color.white.opacity(0.06))
+                    .listRowSeparator(.hidden)
                 } else {
                     // Sets exist — QuickLogStrip, hidden while rest timer is active
                     let shouldShowRest = workout.isActive
@@ -661,14 +751,42 @@ struct ExerciseEditView: View {
                         && shouldOfferRestTimer(for: exercise.name)
 
                     if let lastSet = exercise.setsByOrder.last {
-                        QuickLogStrip(
-                            lastSet: lastSet,
-                            isTimeBased: ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false,
-                            onLog: { reps, weight, duration in
-                                logSet(reps: reps, weight: weight, duration: duration)
-                            },
-                            onCustom: { openAddSetForm() }
-                        )
+                        HStack(spacing: 6) {
+                            // Camera rep counter button (only for supported exercises during active workout)
+                            let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+                            if workout.isActive && !isTimeBased {
+                                Button {
+                                    if ExerciseType.from(exerciseName: exercise.name) != nil {
+                                        showCameraRepCounter = true
+                                    } else {
+                                        showingCameraUnsupported = true
+                                    }
+                                } label: {
+                                    Image(systemName: "camera.viewfinder")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 36, height: 36)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(AppColors.accent.opacity(0.8))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            QuickLogStrip(
+                                lastSet: lastSet,
+                                isTimeBased: ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false,
+                                onLog: { reps, weight, duration in
+                                    logSet(reps: reps, weight: weight, duration: duration)
+                                },
+                                onCustom: { openAddSetForm() }
+                            )
+                            // Force fresh init with the new lastSet whenever set count changes.
+                            // Without this, SwiftUI may reuse the QuickLogStrip instance across the
+                            // isAddingSet→sets-exist branch transition, preserving stale 0/0 state.
+                            .id(exercise.sets?.count ?? 0)
+                        }
                         .onChange(of: shouldShowRest) { oldValue, newValue in
                             if newValue {
                                 // Rest timer showing - hide QuickLogStrip immediately (no animation)
@@ -688,6 +806,9 @@ struct ExerciseEditView: View {
                             quickLogStripOffset = shouldShowRest ? 80 : 0
                             quickLogStripOpacity = shouldShowRest ? 0 : 1.0
                         }
+                        .listRowBackground(Color.white.opacity(0.06))
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 10))
                     }
                 }
             } header: {
@@ -719,10 +840,10 @@ struct ExerciseEditView: View {
                 .padding(.vertical, 8)
                 .listRowBackground(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.6))
+                        .fill(Color.white.opacity(0.06))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                                .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                         )
                 )
                 .listRowSeparator(.hidden)
@@ -742,7 +863,7 @@ struct ExerciseEditView: View {
                             Circle()
                                 .fill(Color.yellow.opacity(0.15))
                                 .frame(width: 44, height: 44)
-                            Image(systemName: "trophy.fill")
+                            Image(systemName: "medal.fill")
                                 .font(.system(size: 20, weight: .medium))
                                 .foregroundStyle(.yellow)
                         }
@@ -758,19 +879,21 @@ struct ExerciseEditView: View {
 
                         Spacer()
 
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("Est. 1RM")
-                                .font(.system(.caption2, weight: .medium))
-                                .foregroundStyle(.tertiary)
-                            Text(UnitFormatter.formatWeightCompact(pr.estimated1RM))
-                                .font(.system(.subheadline, weight: .semibold))
-                                .foregroundStyle(.secondary)
+                        if !pr.isBodyweight {
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("Est. 1RM")
+                                    .font(.system(.caption2, weight: .medium))
+                                    .foregroundStyle(.tertiary)
+                                Text(UnitFormatter.formatWeightCompact(pr.estimated1RM))
+                                    .font(.system(.subheadline, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                     .padding(.vertical, 8)
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.black.opacity(0.6))
+                            .fill(Color.white.opacity(0.06))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.yellow.opacity(0.25), lineWidth: 1)
@@ -779,7 +902,7 @@ struct ExerciseEditView: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 } header: {
-                    Label("Personal Best", systemImage: "trophy")
+                    Label("Personal Best", systemImage: "medal")
                         .font(.system(.caption, weight: .medium))
                         .foregroundStyle(.secondary)
                         .textCase(nil)
@@ -794,7 +917,7 @@ struct ExerciseEditView: View {
                     HStack {
                         Image(systemName: "chart.line.uptrend.xyaxis")
                             .font(.system(.body, weight: .medium))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppColors.accent)
 
                         Text("View Progress")
                             .font(.system(.body, weight: .medium))
@@ -807,12 +930,13 @@ struct ExerciseEditView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
+                .buttonStyle(.plain)
                 .listRowBackground(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.6))
+                        .fill(Color.white.opacity(0.06))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                                .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                         )
                 )
                 .listRowSeparator(.hidden)
@@ -822,14 +946,64 @@ struct ExerciseEditView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.immediately)
-        .background(namespace != nil ? Color(.systemGroupedBackground) : Color(.systemBackground))
+        .background(AppColors.background)
         .navigationTitle(exercise.name)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingProgress) {
             ExerciseProgressView(exerciseName: exercise.name)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Color.black)
+                .presentationBackground(AppColors.background)
+        }
+        .sheet(isPresented: $showingCameraUnsupported) {
+            NavigationStack {
+                List {
+                    Section {
+                        HStack(spacing: 12) {
+                            Image(systemName: "camera.viewfinder")
+                                .font(.system(size: 28))
+                                .foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Not available for \(exercise.name)")
+                                    .font(.system(.body, weight: .semibold))
+                                Text("Camera rep counting works with these exercises:")
+                                    .font(.system(.subheadline))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+
+                    Section("Supported Exercises") {
+                        ForEach(ExerciseType.allCases, id: \.self) { type in
+                            Label(type.rawValue, systemImage: type.systemImage)
+                                .font(.system(.subheadline))
+                        }
+                    }
+                }
+                .scrollContentBackground(.hidden)
+                .background(AppColors.background)
+                .navigationTitle("Camera Tracking")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showingCameraUnsupported = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationBackground(AppColors.background)
+        }
+        .fullScreenCover(isPresented: $showCameraRepCounter) {
+            CameraRepCounterView(
+                exerciseName: exercise.name,
+                lastWeight: exercise.setsByOrder.last?.weight ?? 0,
+                onSetLogged: { reps, weight in
+                    logSet(reps: reps, weight: weight)
+                }
+            )
         }
         .overlay {
             // PR Celebration overlay (confetti + card)
@@ -874,6 +1048,10 @@ struct ExerciseEditView: View {
             loadNote()
             loadPR()
             loadRestTimerPreference()
+            // Auto-open QuickLogStrip for new empty exercises during active workouts
+            if (exercise.sets ?? []).isEmpty && workout.isActive {
+                isAddingSet = true
+            }
         }
         .onChange(of: exercise.name) { oldValue, newValue in
             if !isEditingExerciseName {
@@ -916,7 +1094,7 @@ struct ExerciseEditView: View {
                     Image(systemName: "pencil")
                         .font(.system(.caption, weight: .medium))
                 }
-                .tint(.blue)
+                .tint(AppColors.accent)
             }
         }
         .padding(.vertical, 4)
@@ -956,7 +1134,7 @@ struct ExerciseEditView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.white.opacity(0.06))
                 .shadow(color: Color.primary.opacity(0.06), radius: 8, x: 0, y: 2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
@@ -1182,6 +1360,12 @@ struct ExerciseEditView: View {
 
     private func loadPR() {
         currentPR = PersonalRecordManager.getPR(for: exercise.name, modelContext: modelContext)
+        if currentPR == nil {
+            // No PR record yet — scan all historical workouts to bootstrap one.
+            // This handles exercises logged before PR tracking was introduced.
+            PersonalRecordManager.recalculatePR(exerciseName: exercise.name, modelContext: modelContext)
+            currentPR = PersonalRecordManager.getPR(for: exercise.name, modelContext: modelContext)
+        }
     }
 
     private func checkForPR(weight: Double, reps: Int) {
@@ -1213,13 +1397,14 @@ struct ExerciseEditView: View {
 /// Stepper row below the set list: shows the last set's values with live
 /// reps / weight (or duration) adjustment. Tap ✓ to log.
 /// Hidden while rest timer is active; reappears once rest completes.
+/// Tap reps or weight to edit inline — no sheet, keyboard appears once.
 struct QuickLogStrip: View {
-    let lastSet: WorkoutSet
+    let lastSet: WorkoutSet?  // Now optional - defaults to 0/0 when nil
     let isTimeBased: Bool
     /// Log a set: (reps, weight-in-storage-units, duration-seconds?)
     let onLog: (Int, Double, Int?) -> Void
-    /// Open the full inline add-set form
-    let onCustom: () -> Void
+    /// Open the full inline add-set form (optional - not needed for auto-chain flow)
+    let onCustom: (() -> Void)?
 
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
 
@@ -1229,25 +1414,40 @@ struct QuickLogStrip: View {
     @State private var commitScale: CGFloat = 1.0
     @State private var commitRotation: Double = 0
 
-    init(lastSet: WorkoutSet, isTimeBased: Bool,
+    // Inline editing — replaces sheet-based input for zero-lag keyboard
+    private enum StripField: Hashable { case reps, weight, duration }
+    @FocusState private var focusedField: StripField?
+    @State private var repsText: String = ""
+    @State private var weightText: String = ""
+    @State private var durationText: String = ""
+
+    init(lastSet: WorkoutSet?, isTimeBased: Bool,
          onLog: @escaping (Int, Double, Int?) -> Void,
-         onCustom: @escaping () -> Void) {
+         onCustom: (() -> Void)? = nil) {
         self.lastSet = lastSet
         self.isTimeBased = isTimeBased
         self.onLog = onLog
         self.onCustom = onCustom
-        self._reps = State(initialValue: lastSet.reps)
-        self._weightDisplay = State(initialValue: UnitFormatter.convertToDisplay(lastSet.weight))
-        self._duration = State(initialValue: lastSet.durationSeconds ?? 30)
+
+        let initialReps = lastSet?.reps ?? 0
+        let initialWeight = lastSet.map { UnitFormatter.convertToDisplay($0.weight) } ?? 0.0
+        let initialDuration = lastSet?.durationSeconds ?? 0
+
+        self._reps = State(initialValue: initialReps)
+        self._weightDisplay = State(initialValue: initialWeight)
+        self._duration = State(initialValue: initialDuration)
+
+        // Init text states to match display values
+        let weightStr = initialWeight == initialWeight.rounded()
+            ? "\(Int(initialWeight))"
+            : String(format: "%.1f", initialWeight)
+        self._repsText = State(initialValue: "\(initialReps)")
+        self._weightText = State(initialValue: weightStr)
+        self._durationText = State(initialValue: "\(initialDuration)")
     }
 
-    private var smallWeightStep: Double {
-        unitSystem == "Imperial" ? 2.5 : 1.25
-    }
-
-    private var largeWeightStep: Double {
-        unitSystem == "Imperial" ? 5.0 : 2.5
-    }
+    private var smallWeightStep: Double { unitSystem == "Imperial" ? 2.5 : 1.25 }
+    private var largeWeightStep: Double { unitSystem == "Imperial" ? 5.0 : 2.5 }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -1261,7 +1461,6 @@ struct QuickLogStrip: View {
             Spacer()
 
             Button {
-                // Animate then commit
                 withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
                     commitScale = 1.3
                     commitRotation = 360
@@ -1276,35 +1475,95 @@ struct QuickLogStrip: View {
             } label: {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(.title3))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppColors.accentGold)
                     .scaleEffect(commitScale)
                     .rotationEffect(.degrees(commitRotation))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("quickLogCommitButton")
         }
         .padding(.vertical, 8)
-        .onChange(of: lastSet.id) { _, _ in
-            reps = lastSet.reps
-            weightDisplay = UnitFormatter.convertToDisplay(lastSet.weight)
-            duration = lastSet.durationSeconds ?? 30
+        // Commit text when focus leaves; select all when focus arrives
+        .onChange(of: focusedField) { oldField, newField in
+            switch oldField {
+            case .reps: commitRepsText()
+            case .weight: commitWeightText()
+            case .duration: commitDurationText()
+            case nil: break
+            }
+            if newField != nil {
+                // Select all so typing immediately replaces the existing value
+                DispatchQueue.main.async {
+                    UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
+                }
+            }
+        }
+        // Keep text in sync when steppers mutate the numeric state
+        .onChange(of: reps) { _, newVal in
+            if focusedField != .reps { repsText = "\(newVal)" }
+        }
+        .onChange(of: weightDisplay) { _, newVal in
+            if focusedField != .weight { weightText = formatWeight(newVal) }
+        }
+        .onChange(of: duration) { _, newVal in
+            if focusedField != .duration { durationText = "\(newVal)" }
+        }
+        .onChange(of: lastSet?.reps) { _, newReps in
+            if let newReps, focusedField != .reps {
+                reps = newReps
+                repsText = "\(newReps)"
+            }
+        }
+        .onChange(of: lastSet?.weight) { _, newWeight in
+            if let newWeight, focusedField != .weight {
+                let w = UnitFormatter.convertToDisplay(newWeight)
+                weightDisplay = w
+                weightText = formatWeight(w)
+            }
+        }
+        .onChange(of: lastSet?.durationSeconds) { _, newDuration in
+            if focusedField != .duration {
+                let d = newDuration ?? 30
+                duration = d
+                durationText = "\(d)"
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    switch focusedField {
+                    case .reps:     commitRepsText()
+                    case .weight:   commitWeightText()
+                    case .duration: commitDurationText()
+                    case nil:       break
+                    }
+                    focusedField = nil
+                }
+                .fontWeight(.semibold)
+            }
         }
     }
 
     // MARK: - Stepper Groups
+    // TextFields are always in the hierarchy — no conditional view swapping.
+    // This is required for focus to work reliably inside a List.
 
     private var repsGroup: some View {
         HStack(spacing: 0) {
-            stepButton("−") { reps = max(1, reps - 1) }
-            Button { onCustom() } label: {
-                Text("\(reps)")
-                    .font(.system(.subheadline, weight: .semibold))
-                    .monospacedDigit()
-                    .frame(minWidth: 20, alignment: .center)
-                    .contentTransition(.numericText(value: Double(reps)))
-                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: reps)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Tap to enter custom reps")
+            stepButton("−") { reps = max(0, reps - 1) }
+            TextField("0", text: $repsText)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
+                .font(.system(.subheadline, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(AppColors.accent)
+                .frame(width: 36)
+                .focused($focusedField, equals: .reps)
+                .onSubmit {
+                    commitRepsText()
+                    focusedField = .weight
+                }
             stepButton("+") { reps += 1 }
         }
         .background(Capsule().fill(Color.secondary.opacity(0.1)))
@@ -1312,35 +1571,27 @@ struct QuickLogStrip: View {
 
     private var weightGroup: some View {
         HStack(spacing: 4) {
-            // Large decrease (-5)
             iconStepButton("minus.circle.fill", size: .large) {
                 weightDisplay = max(0, weightDisplay - largeWeightStep)
             }
-
-            // Small decrease (-2.5)
             iconStepButton("minus.circle", size: .small) {
                 weightDisplay = max(0, weightDisplay - smallWeightStep)
             }
-
-            // Weight display — tap to enter custom value
-            Button { onCustom() } label: {
-                Text(formatWeight(weightDisplay))
-                    .font(.system(.subheadline, weight: .semibold))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .frame(minWidth: 56, alignment: .center)
-                    .contentTransition(.numericText(value: weightDisplay))
-                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: weightDisplay)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Tap to enter custom weight")
-
-            // Small increase (+2.5)
+            TextField("0", text: $weightText)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.center)
+                .font(.system(.subheadline, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(AppColors.accent)
+                .frame(width: 56)
+                .focused($focusedField, equals: .weight)
+                .onSubmit {
+                    commitWeightText()
+                    focusedField = nil
+                }
             iconStepButton("plus.circle", size: .small) {
                 weightDisplay += smallWeightStep
             }
-
-            // Large increase (+5)
             iconStepButton("plus.circle.fill", size: .large) {
                 weightDisplay += largeWeightStep
             }
@@ -1353,24 +1604,41 @@ struct QuickLogStrip: View {
     private var durationGroup: some View {
         HStack(spacing: 0) {
             stepButton("−") { duration = max(5, duration - 5) }
-            Button { onCustom() } label: {
-                Text(UnitFormatter.formatDuration(duration))
-                    .font(.system(.subheadline, weight: .semibold))
-                    .monospacedDigit()
-                    .frame(minWidth: 34, alignment: .center)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Tap to enter custom duration")
+            TextField("0", text: $durationText)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
+                .font(.system(.subheadline, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(AppColors.accent)
+                .frame(width: 44)
+                .focused($focusedField, equals: .duration)
+                .onSubmit {
+                    commitDurationText()
+                    focusedField = nil
+                }
             stepButton("+") { duration += 5 }
         }
         .background(Capsule().fill(Color.secondary.opacity(0.1)))
     }
 
+    // MARK: - Text commit helpers
+
+    private func commitRepsText() {
+        if let v = Int(repsText.trimmingCharacters(in: .whitespaces)), v >= 0 { reps = v }
+    }
+
+    private func commitWeightText() {
+        let clean = weightText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        if let v = Double(clean), v >= 0 { weightDisplay = v }
+    }
+
+    private func commitDurationText() {
+        if let v = Int(durationText.trimmingCharacters(in: .whitespaces)), v > 0 { duration = v }
+    }
+
     // MARK: - Helpers
 
-    private enum ButtonSize {
-        case small, large
-    }
+    private enum ButtonSize { case small, large }
 
     private func stepButton(_ label: String, action: @escaping () -> Void) -> some View {
         Button {
@@ -1405,6 +1673,14 @@ struct QuickLogStrip: View {
     }
 
     private func commit() {
+        // Commit any pending inline text edit before logging
+        switch focusedField {
+        case .reps: commitRepsText()
+        case .weight: commitWeightText()
+        case .duration: commitDurationText()
+        case nil: break
+        }
+        focusedField = nil
         if isTimeBased {
             onLog(0, 0, duration)
         } else {

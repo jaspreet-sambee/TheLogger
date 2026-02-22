@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import UIKit
 
 struct CameraRepCounterView: View {
 
@@ -38,6 +39,9 @@ struct CameraRepCounterView: View {
     @State private var showCalibrationOverlay = true
     @State private var calibrationDismissed = false
 
+    // Phone orientation warning
+    @State private var isTooFlat = false
+
     // Exercise auto-detection
     @State private var exerciseAutoDetected: Bool
 
@@ -53,7 +57,7 @@ struct CameraRepCounterView: View {
         switch feedback {
         case .ready: return .white.opacity(0.7)
         case .goingDown, .goingUp: return .yellow
-        case .holdingDown: return .orange
+        case .holdingDown: return AppColors.accent
         case .repComplete: return .green
         case .noDetection: return .red.opacity(0.7)
         }
@@ -128,7 +132,8 @@ struct CameraRepCounterView: View {
                     detectedPose: $detectedPose,
                     exerciseType: exerciseType,
                     repCounter: repCounter,
-                    showSkeleton: $showSkeleton
+                    showSkeleton: $showSkeleton,
+                    isTooFlat: $isTooFlat
                 )
                 .ignoresSafeArea()
             } else {
@@ -152,6 +157,12 @@ struct CameraRepCounterView: View {
                 // Header
                 headerView
                     .background(.ultraThinMaterial.opacity(0.8))
+
+                // Phone too flat warning (non-dismissible, auto-clears when repositioned)
+                if isTooFlat {
+                    tooFlatWarningView
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
 
                 Spacer()
 
@@ -189,6 +200,7 @@ struct CameraRepCounterView: View {
             }
         }
         .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = true
             // Auto-open exercise picker for unsupported exercises
             if !exerciseAutoDetected {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -204,6 +216,9 @@ struct CameraRepCounterView: View {
                     }
                 }
             }
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
         }
         .sheet(isPresented: $showExercisePicker) {
             exercisePickerSheet
@@ -238,7 +253,7 @@ struct CameraRepCounterView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.blue)
+                        .background(AppColors.accent)
                         .cornerRadius(12)
                 }
 
@@ -247,10 +262,10 @@ struct CameraRepCounterView: View {
                 } label: {
                     Text("Go Back")
                         .font(.headline)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppColors.accent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.blue.opacity(0.1))
+                        .background(AppColors.accent.opacity(0.1))
                         .cornerRadius(12)
                 }
             }
@@ -281,9 +296,62 @@ struct CameraRepCounterView: View {
                     .foregroundStyle(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
+
+                // Per-exercise phone placement tip
+                HStack(spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundStyle(.yellow)
+                        .font(.caption)
+                    Text(exerciseType.setupTip)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .multilineTextAlignment(.leading)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.1))
+                .cornerRadius(8)
+                .padding(.horizontal, 40)
+
+                // Tracking note chip
+                Label(exerciseType.trackingNote, systemImage: "arrow.left.arrow.right")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(.white.opacity(0.1)))
             }
         }
         .allowsHitTesting(false)
+    }
+
+    // MARK: - Too Flat Warning
+
+    private var tooFlatWarningView: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Prop your phone upright")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("Lean it against a wall or use a stand. Flat on the floor won't work.")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.black.opacity(0.75))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.orange.opacity(0.7), lineWidth: 1)
+        )
+        .cornerRadius(8)
+        .padding(.horizontal, 12)
+        .padding(.top, 6)
+        .animation(.easeInOut(duration: 0.3), value: isTooFlat)
     }
 
     // MARK: - Subviews
@@ -498,7 +566,7 @@ struct CameraRepCounterView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(repCount > 0 ? Color.blue : Color.gray)
+                    .background(repCount > 0 ? AppColors.accent : Color.gray)
                     .cornerRadius(12)
                 }
                 .disabled(repCount == 0)
@@ -520,7 +588,7 @@ struct CameraRepCounterView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("Not Available Yet", systemImage: "exclamationmark.triangle.fill")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(AppColors.accent)
 
                             Text("Camera tracking isn't available for \"\(exerciseName)\" yet. Select a similar exercise type below.")
                                 .font(.caption)
@@ -528,7 +596,7 @@ struct CameraRepCounterView: View {
 
                             Text("Custom exercise tracking coming soon!")
                                 .font(.caption)
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(AppColors.accent)
                         }
                         .padding(.vertical, 4)
                     }
@@ -543,7 +611,7 @@ struct CameraRepCounterView: View {
                             } label: {
                                 HStack {
                                     Image(systemName: type.systemImage)
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(AppColors.accent)
                                         .frame(width: 30)
 
                                     Text(type.rawValue)
@@ -553,7 +621,7 @@ struct CameraRepCounterView: View {
 
                                     if type == selectedExerciseType {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.blue)
+                                            .foregroundStyle(AppColors.accent)
                                     }
                                 }
                             }

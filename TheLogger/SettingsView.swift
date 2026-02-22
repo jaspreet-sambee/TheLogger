@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    
+    @Environment(\.modelContext) private var modelContext
+
     // User preferences
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
     @AppStorage("defaultRestSeconds") private var defaultRestSeconds: Int = 90
@@ -17,6 +19,7 @@ struct SettingsView: View {
     @AppStorage("globalRestTimerEnabled") private var globalRestTimerEnabled: Bool = false
     @AppStorage("userName") private var userName: String = ""
     @AppStorage("weeklyWorkoutGoal") private var weeklyWorkoutGoal: Int = 4
+    @AppStorage("autoPopulateSetsFromHistory") private var autoPopulateSets: Bool = true
     
     // Local state for picker
     @State private var selectedUnit: UnitSystem = .imperial
@@ -51,7 +54,7 @@ struct SettingsView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                .listRowBackground(Color.black.opacity(0.6))
+                .listRowBackground(Color.white.opacity(0.06))
                 
                 // Rest Timer Section
                 Section {
@@ -96,7 +99,7 @@ struct SettingsView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                .listRowBackground(Color.black.opacity(0.6))
+                .listRowBackground(Color.white.opacity(0.06))
 
                 // Goals Section
                 Section {
@@ -118,7 +121,54 @@ struct SettingsView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                .listRowBackground(Color.black.opacity(0.6))
+                .listRowBackground(Color.white.opacity(0.06))
+
+                // Workout Section
+                Section {
+                    Toggle(isOn: $autoPopulateSets) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Auto-populate Sets")
+                                .font(.system(.body, weight: .medium))
+                            Text("Pre-fills sets and values from your last workout for this exercise")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Label("Workout", systemImage: "dumbbell")
+                        .font(.system(.caption, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(nil)
+                }
+                .listRowBackground(Color.white.opacity(0.06))
+
+                // Personal Records Section
+                Section {
+                    HStack(spacing: 12) {
+                        Image(systemName: "medal.fill")
+                            .font(.system(.body, weight: .medium))
+                            .foregroundStyle(AppColors.accentGold)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Epley Formula")
+                                .font(.system(.body, weight: .medium))
+                            Text("weight × (1 + reps ÷ 30)")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Label("Personal Records", systemImage: "medal")
+                        .font(.system(.caption, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(nil)
+                } footer: {
+                    Text("PRs are ranked by estimated one-rep max (1RM) using the Epley formula. This works across all rep ranges — the same formula used by Hevy. Bodyweight exercises are ranked by reps instead.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .listRowBackground(Color.white.opacity(0.06))
 
                 // Profile Section
                 Section {
@@ -135,7 +185,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .textCase(nil)
                 }
-                .listRowBackground(Color.black.opacity(0.6))
+                .listRowBackground(Color.white.opacity(0.06))
                 
                 // Data Section
                 Section {
@@ -150,7 +200,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .textCase(nil)
                 }
-                .listRowBackground(Color.black.opacity(0.6))
+                .listRowBackground(Color.white.opacity(0.06))
                 
                 // About Section
                 Section {
@@ -184,11 +234,34 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 16)
                 }
-                .listRowBackground(Color.black.opacity(0.6))
+                .listRowBackground(Color.white.opacity(0.06))
+
+                #if DEBUG
+                // Debug Section
+                Section {
+                    Button {
+                        DebugHelpers.populateSampleData(modelContext: modelContext)
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    } label: {
+                        Label("Populate Sample Data", systemImage: "cylinder.fill")
+                            .foregroundStyle(AppColors.accent)
+                    }
+                } header: {
+                    Label("Debug", systemImage: "hammer")
+                        .font(.system(.caption, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(nil)
+                } footer: {
+                    Text("Debug tools only available in development builds. Populate sample data will add 8 workouts and 6 exercise memories.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .listRowBackground(Color.white.opacity(0.06))
+                #endif
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .background(Color.black)
+            .background(AppColors.background)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -202,7 +275,7 @@ struct SettingsView: View {
                 selectedUnit = UnitSystem(rawValue: unitSystem) ?? .imperial
             }
         }
-        .presentationBackground(Color.black)
+        .presentationBackground(AppColors.background)
     }
     
     // MARK: - Helpers
@@ -228,5 +301,6 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
 }
+
 
 

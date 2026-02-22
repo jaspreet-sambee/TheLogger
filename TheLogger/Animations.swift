@@ -19,7 +19,7 @@ struct RingFillProgress: View {
     @State private var isComplete: Bool = false
     @State private var glowOpacity: Double = 0
 
-    init(progress: Double, lineWidth: CGFloat = 8, gradientColors: [Color] = [.blue, .teal]) {
+    init(progress: Double, lineWidth: CGFloat = 8, gradientColors: [Color] = AppColors.accentGradient) {
         self.progress = progress
         self.lineWidth = lineWidth
         self.gradientColors = gradientColors
@@ -34,7 +34,7 @@ struct RingFillProgress: View {
             // Glow effect (shows on completion)
             Circle()
                 .stroke(
-                    gradientColors.first?.opacity(glowOpacity) ?? Color.blue.opacity(glowOpacity),
+                    gradientColors.first?.opacity(glowOpacity) ?? AppColors.accent.opacity(glowOpacity),
                     lineWidth: lineWidth + 6
                 )
                 .blur(radius: 8)
@@ -57,7 +57,7 @@ struct RingFillProgress: View {
             if isComplete {
                 Image(systemName: "checkmark")
                     .font(.system(size: lineWidth * 2, weight: .bold))
-                    .foregroundStyle(gradientColors.first ?? .blue)
+                    .foregroundStyle(gradientColors.first ?? AppColors.accent)
                     .transition(.scale.combined(with: .opacity))
             }
         }
@@ -112,14 +112,14 @@ struct SetCompletionRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(isComplete ? Color.blue : Color.secondary.opacity(0.2))
+                .fill(isComplete ? AppColors.accent : Color.secondary.opacity(0.2))
                 .frame(width: 24, height: 24)
                 .scaleEffect(pulse ? 1.2 : 1.0)
                 .opacity(pulse ? 0.5 : 1.0)
 
             if isComplete {
                 Circle()
-                    .fill(Color.blue)
+                    .fill(AppColors.accent)
                     .frame(width: 24, height: 24)
 
                 Text("\(setNumber)")
@@ -191,8 +191,8 @@ struct LiquidWaveTimer: View {
 
                 // Draw gradient fill
                 let gradient = Gradient(colors: [
-                    Color.blue.opacity(0.7),
-                    Color.teal.opacity(0.5)
+                    AppColors.accent.opacity(0.7),
+                    Color(red: 1.0, green: 0.55, blue: 0.0).opacity(0.5)
                 ])
 
                 context.fill(
@@ -224,7 +224,7 @@ struct LiquidWaveTimer: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                .stroke(AppColors.accent.opacity(0.3), lineWidth: 1)
         )
     }
 }
@@ -277,8 +277,8 @@ struct LiquidWaveBar: View {
 
                 // Draw base fill
                 let gradient = Gradient(colors: [
-                    Color.blue.opacity(0.7),
-                    Color.teal.opacity(0.6)
+                    AppColors.accent.opacity(0.7),
+                    Color(red: 1.0, green: 0.55, blue: 0.0).opacity(0.6)
                 ])
 
                 context.fill(
@@ -337,12 +337,12 @@ struct WorkoutProgressRing: View {
         ZStack {
             // Background ring
             Circle()
-                .stroke(Color.blue.opacity(0.15), lineWidth: 6)
+                .stroke(AppColors.accent.opacity(0.15), lineWidth: 6)
 
-            // Progress ring - solid blue
+            // Progress ring - solid orange
             Circle()
                 .trim(from: 0, to: progress)
-                .stroke(Color.blue, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .stroke(AppColors.accent, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.easeOut(duration: 0.4), value: progress)
 
@@ -404,7 +404,7 @@ struct HapticWeightStepper: View {
                     .foregroundStyle(.primary)
                     .contentTransition(.numericText(value: value))
                     .scaleEffect(numberScale)
-                    .shadow(color: .blue.opacity(numberGlow), radius: 12)
+                    .shadow(color: AppColors.accent.opacity(numberGlow), radius: 12)
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: value)
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: numberScale)
                     .animation(.linear(duration: 0.15), value: numberGlow)
@@ -451,7 +451,7 @@ struct HapticWeightStepper: View {
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 28))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppColors.accent)
             }
             .buttonStyle(.plain)
             .scaleEffect(plusButtonScale)
@@ -559,7 +559,7 @@ struct HapticRepsStepper: View {
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppColors.accent)
             }
             .buttonStyle(.plain)
         }
@@ -654,7 +654,7 @@ struct AnimatedFlame: View {
     let color: Color
     @State private var isAnimating = false
 
-    init(color: Color = .orange) {
+    init(color: Color = AppColors.accent) {
         self.color = color
     }
 
@@ -908,7 +908,7 @@ struct RecentWorkoutCard: View {
                     .padding(.vertical, 4)
                     .background(
                         Capsule()
-                            .fill(Color.blue)
+                            .fill(AppColors.accent)
                     )
 
                 // Workout name
@@ -937,11 +937,11 @@ struct RecentWorkoutCard: View {
             .frame(width: 140, height: 110)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(0.6))
+                    .fill(Color.white.opacity(0.06))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                    .stroke(AppColors.accent.opacity(0.2), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
@@ -1029,14 +1029,14 @@ struct LevelAvatar: View {
 
     private var levelColors: (primary: Color, secondary: Color) {
         switch level {
-        case 1: return (.gray, .gray.opacity(0.6))              // Rookie
-        case 2: return (.green, .mint)                           // Regular
-        case 3: return (.blue, .cyan)                            // Dedicated
-        case 4: return (.purple, .indigo)                        // Strong
-        case 5: return (.orange, .yellow)                        // Elite
-        case 6: return (.red, .orange)                           // Champion
-        case 7: return (.yellow, .orange)                        // Legend
-        default: return (.pink, .purple)                         // Master
+        case 1: return (AppColors.accent.opacity(0.35), AppColors.accent.opacity(0.18))
+        case 2: return (AppColors.accent.opacity(0.55), AppColors.accent.opacity(0.32))
+        case 3: return (AppColors.accent.opacity(0.75), AppColors.accent.opacity(0.45))
+        case 4: return (AppColors.accent, AppColors.accent.opacity(0.6))
+        case 5: return (Color(red: 1.0, green: 0.54, blue: 0.34), AppColors.accent)
+        case 6: return (AppColors.accentGold.opacity(0.85), Color(red: 1.0, green: 0.54, blue: 0.34))
+        case 7: return (AppColors.accentGold, AppColors.accentGold.opacity(0.65))
+        default: return (Color(red: 1.0, green: 0.87, blue: 0.22), AppColors.accentGold)
         }
     }
 
@@ -1100,7 +1100,7 @@ struct LevelAvatar: View {
                         Spacer()
                         ZStack {
                             Circle()
-                                .fill(Color(.systemBackground))
+                                .fill(AppColors.background)
                                 .frame(width: size * 0.38, height: size * 0.38)
                             Circle()
                                 .fill(levelColors.primary)
@@ -1152,14 +1152,14 @@ struct LevelBadge: View {
 
     private var levelColor: Color {
         switch level {
-        case 1: return .gray
-        case 2: return .green
-        case 3: return .blue
-        case 4: return .purple
-        case 5: return .orange
-        case 6: return .red
-        case 7: return .yellow
-        default: return .pink
+        case 1: return AppColors.accent.opacity(0.35)
+        case 2: return AppColors.accent.opacity(0.55)
+        case 3: return AppColors.accent.opacity(0.75)
+        case 4: return AppColors.accent
+        case 5: return Color(red: 1.0, green: 0.54, blue: 0.34)
+        case 6: return AppColors.accentGold.opacity(0.85)
+        case 7: return AppColors.accentGold
+        default: return Color(red: 1.0, green: 0.87, blue: 0.22)
         }
     }
 
@@ -1336,7 +1336,7 @@ struct RestDayMessage: View {
         .padding(.vertical, 8)
         .background(
             Capsule()
-                .fill(Color.blue.opacity(0.1))
+                .fill(AppColors.accent.opacity(0.1))
         )
     }
 }
@@ -1406,7 +1406,7 @@ struct AnimatedGradientBorder: View {
     let colors: [Color]
     let lineWidth: CGFloat
 
-    init(cornerRadius: CGFloat = 12, colors: [Color] = [.blue, .cyan, .blue], lineWidth: CGFloat = 1.5) {
+    init(cornerRadius: CGFloat = 12, colors: [Color] = [AppColors.accent, AppColors.accentGold, AppColors.accent], lineWidth: CGFloat = 1.5) {
         self.cornerRadius = cornerRadius
         self.colors = colors
         self.lineWidth = lineWidth
@@ -1461,7 +1461,7 @@ struct FloatingParticlesView: View {
 
                     context.fill(
                         Circle().path(in: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)),
-                        with: .color(.blue.opacity(0.04))
+                        with: .color(AppColors.accent.opacity(0.04))
                     )
                 }
             }

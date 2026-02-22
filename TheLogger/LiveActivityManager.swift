@@ -167,21 +167,43 @@ final class LiveActivityManager: ObservableObject {
         guard let defaults = UserDefaults(suiteName: "group.SDL-Tutorial.TheLogger") else { return }
 
         let newSetCount = defaults.integer(forKey: "liveActivitySetCount")
+        let newWeight = defaults.double(forKey: "liveActivityLastWeight")
+        let newReps = defaults.integer(forKey: "liveActivityLastReps")
+        let lastUpdate = defaults.double(forKey: "liveActivityLastUpdate")
 
-        // Only update if changed
-        guard newSetCount > 0 && newSetCount != lastSetCount else { return }
-        lastSetCount = newSetCount
+        // Update if set count changed OR if values were adjusted (lastUpdate changed)
+        let setCountChanged = newSetCount > 0 && newSetCount != lastSetCount
+        let valuesAdjusted = lastUpdate > 0  // Widget sets this on every adjustment
 
-        // Update with high priority
-        Task {
+        guard setCountChanged || valuesAdjusted else { return }
+
+        if setCountChanged {
+            lastSetCount = newSetCount
+        }
+
+        // Clear the lastUpdate flag IMMEDIATELY to prevent duplicate processing
+        if valuesAdjusted {
+            defaults.removeObject(forKey: "liveActivityLastUpdate")
+        }
+
+        // Update with HIGHEST priority for instant response
+        Task(priority: .userInitiated) {
             var state = activity.content.state
             state.exerciseSets = newSetCount
 
-            // Use staleDate in the past to hint this is urgent
+            // Always update weight and reps from metadata
+            if newWeight > 0 {
+                state.lastWeight = newWeight
+            }
+            if newReps > 0 {
+                state.lastReps = newReps
+            }
+
+            // Update immediately without staleDate manipulation
             await activity.update(
-                ActivityContent(state: state, staleDate: Date(timeIntervalSinceNow: -1))
+                ActivityContent(state: state, staleDate: nil)
             )
-            print("[LiveActivity] Updated from widget - sets: \(newSetCount)")
+            print("[LiveActivity] ⚡ Fast update - sets: \(newSetCount), weight: \(newWeight) lbs, reps: \(newReps)")
         }
     }
 
@@ -253,6 +275,15 @@ final class LiveActivityManager: ObservableObject {
         guard let activity = currentActivity else {
             print("[LiveActivity] No active activity to update")
             return
+        }
+
+        // CRITICAL: Write to metadata so widget buttons can read current values
+        if let defaults = UserDefaults(suiteName: "group.SDL-Tutorial.TheLogger") {
+            defaults.set(exerciseSets, forKey: "liveActivitySetCount")
+            defaults.set(lastWeight, forKey: "liveActivityLastWeight")
+            defaults.set(lastReps, forKey: "liveActivityLastReps")
+            defaults.set(exerciseId.uuidString, forKey: "liveActivityExerciseId")
+            print("[LiveActivity] Wrote to metadata: \(exerciseSets) sets, \(lastWeight) lbs × \(lastReps)")
         }
 
         let elapsed = Int(Date().timeIntervalSince(activity.attributes.startTime))

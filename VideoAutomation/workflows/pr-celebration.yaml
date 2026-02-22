@@ -1,0 +1,39 @@
+name: "PR Celebration Demo"
+description: "Shows the PR celebration when you hit a personal record"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 10  # Just the celebration moment
+
+output:
+  filename: "pr-celebration"
+  twitter_optimized: true
+  include_device_frame: true
+  background_color: "#000000"
+  caption: "Celebrate your PRs! Every milestone matters 🏆"
+  hashtags: ["personalrecord", "PR", "gains", "progress"]
+
+effects:
+  music: true
+  music_volume: 0.3
+  zoom_moments:
+    - time: 7.0        # just before confetti fires - zoom out slightly to show full confetti
+      scale: 0.9
+      duration: 0.3
+      anchor: "center"
+    - time: 9.0        # trophy card appears
+      scale: 1.15
+      duration: 0.5
+      anchor: "center"
+  text_overlays:
+    - text: "New PR? App celebrates with you."
+      start: 7.5
+      end: 11.0
+      position: "bottom"
+  flash_moments:
+    - time: 7.2        # confetti burst
+      duration: 0.12
+  speed_ramp: null

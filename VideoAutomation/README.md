@@ -7,28 +7,52 @@ Automated system for recording demo videos of TheLogger app for social media (Tw
 Install required tools:
 
 ```bash
-brew install ffmpeg yq
-brew install screenframer  # Optional but recommended for device frames
+# Required
+brew install ffmpeg yq jq
+gem install twurl
+
+# Optional (but recommended)
+brew install screenframer  # For device frames
 ```
 
 ## Quick Start
 
-1. Build the app first (or it will be built automatically):
-```bash
-cd /Users/jaspreet/Documents/MyApps/TheLogger
-xcodebuild -project TheLogger.xcodeproj -scheme TheLogger \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
-```
+### Recording Videos
 
-2. Record a demo video:
 ```bash
+# Record single demo
 ./VideoAutomation/record-demo new-workout
+
+# Record ALL demos at once
+./VideoAutomation/scripts/batch-record.sh all
+
+# Record specific demos
+./VideoAutomation/scripts/batch-record.sh quicklog-strip pr-celebration
 ```
 
-3. Find your video:
+### Posting to Twitter
+
+```bash
+# Set up Twitter API (one-time)
+gem install twurl
+twurl authorize --consumer-key YOUR_KEY --consumer-secret YOUR_SECRET
+
+# Post a video
+./VideoAutomation/scripts/post-to-twitter.sh \
+  output/new-workout_twitter.mp4 \
+  workflows/new-workout.yaml
+```
+
+### Find Your Videos
+
 ```bash
 open VideoAutomation/output/
 ```
+
+## Complete Guide
+
+For full automation setup, posting schedules, and content strategy, see:
+**[AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md)**
 
 ## Troubleshooting
 

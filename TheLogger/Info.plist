@@ -4,5 +4,7 @@
 <dict>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>TheLogger uses the camera to automatically count your exercise reps using pose detection. No video is recorded or stored.</string>
 </dict>
 </plist>
