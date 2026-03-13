@@ -16,3 +16,14 @@ VideoAutomation/output/
 
 # Local Netlify folder
 .netlify
+
+# Videos & large media
+*.mov
+*.gif
+marketing-assets/
+marketing-video/
+
+# Dev tools & scaffolding
+mimicmotion-runpod/
+.agents/
+skills-lock.json
