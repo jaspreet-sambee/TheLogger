@@ -23,7 +23,7 @@ struct CameraRepCounterView: View {
     @State private var repCount = 0
     @State private var weight: Double
     @State private var currentAngle: Double = 0
-    @State private var feedback: RepCounter.MovementFeedback = .ready
+    @State private var feedback: RepCounter.MovementFeedback = .settingUp
     @State private var detectedPose: DetectedPose?
     @State private var selectedExerciseType: ExerciseType
     @State private var showExercisePicker = false
@@ -35,6 +35,9 @@ struct CameraRepCounterView: View {
     // Skeleton toggle
     @AppStorage("showSkeletonOverlay") private var showSkeleton = true
 
+    // Sensitivity (0=Strict, 1=Normal, 2=Easy)
+    @AppStorage("repCounterSensitivity") private var sensitivity: Int = 1
+
     // Calibration overlay
     @State private var showCalibrationOverlay = true
     @State private var calibrationDismissed = false
@@ -42,11 +45,27 @@ struct CameraRepCounterView: View {
     // Phone orientation warning
     @State private var isTooFlat = false
 
+    // Low confidence
+    @State private var isLowConfidence = false
+    @State private var poseConfidence: Double = 0
+    @State private var showTorchSuggestion = false
+
     // Exercise auto-detection
     @State private var exerciseAutoDetected: Bool
 
     // Rep counter (needs to persist during view updates)
     @State private var repCounter: RepCounter
+
+    // Rep flash
+    @State private var showRepFlash = false
+
+    // Multi-set flow
+    @State private var loggedSets: [(reps: Int, weight: Double, rejectedShallow: Int, rejectedFast: Int)] = []
+    @State private var showSetLoggedConfirmation = false
+
+    // Rejection toast
+    @State private var showRejectionToast = false
+    @State private var rejectionMessage = ""
 
     // Computed
     private var exerciseType: ExerciseType {
@@ -55,11 +74,30 @@ struct CameraRepCounterView: View {
 
     private var feedbackColor: Color {
         switch feedback {
+        case .settingUp: return .white.opacity(0.5)
+        case .almostReady: return .yellow.opacity(0.7)
+        case .armed: return .green
         case .ready: return .white.opacity(0.7)
         case .goingDown, .goingUp: return .yellow
         case .holdingDown: return AppColors.accent
         case .repComplete: return .green
+        case .tooShallow, .tooFast: return .orange
         case .noDetection: return .red.opacity(0.7)
+        case .lowVisibility: return .orange.opacity(0.7)
+        }
+    }
+
+    /// Edge glow color based on current feedback state — visible from any distance
+    private var edgeGlowColor: Color {
+        switch feedback {
+        case .settingUp, .noDetection: return .clear
+        case .almostReady: return .yellow.opacity(0.4)
+        case .armed, .ready: return .green.opacity(0.7)
+        case .goingDown, .goingUp: return .yellow.opacity(0.6)
+        case .holdingDown: return AppColors.accent
+        case .repComplete: return .green
+        case .tooShallow, .tooFast: return .orange.opacity(0.5)
+        case .lowVisibility: return .red.opacity(0.4)
         }
     }
 
@@ -85,15 +123,18 @@ struct CameraRepCounterView: View {
         self.lastWeight = lastWeight
         self.onSetLogged = onSetLogged
 
-        // Initialize weight
-        self._weight = State(initialValue: lastWeight)
+        self._weight = State(initialValue: UnitFormatter.convertToDisplay(lastWeight))
 
-        // Determine exercise type
         let detectedType = ExerciseType.from(exerciseName: exerciseName)
         self._exerciseAutoDetected = State(initialValue: detectedType != nil)
         let exerciseType = detectedType ?? .squat
         self._selectedExerciseType = State(initialValue: exerciseType)
         self._repCounter = State(initialValue: RepCounter(exerciseType: exerciseType))
+
+        // Skip calibration if user has already seen it for this exercise type
+        let seen = UserDefaults.standard.bool(forKey: "calibrationSeen_\(exerciseType.rawValue)")
+        self._showCalibrationOverlay = State(initialValue: !seen)
+        self._calibrationDismissed = State(initialValue: seen)
     }
 
     // MARK: - Body
@@ -133,11 +174,12 @@ struct CameraRepCounterView: View {
                     exerciseType: exerciseType,
                     repCounter: repCounter,
                     showSkeleton: $showSkeleton,
-                    isTooFlat: $isTooFlat
+                    isTooFlat: $isTooFlat,
+                    isLowConfidence: $isLowConfidence,
+                    poseConfidence: $poseConfidence
                 )
                 .ignoresSafeArea()
             } else {
-                // Paused state
                 Color.black
                     .ignoresSafeArea()
                     .overlay {
@@ -152,16 +194,43 @@ struct CameraRepCounterView: View {
                     }
             }
 
+            // Edge glow overlay — state visible from 6ft away
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(edgeGlowColor, lineWidth: 15)
+                .blur(radius: 8)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .animation(.easeInOut(duration: 0.25), value: feedback)
+
+            // Full-screen green flash on rep completion
+            Color.green
+                .opacity(showRepFlash ? 0.35 : 0)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .animation(.easeOut(duration: 0.3), value: showRepFlash)
+
             // UI Overlay
             VStack(spacing: 0) {
                 // Header
                 headerView
                     .background(.ultraThinMaterial.opacity(0.8))
 
-                // Phone too flat warning (non-dismissible, auto-clears when repositioned)
-                if isTooFlat {
+                // Low visibility banner
+                if isLowConfidence {
+                    lowVisibilityBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                // Phone too flat warning
+                if isTooFlat && !isLowConfidence {
                     tooFlatWarningView
                         .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                // Stability progress bar (during idle/arming)
+                if repCounter.currentPhase == .idle && repCounter.stabilityProgress > 0 {
+                    stabilityProgressBar
+                        .transition(.opacity)
                 }
 
                 Spacer()
@@ -170,6 +239,13 @@ struct CameraRepCounterView: View {
                 repCounterDisplay
 
                 Spacer()
+
+                // Rejection toast
+                if showRejectionToast {
+                    rejectionToastView
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                        .padding(.bottom, 4)
+                }
 
                 // Feedback indicator
                 feedbackView
@@ -181,39 +257,63 @@ struct CameraRepCounterView: View {
             }
 
             // Calibration overlay
-            if showCalibrationOverlay && !calibrationDismissed && !isPaused {
+            if showCalibrationOverlay && !isPaused {
                 calibrationOverlayView
                     .transition(.opacity)
+            }
+
+            // Set logged confirmation overlay
+            if showSetLoggedConfirmation {
+                setLoggedConfirmationView
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }
         .onChange(of: selectedExerciseType) { _, newType in
             repCounter.reset()
             repCount = 0
+            // Check if calibration was already seen for the new exercise type
+            let seen = UserDefaults.standard.bool(forKey: "calibrationSeen_\(newType.rawValue)")
+            if seen {
+                showCalibrationOverlay = false
+                calibrationDismissed = true
+            } else {
+                showCalibrationOverlay = true
+                calibrationDismissed = false
+            }
         }
-        .onChange(of: detectedPose?.confidence) { _, newConfidence in
-            // Auto-dismiss calibration when good tracking detected
-            if let confidence = newConfidence, confidence > 0.7, showCalibrationOverlay {
-                withAnimation(.easeOut(duration: 0.4)) {
-                    showCalibrationOverlay = false
-                    calibrationDismissed = true
+        .onChange(of: repCounter.lastRejectionReason) { _, reason in
+            guard reason != .none else { return }
+            showRejectionToast(for: reason)
+        }
+        .onChange(of: repCount) { oldValue, newValue in
+            // Flash green only when rep counter increases from camera detection
+            guard newValue > oldValue, feedback == .repComplete else { return }
+            showRepFlash = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                showRepFlash = false
+            }
+        }
+        .onChange(of: sensitivity) { _, newValue in
+            applySensitivity(newValue, to: repCounter)
+        }
+        .onChange(of: isLowConfidence) { _, isLow in
+            if isLow {
+                // Show torch suggestion after 3s of sustained low confidence
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    if isLowConfidence {
+                        withAnimation { showTorchSuggestion = true }
+                    }
                 }
+            } else {
+                withAnimation { showTorchSuggestion = false }
             }
         }
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = true
-            // Auto-open exercise picker for unsupported exercises
+            applySensitivity(sensitivity, to: repCounter)
             if !exerciseAutoDetected {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     showExercisePicker = true
-                }
-            }
-            // Auto-dismiss calibration after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                if showCalibrationOverlay {
-                    withAnimation(.easeOut(duration: 0.4)) {
-                        showCalibrationOverlay = false
-                        calibrationDismissed = true
-                    }
                 }
             }
         }
@@ -281,23 +381,36 @@ struct CameraRepCounterView: View {
         ZStack {
             Color.black.opacity(0.6)
                 .ignoresSafeArea()
+                .onTapGesture {
+                    dismissCalibration()
+                }
 
-            VStack(spacing: 24) {
+            VStack(spacing: 20) {
+                // Dismiss button
+                HStack {
+                    Spacer()
+                    Button {
+                        dismissCalibration()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
+
                 Image(systemName: "figure.stand")
-                    .font(.system(size: 100, weight: .thin))
+                    .font(.system(size: 80, weight: .thin))
                     .foregroundStyle(.white.opacity(0.8))
 
                 Text("Position Yourself")
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(.white)
 
-                Text("Stand back so the camera can see your full body")
+                Text(exerciseType.framingTip)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
 
-                // Per-exercise phone placement tip
                 HStack(spacing: 8) {
                     Image(systemName: "lightbulb.fill")
                         .foregroundStyle(.yellow)
@@ -311,9 +424,21 @@ struct CameraRepCounterView: View {
                 .padding(.vertical, 10)
                 .background(Color.white.opacity(0.1))
                 .cornerRadius(8)
-                .padding(.horizontal, 40)
 
-                // Tracking note chip
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundStyle(.green)
+                        .font(.caption)
+                    Text(exerciseType.repDescription)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .multilineTextAlignment(.leading)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.1))
+                .cornerRadius(8)
+
                 Label(exerciseType.trackingNote, systemImage: "arrow.left.arrow.right")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.white.opacity(0.7))
@@ -321,8 +446,55 @@ struct CameraRepCounterView: View {
                     .padding(.vertical, 5)
                     .background(Capsule().fill(.white.opacity(0.1)))
             }
+            .padding(24)
+            .background(.ultraThinMaterial)
+            .cornerRadius(20)
+            .padding(.horizontal, 24)
         }
-        .allowsHitTesting(false)
+    }
+
+    // MARK: - Low Visibility Banner
+
+    private var lowVisibilityBanner: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                Image(systemName: "eye.slash.fill")
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Low visibility")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text("Move to a brighter area — rep counting paused")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+                Spacer()
+            }
+
+            if showTorchSuggestion {
+                HStack(spacing: 6) {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundStyle(.yellow)
+                        .font(.caption2)
+                    Text("Tip: Try facing a window or light source")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.7))
+                    Spacer()
+                }
+                .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.black.opacity(0.75))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.orange.opacity(0.7), lineWidth: 1)
+        )
+        .cornerRadius(8)
+        .padding(.horizontal, 12)
+        .padding(.top, 6)
+        .animation(.easeInOut(duration: 0.3), value: isLowConfidence)
     }
 
     // MARK: - Too Flat Warning
@@ -352,6 +524,69 @@ struct CameraRepCounterView: View {
         .padding(.horizontal, 12)
         .padding(.top, 6)
         .animation(.easeInOut(duration: 0.3), value: isTooFlat)
+    }
+
+    // MARK: - Stability Progress Bar
+
+    private var stabilityProgressBar: some View {
+        VStack(spacing: 4) {
+            ProgressView(value: repCounter.stabilityProgress)
+                .tint(.green)
+                .frame(height: 4)
+                .padding(.horizontal, 40)
+
+            Text("Hold steady...")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.6))
+        }
+        .padding(.top, 8)
+    }
+
+    // MARK: - Rejection Toast
+
+    private var rejectionToastView: some View {
+        Text(rejectionMessage)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color.orange.opacity(0.8))
+            )
+    }
+
+    private func showRejectionToast(for reason: RepCounter.RejectionReason) {
+        let message: String
+        let duration: TimeInterval
+
+        switch reason {
+        case .tooShallow:
+            message = "Go deeper"
+            duration = 0.8
+        case .tooFast:
+            message = "Too fast"
+            duration = 0.5
+        case .notArmed:
+            message = "Hold still to start"
+            duration = 1.0
+        case .lowConfidence:
+            message = "Can't see you clearly"
+            duration = 1.0
+        case .none:
+            return
+        }
+
+        withAnimation(.easeIn(duration: 0.15)) {
+            rejectionMessage = message
+            showRejectionToast = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            withAnimation(.easeOut(duration: 0.2)) {
+                showRejectionToast = false
+            }
+        }
     }
 
     // MARK: - Subviews
@@ -405,6 +640,19 @@ struct CameraRepCounterView: View {
             .background(Capsule().fill(.black.opacity(0.3)))
             .animation(.easeInOut(duration: 0.3), value: detectedPose?.confidence)
 
+            // Instructions info button (visible after first dismissal)
+            if calibrationDismissed {
+                Button {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        showCalibrationOverlay = true
+                    }
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.title3)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            }
+
             // Skeleton toggle
             Button {
                 showSkeleton.toggle()
@@ -430,40 +678,53 @@ struct CameraRepCounterView: View {
     private var repCounterDisplay: some View {
         VStack(spacing: 8) {
             // Rep count
-            Text("\(repCount)")
-                .font(.system(size: 140, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.5), radius: 10)
-                .contentTransition(.numericText())
-                .animation(.spring(response: 0.3), value: repCount)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(repCount)")
+                    .font(.system(size: 140, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 10)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.3), value: repCount)
+
+                // Low confidence indicator
+                if repCounter.isLowConfidenceRep && repCount > 0 {
+                    Text("?")
+                        .font(.title.weight(.bold))
+                        .foregroundStyle(.yellow.opacity(0.7))
+                }
+            }
 
             Text("REPS")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.7))
                 .tracking(4)
 
-            // Debug info (angle)
             #if DEBUG
-            Text("Angle: \(Int(currentAngle))°")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.white.opacity(0.4))
-                .padding(.top, 8)
+            VStack(spacing: 2) {
+                Text("Angle: \(Int(currentAngle))°  Vel: \(String(format: "%.1f", repCounter.angularVelocity))  Phase: \(repCounter.currentPhase.rawValue)  Stab: \(String(format: "%.0f%%", repCounter.stabilityProgress * 100))")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.4))
+                Text("Frames: \(repCounter.debugAcceptedFrames)/\(repCounter.debugFrameCount)  Near: \(repCounter.debugIsNearStart ? "Y" : "N")  Still: \(repCounter.debugIsStable ? "Y" : "N")  Outlier: \(repCounter.debugLastOutlierRejected ? "REJ" : "ok")")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+            .padding(.top, 8)
             #endif
         }
     }
 
     private var feedbackView: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Circle()
                 .fill(feedbackColor)
-                .frame(width: 10, height: 10)
+                .frame(width: 14, height: 14)
 
             Text(feedback.rawValue)
-                .font(.subheadline.weight(.medium))
+                .font(.title3.weight(.bold))
                 .foregroundStyle(feedbackColor)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
         .background(
             Capsule()
                 .fill(.black.opacity(0.5))
@@ -472,7 +733,21 @@ struct CameraRepCounterView: View {
     }
 
     private var bottomControls: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
+            // Set history strip (shown after first logged set)
+            if !loggedSets.isEmpty {
+                setHistoryStrip
+            }
+
+            // Sensitivity picker
+            Picker("Sensitivity", selection: $sensitivity) {
+                Text("Strict").tag(0)
+                Text("Normal").tag(1)
+                Text("Easy").tag(2)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+
             // Weight input
             HStack(spacing: 16) {
                 Text("Weight:")
@@ -502,7 +777,7 @@ struct CameraRepCounterView: View {
                     }
                 }
 
-                Text("lbs")
+                Text(UnitFormatter.weightUnit)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.8))
 
@@ -511,22 +786,17 @@ struct CameraRepCounterView: View {
                 // Manual rep adjustment
                 HStack(spacing: 8) {
                     Button {
-                        if repCount > 0 {
-                            repCount -= 1
-                            repCounter.reset()
-                            for _ in 0..<repCount {
-                                repCounter.addRep()
-                            }
-                        }
+                        repCounter.removeRep()
+                        repCount = repCounter.repCount
                     } label: {
                         Image(systemName: "minus.circle")
-                            .font(.title3)
-                            .foregroundStyle(.white.opacity(0.5))
+                            .font(.title2)
+                            .foregroundStyle(.white.opacity(0.7))
                     }
 
                     Button {
-                        repCount += 1
                         repCounter.addRep()
+                        repCount = repCounter.repCount
                     } label: {
                         Image(systemName: "plus.circle")
                             .font(.title3)
@@ -552,15 +822,13 @@ struct CameraRepCounterView: View {
                         .cornerRadius(12)
                 }
 
-                // Log set button
+                // Log set button — stays in camera, doesn't dismiss
                 Button {
-                    onSetLogged(repCount, weight)
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    dismiss()
+                    logCurrentSet()
                 } label: {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                        Text("Log Set")
+                        Text(loggedSets.isEmpty ? "Log Set" : "Log Set \(loggedSets.count + 1)")
                     }
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -577,12 +845,60 @@ struct CameraRepCounterView: View {
         .padding(.top, 16)
     }
 
+    // MARK: - Set History Strip
+
+    private var setHistoryStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(loggedSets.enumerated()), id: \.offset) { index, set in
+                    Text("Set \(index + 1): \(set.reps)×\(Int(set.weight))")
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(.white.opacity(0.15)))
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    // MARK: - Multi-Set Helpers
+
+    private func logCurrentSet() {
+        // Snapshot rejection counts before reset
+        let shallowCount = repCounter.rejectedShallowCount
+        let fastCount = repCounter.rejectedFastCount
+
+        // Save set immediately (convert display value back to storage units — always lbs internally)
+        onSetLogged(repCount, UnitFormatter.convertToStorage(weight))
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+        // Track for history display
+        loggedSets.append((reps: repCount, weight: weight, rejectedShallow: shallowCount, rejectedFast: fastCount))
+
+        // Show confirmation
+        withAnimation(.spring(response: 0.3)) {
+            showSetLoggedConfirmation = true
+        }
+
+        // Reset for next set
+        repCounter.reset()
+        repCount = 0
+
+        // Auto-hide confirmation after 1.5s
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeOut(duration: 0.3)) {
+                showSetLoggedConfirmation = false
+            }
+        }
+    }
+
     // MARK: - Exercise Picker Sheet
 
     private var exercisePickerSheet: some View {
         NavigationStack {
             List {
-                // Banner for unsupported exercises
                 if !exerciseAutoDetected {
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
@@ -642,6 +958,67 @@ struct CameraRepCounterView: View {
         .presentationDetents([.large])
     }
 
+    // MARK: - Set Logged Confirmation
+
+    private var setLoggedConfirmationView: some View {
+        VStack(spacing: 6) {
+            let setNumber = loggedSets.count
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("Set \(setNumber) Logged!")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+
+            if let lastSet = loggedSets.last {
+                let parts = rejectionSummaryParts(shallow: lastSet.rejectedShallow, fast: lastSet.rejectedFast)
+                if !parts.isEmpty {
+                    Text(parts)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial)
+        .cornerRadius(16)
+    }
+
+    private func rejectionSummaryParts(shallow: Int, fast: Int) -> String {
+        var parts: [String] = []
+        if shallow > 0 { parts.append("\(shallow) shallow") }
+        if fast > 0 { parts.append("\(fast) too fast") }
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: - Calibration Helpers
+
+    private func dismissCalibration() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            showCalibrationOverlay = false
+            calibrationDismissed = true
+        }
+        UserDefaults.standard.set(true, forKey: "calibrationSeen_\(exerciseType.rawValue)")
+    }
+
+    // MARK: - Sensitivity Helpers
+
+    private func applySensitivity(_ level: Int, to counter: RepCounter) {
+        switch level {
+        case 0: // Strict
+            counter.sensitivityMultiplier = 0.5
+            counter.minimumRepDurationOverride = 0.6
+        case 2: // Easy
+            counter.sensitivityMultiplier = 0.25
+            counter.minimumRepDurationOverride = 0.4
+        default: // Normal
+            counter.sensitivityMultiplier = 0.4
+            counter.minimumRepDurationOverride = 0.6
+        }
+    }
+
     // MARK: - Permission Helpers
 
     private func checkCameraPermission() {
@@ -665,7 +1042,7 @@ struct CameraRepCounterView: View {
         exerciseName: "Squat",
         lastWeight: 135,
         onSetLogged: { reps, weight in
-            print("Logged: \(reps) reps @ \(weight) lbs")
+            debugLog("Logged: \(reps) reps @ \(weight) lbs")
         }
     )
 }
