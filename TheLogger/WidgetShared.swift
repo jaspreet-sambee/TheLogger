@@ -71,7 +71,7 @@ struct WidgetDataManager {
     /// Save current workout state for the widget
     static func save(_ data: WidgetWorkoutData) {
         guard let defaults = AppGroup.userDefaults else {
-            print("[Widget] Failed to access App Group UserDefaults")
+            debugLog("[Widget] Failed to access App Group UserDefaults")
             return
         }
 
@@ -83,11 +83,9 @@ struct WidgetDataManager {
             // Trigger widget refresh
             WidgetCenter.shared.reloadAllTimelines()
 
-            #if DEBUG
-            print("[Widget] Saved workout data: \(data.currentExerciseName ?? "nil")")
-            #endif
+            debugLog("[Widget] Saved workout data: \(data.currentExerciseName ?? "nil")")
         } catch {
-            print("[Widget] Failed to encode workout data: \(error)")
+            debugLog("[Widget] Failed to encode workout data: \(error)")
         }
     }
 
@@ -101,7 +99,7 @@ struct WidgetDataManager {
         do {
             return try JSONDecoder().decode(WidgetWorkoutData.self, from: data)
         } catch {
-            print("[Widget] Failed to decode workout data: \(error)")
+            debugLog("[Widget] Failed to decode workout data: \(error)")
             return nil
         }
     }
@@ -113,9 +111,7 @@ struct WidgetDataManager {
         defaults.synchronize()
         WidgetCenter.shared.reloadAllTimelines()
 
-        #if DEBUG
-        print("[Widget] Cleared workout data")
-        #endif
+        debugLog("[Widget] Cleared workout data")
     }
 }
 
@@ -193,7 +189,7 @@ struct PendingSetManager {
         do {
             return try JSONDecoder().decode([PendingSet].self, from: data)
         } catch {
-            print("[Widget] Failed to decode pending sets: \(error)")
+            debugLog("[Widget] Failed to decode pending sets: \(error)")
             return []
         }
     }
@@ -202,7 +198,7 @@ struct PendingSetManager {
     static func clearPendingSets() {
         AppGroup.userDefaults?.removeObject(forKey: key)
         AppGroup.userDefaults?.synchronize()
-        print("[Widget] Cleared pending sets")
+        debugLog("[Widget] Cleared pending sets")
     }
 
     /// Check if there are pending sets to sync

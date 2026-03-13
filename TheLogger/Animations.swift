@@ -653,6 +653,7 @@ extension View {
 struct AnimatedFlame: View {
     let color: Color
     @State private var isAnimating = false
+    @State private var timer: Timer?
 
     init(color: Color = AppColors.accent) {
         self.color = color
@@ -663,10 +664,13 @@ struct AnimatedFlame: View {
             .foregroundStyle(color)
             .symbolEffect(.bounce, value: isAnimating)
             .onAppear {
-                // Bounce every 2.5 seconds
-                Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { _ in
+                timer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { _ in
                     isAnimating.toggle()
                 }
+            }
+            .onDisappear {
+                timer?.invalidate()
+                timer = nil
             }
     }
 }

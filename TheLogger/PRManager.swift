@@ -243,8 +243,8 @@ class PRManager {
                 guard let sets = exercise.sets else { continue }
 
                 for set in sets {
-                    // Only consider working sets; weight == 0 is valid for bodyweight exercises
-                    guard set.type == .working && set.reps > 0 else {
+                    // Only consider PR-eligible sets; weight == 0 is valid for bodyweight exercises
+                    guard set.type.countsForPR && set.reps > 0 else {
                         continue
                     }
 

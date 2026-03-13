@@ -7,6 +7,15 @@
 
 import SwiftUI
 
+// MARK: - Debug Logging
+
+/// Logs a message to the console in DEBUG builds only. No-op in release.
+func debugLog(_ message: String) {
+    #if DEBUG
+    print(message)
+    #endif
+}
+
 // MARK: - App Color Tokens
 
 /// Centralized color tokens for Midnight Lift theming (deep navy + electric coral)

@@ -165,11 +165,13 @@ final class Workout: Identifiable {
         let isDefaultName = name.range(of: timestampPattern, options: .regularExpression) != nil
 
         if isDefaultName || name.isEmpty {
-            if let firstExercise = exercises?.first, !firstExercise.name.isEmpty {
-                name = "\(firstExercise.name) Workout"
-            } else if (exercises ?? []).count > 1 {
-                // Multiple exercises - use workout type
+            let exerciseList = exercises ?? []
+            if exerciseList.count > 1 {
+                // Multiple exercises — detect workout type (Push Day, Pull Day, Leg Day, etc.)
                 name = detectWorkoutType()
+            } else if let firstExercise = exerciseList.first, !firstExercise.name.isEmpty {
+                // Single exercise — name after it
+                name = "\(firstExercise.name) Workout"
             }
         }
     }
@@ -1008,11 +1010,11 @@ struct PersonalRecordManager {
     ) -> Bool {
         let normalizedName = exerciseName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Only consider valid working sets (reps > 0, not warmup).
+        // Only consider valid sets that count for PRs (reps > 0, not warmup).
         // weight == 0 is allowed for bodyweight exercises (pull-ups, dips, etc.).
-        guard reps > 0, setType == .working else {
+        guard reps > 0, setType.countsForPR else {
             #if DEBUG
-            print("[PR] checkAndSavePR SKIP guard reps=\(reps) setType=\(setType)")
+            debugLog("[PR] checkAndSavePR SKIP guard reps=\(reps) setType=\(setType)")
             #endif
             return false
         }
@@ -1044,12 +1046,12 @@ struct PersonalRecordManager {
                 // Same-workout improvements (e.g. set 3 beats set 1) are saved silently.
                 let fromPreviousWorkout = previousWorkoutId != workoutId
                 #if DEBUG
-                print("[PR] checkAndSavePR UPDATED \(normalizedName) -> \(weight)x\(reps) score \(existingScore)->\(newScore) celebrate=\(fromPreviousWorkout)")
+                debugLog("[PR] checkAndSavePR UPDATED \(normalizedName) -> \(weight)x\(reps) score \(existingScore)->\(newScore) celebrate=\(fromPreviousWorkout)")
                 #endif
                 return fromPreviousWorkout
             }
             #if DEBUG
-            print("[PR] checkAndSavePR NO beat \(normalizedName) newScore=\(newScore) existingScore=\(existingScore)")
+            debugLog("[PR] checkAndSavePR NO beat \(normalizedName) newScore=\(newScore) existingScore=\(existingScore)")
             #endif
         } else {
             // First time ever logging this exercise — establish baseline record silently.
@@ -1063,7 +1065,7 @@ struct PersonalRecordManager {
             modelContext.insert(newPR)
             try? modelContext.save()
             #if DEBUG
-            print("[PR] checkAndSavePR BASELINE \(normalizedName) \(weight)x\(reps) score=\(newScore)")
+            debugLog("[PR] checkAndSavePR BASELINE \(normalizedName) \(weight)x\(reps) score=\(newScore)")
             #endif
             return false
         }
@@ -1098,8 +1100,8 @@ struct PersonalRecordManager {
             for exercise in (workout.exercises ?? []) {
                 guard exercise.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName else { continue }
                 for set in (exercise.sets ?? []) {
-                    // Allow weight == 0 for bodyweight exercises; require reps > 0 and working type
-                    guard set.reps > 0, set.type == .working else { continue }
+                    // Allow weight == 0 for bodyweight exercises; require reps > 0 and a PR-eligible type
+                    guard set.reps > 0, set.type.countsForPR else { continue }
                     let score = prScore(weight: set.weight, reps: set.reps)
                     if score > best1RM {
                         best1RM = score
@@ -1135,7 +1137,7 @@ struct PersonalRecordManager {
             }
             try? modelContext.save()
             #if DEBUG
-            print("[PR] recalculatePR \(normalizedName) -> \(best.weight)x\(best.reps) 1RM=\(best1RM)")
+            debugLog("[PR] recalculatePR \(normalizedName) -> \(best.weight)x\(best.reps) 1RM=\(best1RM)")
             #endif
             return changed
         } else {
@@ -1144,7 +1146,7 @@ struct PersonalRecordManager {
                 modelContext.delete(pr)
                 try? modelContext.save()
                 #if DEBUG
-                print("[PR] recalculatePR \(normalizedName) REMOVED (no valid sets)")
+                debugLog("[PR] recalculatePR \(normalizedName) REMOVED (no valid sets)")
                 #endif
                 return true
             }
@@ -1401,7 +1403,11 @@ final class RestTimerManager {
     private init() {
         setupBackgroundObservers()
     }
-    
+
+    /// Internal initializer for unit testing — skips background observers.
+    init(forTesting: Bool) {}
+
+
     // MARK: - Public API
 
     /// Show rest option after a set is logged
@@ -1410,24 +1416,24 @@ final class RestTimerManager {
     ///   - duration: Suggested rest duration in seconds (nil = use user's setting)
     ///   - autoStart: If true, timer starts immediately instead of showing option
     func offerRest(for exerciseId: UUID, duration: Int? = nil, autoStart: Bool = false) {
-        print("[RestTimer] offerRest called - isActive=\(isActive), isComplete=\(isComplete), showRestOption=\(showRestOption)")
+        debugLog("[RestTimer] offerRest called - isActive=\(isActive), isComplete=\(isComplete), showRestOption=\(showRestOption)")
 
         // Don't interrupt an active timer, but allow if timer is complete (waiting to dismiss)
         guard !isActive || isComplete else {
-            print("[RestTimer] offerRest BLOCKED by guard")
+            debugLog("[RestTimer] offerRest BLOCKED by guard")
             return
         }
 
         // If timer was complete, reset it first
         if isComplete {
-            print("[RestTimer] Resetting complete timer")
+            debugLog("[RestTimer] Resetting complete timer")
             timer?.invalidate()
             timer = nil
             isActive = false
             isComplete = false
         }
 
-        print("[RestTimer] offerRest proceeding for exercise \(exerciseId)")
+        debugLog("[RestTimer] offerRest proceeding for exercise \(exerciseId)")
         activeExerciseId = exerciseId
         // Use provided duration, or user's setting, or fallback to 90
         let userDefault = UserDefaults.standard.integer(forKey: "defaultRestSeconds")
@@ -1436,16 +1442,16 @@ final class RestTimerManager {
 
         if autoStart {
             // Start immediately
-            print("[RestTimer] autoStart=true, starting timer")
+            debugLog("[RestTimer] autoStart=true, starting timer")
             showRestOption = false
             start()
         } else {
             // Show option button with animation
-            print("[RestTimer] Setting showRestOption=true for exercise \(exerciseId)")
+            debugLog("[RestTimer] Setting showRestOption=true for exercise \(exerciseId)")
             withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                 showRestOption = true
             }
-            print("[RestTimer] showRestOption is now \(showRestOption)")
+            debugLog("[RestTimer] showRestOption is now \(showRestOption)")
         }
     }
     
@@ -1482,7 +1488,7 @@ final class RestTimerManager {
     
     /// Stop and hide everything
     func stop() {
-        print("[RestTimer] stop() called")
+        debugLog("[RestTimer] stop() called")
         timer?.invalidate()
         timer = nil
         withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
@@ -1491,7 +1497,7 @@ final class RestTimerManager {
             showRestOption = false
             activeExerciseId = nil
         }
-        print("[RestTimer] stop() complete - all state reset to nil/false")
+        debugLog("[RestTimer] stop() complete - all state reset to nil/false")
     }
 
     /// Dismiss rest option without starting timer
@@ -1530,12 +1536,12 @@ final class RestTimerManager {
     
     /// Pause timer (when user starts adding a set)
     func pause() {
-        print("[RestTimer] pause() called - isActive=\(isActive), showRestOption=\(showRestOption)")
+        debugLog("[RestTimer] pause() called - isActive=\(isActive), showRestOption=\(showRestOption)")
         timer?.invalidate()
         timer = nil
         // Also hide rest option when user starts adding
         showRestOption = false
-        print("[RestTimer] pause() complete - showRestOption=\(showRestOption)")
+        debugLog("[RestTimer] pause() complete - showRestOption=\(showRestOption)")
     }
     
     /// Resume timer after pause
@@ -1547,7 +1553,7 @@ final class RestTimerManager {
     /// Check if should show anything for this exercise
     func shouldShowFor(exerciseId: UUID) -> Bool {
         let result = activeExerciseId == exerciseId && (showRestOption || isActive)
-        print("[RestTimer] shouldShowFor(\(exerciseId)) - activeExerciseId=\(String(describing: activeExerciseId)), showRestOption=\(showRestOption), isActive=\(isActive) → \(result)")
+        debugLog("[RestTimer] shouldShowFor(\(exerciseId)) - activeExerciseId=\(String(describing: activeExerciseId)), showRestOption=\(showRestOption), isActive=\(isActive) → \(result)")
         return result
     }
     
@@ -1612,15 +1618,15 @@ final class RestTimerManager {
         // Auto-dismiss after 2 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             guard let self = self else {
-                print("[RestTimer] auto-dismiss: self is nil")
+                debugLog("[RestTimer] auto-dismiss: self is nil")
                 return
             }
-            print("[RestTimer] auto-dismiss fired - isComplete=\(self.isComplete)")
+            debugLog("[RestTimer] auto-dismiss fired - isComplete=\(self.isComplete)")
             guard self.isComplete else {
-                print("[RestTimer] auto-dismiss skipped (isComplete=false)")
+                debugLog("[RestTimer] auto-dismiss skipped (isComplete=false)")
                 return
             }
-            print("[RestTimer] auto-dismiss calling stop()")
+            debugLog("[RestTimer] auto-dismiss calling stop()")
             self.stop()
         }
     }

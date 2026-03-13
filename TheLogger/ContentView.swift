@@ -278,7 +278,7 @@ struct AddWorkoutView: View {
                             try modelContext.save()
                             dismiss()
                         } catch {
-                            print("Error saving workout: \(error)")
+                            debugLog("Error saving workout: \(error)")
                             // Remove from context since save failed
                             modelContext.delete(newWorkout)
                         }

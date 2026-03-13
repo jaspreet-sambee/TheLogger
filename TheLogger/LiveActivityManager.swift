@@ -113,7 +113,7 @@ final class LiveActivityManager: ObservableObject {
         guard let containerURL = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroupId
         ) else {
-            print("[LiveActivity] Failed to get App Group container")
+            debugLog("[LiveActivity] Failed to get App Group container")
             return
         }
 
@@ -125,11 +125,11 @@ final class LiveActivityManager: ObservableObject {
             try? "0".write(to: signalFile, atomically: true, encoding: .utf8)
         }
 
-        print("[LiveActivity] Monitoring signal file: \(signalFile.path)")
+        debugLog("[LiveActivity] Monitoring signal file: \(signalFile.path)")
 
         let fd = open(signalFile.path, O_EVTONLY)
         guard fd != -1 else {
-            print("[LiveActivity] Failed to open signal file")
+            debugLog("[LiveActivity] Failed to open signal file")
             return
         }
 
@@ -140,7 +140,7 @@ final class LiveActivityManager: ObservableObject {
         )
 
         source.setEventHandler { [weak self] in
-            print("[LiveActivity] SIGNAL FILE CHANGED - triggering update")
+            debugLog("[LiveActivity] SIGNAL FILE CHANGED - triggering update")
             Task { @MainActor in
                 self?.handleWidgetUpdate()
             }
@@ -152,7 +152,7 @@ final class LiveActivityManager: ObservableObject {
 
         source.resume()
         fileMonitorSource = source
-        print("[LiveActivity] Signal file monitoring ACTIVE")
+        debugLog("[LiveActivity] Signal file monitoring ACTIVE")
     }
 
     private func stopFileSystemMonitoring() {
@@ -203,7 +203,7 @@ final class LiveActivityManager: ObservableObject {
             await activity.update(
                 ActivityContent(state: state, staleDate: nil)
             )
-            print("[LiveActivity] ⚡ Fast update - sets: \(newSetCount), weight: \(newWeight) lbs, reps: \(newReps)")
+            debugLog("[LiveActivity] ⚡ Fast update - sets: \(newSetCount), weight: \(newWeight) lbs, reps: \(newReps)")
         }
     }
 
@@ -221,10 +221,10 @@ final class LiveActivityManager: ObservableObject {
         lastReps: Int = 0,
         lastWeight: Double = 0
     ) {
-        print("[LiveActivity] Starting for workout: \(workoutName)")
+        debugLog("[LiveActivity] Starting for workout: \(workoutName)")
 
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("[LiveActivity] Not enabled in Settings")
+            debugLog("[LiveActivity] Not enabled in Settings")
             return
         }
 
@@ -255,11 +255,11 @@ final class LiveActivityManager: ObservableObject {
                 )
                 self.currentActivity = activity
                 self.lastSetCount = exerciseSets
-                print("[LiveActivity] Started: \(activity.id)")
+                debugLog("[LiveActivity] Started: \(activity.id)")
                 startElapsedTimeUpdater()
                 startFileSystemMonitoring()
             } catch {
-                print("[LiveActivity] Failed: \(error.localizedDescription)")
+                debugLog("[LiveActivity] Failed: \(error.localizedDescription)")
             }
         }
     }
@@ -273,7 +273,7 @@ final class LiveActivityManager: ObservableObject {
         lastWeight: Double
     ) async {
         guard let activity = currentActivity else {
-            print("[LiveActivity] No active activity to update")
+            debugLog("[LiveActivity] No active activity to update")
             return
         }
 
@@ -283,7 +283,7 @@ final class LiveActivityManager: ObservableObject {
             defaults.set(lastWeight, forKey: "liveActivityLastWeight")
             defaults.set(lastReps, forKey: "liveActivityLastReps")
             defaults.set(exerciseId.uuidString, forKey: "liveActivityExerciseId")
-            print("[LiveActivity] Wrote to metadata: \(exerciseSets) sets, \(lastWeight) lbs × \(lastReps)")
+            debugLog("[LiveActivity] Wrote to metadata: \(exerciseSets) sets, \(lastWeight) lbs × \(lastReps)")
         }
 
         let elapsed = Int(Date().timeIntervalSince(activity.attributes.startTime))
@@ -298,7 +298,7 @@ final class LiveActivityManager: ObservableObject {
         )
 
         await activity.update(ActivityContent(state: state, staleDate: nil))
-        print("[LiveActivity] Updated: \(exerciseName) - \(exerciseSets) sets")
+        debugLog("[LiveActivity] Updated: \(exerciseName) - \(exerciseSets) sets")
     }
 
     /// End the Live Activity
@@ -313,7 +313,7 @@ final class LiveActivityManager: ObservableObject {
         )
         currentActivity = nil
         lastSetCount = 0
-        print("[LiveActivity] Ended")
+        debugLog("[LiveActivity] Ended")
     }
 
     private func startElapsedTimeUpdater() {

@@ -30,7 +30,7 @@ enum SetType: String, Codable, CaseIterable {
         switch self {
         case .warmup: return .yellow
         case .working: return AppColors.accent
-        case .dropSet: return AppColors.accent
+        case .dropSet: return .orange
         case .failure: return .red
         case .pause: return .teal
         }

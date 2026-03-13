@@ -10,8 +10,38 @@ import SwiftData
 
 @main
 struct TheLoggerApp: App {
-    // Configure SwiftData model container with iCloud sync and migration plan
-    var sharedModelContainer: ModelContainer = {
+    var sharedModelContainer: ModelContainer
+    var containerCreationFailed = false
+
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @Environment(\.scenePhase) private var scenePhase
+
+    // Deep link state for widget navigation
+    @State private var deepLinkWorkoutId: UUID?
+    @State private var deepLinkExerciseId: UUID?
+
+    init() {
+        #if DEBUG
+        if CommandLine.arguments.contains("--uitesting") {
+            // Reset UserDefaults for clean test state
+            let defaults = UserDefaults.standard
+            defaults.set(true, forKey: "hasCompletedOnboarding")
+            // Disable rest timer by default so demos aren't interrupted between sets.
+            // Use --enable-rest-timer alongside --uitesting to override (for rest timer demo).
+            let enableRestTimer = CommandLine.arguments.contains("--enable-rest-timer")
+            defaults.set(enableRestTimer, forKey: "globalRestTimerEnabled")
+            defaults.synchronize()
+        }
+        #endif
+
+        let (container, failed) = Self.makeModelContainer()
+        self.sharedModelContainer = container
+        self.containerCreationFailed = failed
+    }
+
+    // MARK: - Model Container Setup
+
+    private static func makeModelContainer() -> (ModelContainer, Bool) {
         let schema = Schema([
             Workout.self,
             Exercise.self,
@@ -26,14 +56,14 @@ struct TheLoggerApp: App {
             isStoredInMemoryOnly: false,
             cloudKitDatabase: .automatic
         )
-        
+
         do {
             let container = try ModelContainer(
                 for: Workout.self, Exercise.self, WorkoutSet.self, ExerciseMemory.self, PersonalRecord.self,
                 migrationPlan: TheLoggerMigrationPlan.self,
                 configurations: modelConfiguration
             )
-            
+
             // Migrate existing workouts that don't have a name
             // This runs synchronously to ensure migration completes before returning
             let context = container.mainContext
@@ -80,27 +110,27 @@ struct TheLoggerApp: App {
             }
             #endif
 
-            return container
+            return (container, false)
         } catch {
             // ModelContainer creation failed. Preserve existing store by moving to recovery
             // (never delete), then create a fresh store. CloudKit may restore data on sync.
-            print("[TheLogger] Error creating ModelContainer: \(error)")
-            print("[TheLogger] Moving store to recovery folder (data preserved for potential recovery)")
-            
+            debugLog("[TheLogger] Error creating ModelContainer: \(error)")
+            debugLog("[TheLogger] Moving store to recovery folder (data preserved for potential recovery)")
+
             let fileManager = FileManager.default
             let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             let storeBase = appSupportURL.appendingPathComponent("default.store")
-            
+
             // Move store files to recovery directory instead of deleting
             let timestamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
             let recoveryDir = appSupportURL.appendingPathComponent("default.store.recovery.\(timestamp)")
-            
+
             let storeFiles: [URL] = [
                 storeBase,
                 storeBase.appendingPathExtension("wal"),
                 storeBase.appendingPathExtension("shm")
             ]
-            
+
             do {
                 try fileManager.createDirectory(at: recoveryDir, withIntermediateDirectories: true)
                 for url in storeFiles {
@@ -108,13 +138,13 @@ struct TheLoggerApp: App {
                         let dest = recoveryDir.appendingPathComponent(url.lastPathComponent)
                         try? fileManager.removeItem(at: dest)
                         try fileManager.moveItem(at: url, to: dest)
-                        print("[TheLogger] Moved to recovery: \(url.lastPathComponent)")
+                        debugLog("[TheLogger] Moved to recovery: \(url.lastPathComponent)")
                     }
                 }
             } catch let moveError {
-                print("[TheLogger] Could not move to recovery: \(moveError)")
+                debugLog("[TheLogger] Could not move to recovery: \(moveError)")
             }
-            
+
             // Create fresh container; CloudKit will sync down if data exists in iCloud
             do {
                 let freshContainer = try ModelContainer(
@@ -122,56 +152,44 @@ struct TheLoggerApp: App {
                     migrationPlan: TheLoggerMigrationPlan.self,
                     configurations: modelConfiguration
                 )
-                print("[TheLogger] Created fresh database; CloudKit may restore data")
-                return freshContainer
+                debugLog("[TheLogger] Created fresh database; CloudKit may restore data")
+                return (freshContainer, false)
             } catch {
-                print("[TheLogger] Failed to create fresh database: \(error)")
-                // Last resort: in-memory storage
-                print("[TheLogger] Using in-memory storage as fallback")
+                debugLog("[TheLogger] Failed to create fresh database: \(error)")
+                // Last resort: in-memory storage — signal UI to show an error alert
+                debugLog("[TheLogger] Using in-memory storage as fallback")
                 let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-                do {
-                    return try ModelContainer(for: schema, configurations: [fallbackConfig])
-                } catch {
-                    fatalError("Could not create ModelContainer: \(error)")
+                if let fallback = try? ModelContainer(for: schema, configurations: [fallbackConfig]) {
+                    return (fallback, true)
                 }
+                // Absolute last resort — empty schema in-memory container
+                let emptyConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+                return ((try? ModelContainer(for: schema, configurations: [emptyConfig]))!, true)
             }
         }
-    }()
-    
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @Environment(\.scenePhase) private var scenePhase
-
-    // Deep link state for widget navigation
-    @State private var deepLinkWorkoutId: UUID?
-    @State private var deepLinkExerciseId: UUID?
-
-    init() {
-        #if DEBUG
-        if CommandLine.arguments.contains("--uitesting") {
-            // Reset UserDefaults for clean test state
-            let defaults = UserDefaults.standard
-            defaults.set(true, forKey: "hasCompletedOnboarding")
-            // Disable rest timer by default so demos aren't interrupted between sets.
-            // Use --enable-rest-timer alongside --uitesting to override (for rest timer demo).
-            let enableRestTimer = CommandLine.arguments.contains("--enable-rest-timer")
-            defaults.set(enableRestTimer, forKey: "globalRestTimerEnabled")
-            defaults.synchronize()
-        }
-        #endif
     }
+
+    // MARK: - Body
 
     var body: some Scene {
         WindowGroup {
-            if hasCompletedOnboarding {
-                WorkoutListView(
-                    deepLinkWorkoutId: $deepLinkWorkoutId,
-                    deepLinkExerciseId: $deepLinkExerciseId
-                )
-                .onAppear {
-                    syncPendingSetsFromWidget()
+            Group {
+                if hasCompletedOnboarding {
+                    WorkoutListView(
+                        deepLinkWorkoutId: $deepLinkWorkoutId,
+                        deepLinkExerciseId: $deepLinkExerciseId
+                    )
+                    .onAppear {
+                        syncPendingSetsFromWidget()
+                    }
+                } else {
+                    OnboardingView()
                 }
-            } else {
-                OnboardingView()
+            }
+            .alert("Storage Error", isPresented: .constant(containerCreationFailed)) {
+                Button("OK") { }
+            } message: {
+                Text("TheLogger could not access its database and is running in temporary mode. Your data will not be saved this session. Please restart the app — if the problem persists, try reinstalling.")
             }
         }
         .modelContainer(sharedModelContainer)
@@ -184,16 +202,18 @@ struct TheLoggerApp: App {
         .handlesExternalEvents(matching: ["thelogger"])
     }
 
+    // MARK: - Widget Sync
+
     /// Sync sets that were logged from the Live Activity widget
     private func syncPendingSetsFromWidget() {
         // Debug: Print full intent debug log
         if let debugDefaults = UserDefaults(suiteName: "group.SDL-Tutorial.TheLogger"),
-           let debugLog = debugDefaults.string(forKey: "debugIntentLog") {
-            print("[App] ====== WIDGET INTENT DEBUG LOG ======")
-            print(debugLog)
-            print("[App] ====================================")
+           let intentLog = debugDefaults.string(forKey: "debugIntentLog") {
+            debugLog("[App] ====== WIDGET INTENT DEBUG LOG ======")
+            debugLog(intentLog)
+            debugLog("[App] ====================================")
         } else {
-            print("[App] DEBUG - No widget intent log found")
+            debugLog("[App] DEBUG - No widget intent log found")
         }
 
         let pendingSets = PendingSetManager.getPendingSets()
@@ -219,7 +239,7 @@ struct TheLoggerApp: App {
 
             // Add the set to the exercise
             exercise.addSet(reps: pendingSet.reps, weight: pendingSet.weight)
-            print("[App] Synced pending set: \(pendingSet.reps) reps @ \(pendingSet.weight) for \(exercise.name)")
+            debugLog("[App] Synced pending set: \(pendingSet.reps) reps @ \(pendingSet.weight) for \(exercise.name)")
         }
 
         // Save and clear pending sets
