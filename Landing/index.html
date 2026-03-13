@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TheLogger — A workout tracker that uses your iPhone camera to count reps automatically. Log sets in seconds, PRs tracked, no account needed.">
-  <meta property="og:title" content="TheLogger — The workout app that watches you lift">
-  <meta property="og:description" content="Your camera counts the reps. You focus on the set.">
-  <meta property="og:image" content="https://thelogger-app.netlify.app/assets/icon.png">
+  <meta name="description" content="TheLogger — Log a set in 2 taps. Rest timer starts itself. PRs tracked automatically. No account, no subscription, free beta for iPhone.">
+  <meta property="og:title" content="TheLogger — The workout tracker that gets out of the way">
+  <meta property="og:description" content="Camera counts your reps. Weight pre-filled. Rest timer starts itself. PRs tracked automatically. Free for iPhone.">
+  <meta property="og:image" content="https://thelogger.app/assets/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/jpeg">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="TheLogger — The workout app that watches you lift">
-  <meta name="twitter:description" content="Your camera counts the reps. You focus on the set.">
-  <title>TheLogger — The workout app that watches you lift</title>
+  <meta name="twitter:title" content="TheLogger — The workout tracker that gets out of the way">
+  <meta name="twitter:description" content="Camera counts your reps. Weight pre-filled. Rest timer starts itself. PRs tracked automatically. Free for iPhone.">
+  <meta name="twitter:image" content="https://thelogger.app/assets/og-image.jpg">
+  <title>TheLogger — The workout tracker that gets out of the way</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -175,11 +179,11 @@
 
     /* ─── VIDEO ─── */
     .demo {
-      padding: 16px 24px 80px;
+      padding: 16px 0 80px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
     }
 
     .demo-caption {
@@ -188,27 +192,33 @@
       text-align: center;
       max-width: 420px;
       line-height: 1.5;
+      padding: 0 24px;
     }
 
     .video-wrap {
       width: 100%;
-      max-width: 680px;
+      max-width: 760px;
+      aspect-ratio: 3392 / 2160;
       border-radius: 14px;
       overflow: hidden;
       background: #0a0a14;
       border: 1px solid rgba(255,255,255,0.09);
       box-shadow: 0 24px 72px rgba(0,0,0,0.55);
+      position: relative;
     }
 
     .video-wrap video {
+      position: absolute;
+      inset: 0;
       width: 100%;
+      height: 100%;
       display: block;
-      aspect-ratio: 16 / 9;
       object-fit: cover;
     }
 
     .video-fallback {
-      aspect-ratio: 16 / 9;
+      position: absolute;
+      inset: 0;
       display: none;
       align-items: center;
       justify-content: center;
@@ -273,65 +283,143 @@
       line-height: 1.55;
     }
 
-    /* ─── FEATURES ─── */
+    /* ─── FEAT SECTIONS ─── */
     .features {
-      padding: 60px 24px 80px;
-      max-width: 760px;
+      padding: 0 0 0;
+    }
+
+    .feat-section {
+      display: flex;
+      align-items: center;
+      gap: 64px;
+      max-width: 900px;
       margin: 0 auto;
+      padding: 72px 24px;
     }
 
-    .features > h2 {
-      font-size: clamp(1.4rem, 3.2vw, 2rem);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
-      line-height: 1.2;
+    .feat-section--reverse { flex-direction: row-reverse; }
+
+    .feat-phone { flex-shrink: 0; }
+
+    /* ── iPhone frame ── */
+    .phone-frame {
+      width: 280px;
+      aspect-ratio: 9 / 19.5;
+      border-radius: 44px;
+      background: #000;
+      box-shadow:
+        0 0 0 1px #2a2a2a,
+        inset 0 0 0 1px rgba(255,255,255,0.04),
+        0 44px 88px rgba(0,0,0,0.65),
+        0 10px 24px rgba(255,90,107,0.06);
+      position: relative;
     }
 
-    .features > p {
-      font-size: 0.9rem;
-      color: var(--dim);
-      margin-bottom: 36px;
+    /* Volume buttons — left (mute + vol up + vol down) */
+    .phone-frame::before {
+      content: '';
+      position: absolute;
+      left: -3px;
+      top: 118px;
+      width: 3px;
+      height: 30px;
+      background: #111;
+      border-radius: 2px 0 0 2px;
+      /* box-shadow copies same 3×30px element at +48px and +96px */
+      box-shadow: 0 48px 0 0 #111, 0 96px 0 0 #111;
     }
 
-    .feature-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+    /* Power button — right */
+    .phone-frame::after {
+      content: '';
+      position: absolute;
+      right: -3px;
+      top: 152px;
+      width: 3px;
+      height: 80px;
+      background: #111;
+      border-radius: 0 2px 2px 0;
     }
 
-    .feature-card {
+    /* Inner screen — clips the screenshot to rounded rect */
+    .phone-screen {
+      position: absolute;
+      top: 10px; left: 10px; right: 10px; bottom: 10px;
+      border-radius: 34px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .phone-screen img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+
+    .phone-screen .ss-placeholder {
+      width: 100%; height: 100%;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px 20px;
-      transition: border-color 0.2s;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; color: var(--dim);
     }
 
-    .feature-card:hover { border-color: rgba(255,90,107,0.15); }
-
-    .feature-card.span-2 { grid-column: 1 / -1; }
-
-    .feature-icon {
-      font-size: 1.5rem;
-      display: block;
-      margin-bottom: 10px;
-      line-height: 1;
+    /* Dynamic Island pill */
+    .phone-island {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 88px;
+      height: 26px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 2;
+      pointer-events: none;
     }
 
-    .feature-title {
-      font-size: 0.92rem;
-      font-weight: 650;
-      color: var(--text);
-      margin-bottom: 5px;
-      letter-spacing: -0.01em;
+    .feat-copy { flex: 1; }
+
+    .feat-label {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); display: block; margin-bottom: 12px;
     }
 
-    .feature-desc {
-      font-size: 0.835rem;
-      color: var(--muted);
-      line-height: 1.6;
+    .feat-title {
+      font-size: clamp(1.3rem, 2.8vw, 1.75rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      line-height: 1.15; margin-bottom: 14px; color: #fff;
     }
+
+    .feat-desc {
+      font-size: 0.9rem; color: var(--muted); line-height: 1.7;
+    }
+
+    @media (max-width: 640px) {
+      .feat-section, .feat-section--reverse {
+        flex-direction: column; gap: 28px; padding: 48px 20px;
+      }
+      .phone-frame { width: 190px; }
+      .phone-frame::before, .phone-frame::after { display: none; }
+      .phone-island { width: 62px; height: 20px; top: 10px; }
+    }
+
+    /* Post-video CTA */
+    .video-cta {
+      font-size: 0.85rem;
+      color: var(--dim);
+      text-align: center;
+      padding: 0 24px;
+    }
+
+    .video-cta a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,90,107,0.3);
+      padding-bottom: 1px;
+    }
+
+    .video-cta a:hover { border-color: var(--accent); }
 
     /* ─── PRIVACY ─── */
     .privacy {
@@ -462,13 +550,13 @@
     @media (max-width: 560px) {
       nav { padding: 14px 20px; }
       .hero { padding: 120px 20px 60px; }
-      .how, .features { padding-left: 20px; padding-right: 20px; }
+      .how { padding-left: 20px; padding-right: 20px; }
       .waitlist { padding: 72px 20px; }
-      .feature-grid { grid-template-columns: 1fr; }
-      .feature-card.span-2 { grid-column: auto; }
       .waitlist-form { flex-direction: column; }
     }
   </style>
+  <!-- Cloudflare Web Analytics — replace TOKEN with your token from dash.cloudflare.com/web-analytics -->
+  <!-- <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "REPLACE_WITH_YOUR_TOKEN"}'></script> -->
 </head>
 <body>
 
@@ -488,10 +576,9 @@
 
   <!-- ── HERO ── -->
   <section class="hero">
-    <p class="hero-intro">"How many was that? 8? 9?"</p>
-    <h1>The workout app that<br><em>watches you lift.</em></h1>
-    <p class="tagline">Point your camera at yourself. TheLogger counts the reps — automatically, on-device, no wearable needed.</p>
-    <p class="tagline-extras">Rest timer starts the moment you log. PRs get tracked across every exercise. Sets take about 2 seconds to log.</p>
+    <p class="hero-intro">Finally, a workout tracker that gets out of the way.</p>
+    <h1>Your phone counts<br><em>your reps.</em></h1>
+    <p class="tagline">Prop your phone and lift — the camera counts every rep hands-free. Or log manually in 2 taps. Rest timer starts itself. PRs tracked automatically.</p>
     <a href="#waitlist" class="cta-primary">Get early access →</a>
     <p class="hero-footnote">iPhone only &nbsp;·&nbsp; free &nbsp;·&nbsp; no account needed</p>
   </section>
@@ -506,32 +593,33 @@
         <p>🎬 Demo video loading...</p>
       </div>
     </div>
-    <p class="demo-caption reveal">The rep counter running live. Pose detection happens entirely on your device — nothing leaves your phone.</p>
+    <p class="demo-caption reveal">Logging a set — weight pre-filled from your last session, reps adjusted in one tap, rest timer starts the moment you confirm.</p>
+    <p class="video-cta reveal">Looks good? <a href="#waitlist">Join the waitlist →</a></p>
   </section>
 
   <!-- ── HOW IT WORKS ── -->
   <section class="how">
-    <p class="how-heading reveal">How it works</p>
+    <p class="how-heading reveal">How a set works</p>
     <div class="steps">
       <div class="step reveal">
         <span class="step-num">01</span>
         <div>
-          <p class="step-title">Set up your exercise</p>
-          <p class="step-desc">Search for it or pick from your history. It remembers the weight you used last time.</p>
+          <p class="step-title">Pick your exercise</p>
+          <p class="step-desc">Search or scroll. TheLogger pre-fills the weight you used last time — no hunting through history, no re-entering the same number every Monday.</p>
         </div>
       </div>
       <div class="step reveal">
         <span class="step-num">02</span>
         <div>
-          <p class="step-title">Point your camera and lift</p>
-          <p class="step-desc">The rep counter ticks up as you move. You don't touch the phone mid-set. When you're done, the number's already there.</p>
+          <p class="step-title">Lift, then log in 2 taps</p>
+          <p class="step-desc">Reps and weight sit right on the row. Adjust if needed, confirm. Or prop your phone and let the camera count your reps — no tapping at all.</p>
         </div>
       </div>
       <div class="step reveal">
         <span class="step-num">03</span>
         <div>
-          <p class="step-title">Log the set, rest</p>
-          <p class="step-desc">Two taps to confirm weight and reps. The rest timer starts immediately and shows up on your Lock Screen. If you hit a PR, you'll know.</p>
+          <p class="step-title">Rest — the app handles the rest</p>
+          <p class="step-desc">Timer starts automatically. Lives on your Lock Screen so you're not unlocking to check. Hit a PR and confetti fires. Miss it and nothing happens — no guilt, just data.</p>
         </div>
       </div>
     </div>
@@ -539,46 +627,103 @@
 
   <!-- ── FEATURES ── -->
   <section class="features">
-    <h2 class="reveal">The parts that<br>actually matter.</h2>
-    <p class="reveal">No social feed. No AI workout plans. Just the tools to track a lift properly.</p>
-    <div class="feature-grid">
 
-      <div class="feature-card span-2 reveal">
-        <span class="feature-icon">📷</span>
-        <p class="feature-title">Camera rep counting</p>
-        <p class="feature-desc">Vision framework tracks your body position frame by frame and counts full reps automatically. Works for most barbell, dumbbell, and bodyweight movements. Entirely on-device — no cloud, no subscription, no privacy tradeoff.</p>
+    <!-- 1: Camera rep counting — photo left, text right -->
+    <div class="feat-section reveal">
+      <div class="feat-phone">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <img src="assets/screenshots/ss-camera.png" alt="Camera rep counting screen" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="ss-placeholder" style="display:none">📷</div>
+          </div>
+          <div class="phone-island"></div>
+        </div>
       </div>
-
-      <div class="feature-card reveal">
-        <span class="feature-icon">⚡</span>
-        <p class="feature-title">Log a set in 2 seconds</p>
-        <p class="feature-desc">Weight and reps sit on the row. Tap, adjust, done. Before you've sat back down.</p>
+      <div class="feat-copy">
+        <span class="feat-label">Camera rep counting</span>
+        <h3 class="feat-title">Your phone counts your reps.<br>No wearable. No tapping.</h3>
+        <p class="feat-desc">Prop your phone, start lifting. TheLogger uses on-device pose detection to track your body and count every rep — 20 exercises supported, from squats to curls. Nothing leaves your phone. No wearable, no clicker, nothing to start or stop.</p>
       </div>
-
-      <div class="feature-card reveal">
-        <span class="feature-icon">🏆</span>
-        <p class="feature-title">PRs tracked silently</p>
-        <p class="feature-desc">Every set gets compared against your history. Hit a record — confetti. Miss it — nothing. No noise.</p>
-      </div>
-
-      <div class="feature-card reveal">
-        <span class="feature-icon">⏱</span>
-        <p class="feature-title">Rest timer that just goes</p>
-        <p class="feature-desc">Starts automatically after each set. Lives on your Lock Screen. You stop forgetting to start it.</p>
-      </div>
-
-      <div class="feature-card reveal">
-        <span class="feature-icon">📋</span>
-        <p class="feature-title">Your program, saved</p>
-        <p class="feature-desc">Build it once as a template. Tap it on Monday. Every session pre-loaded exactly how you set it up.</p>
-      </div>
-
     </div>
+
+    <!-- 2: Fast logging — photo right, text left -->
+    <div class="feat-section feat-section--reverse reveal">
+      <div class="feat-phone">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <img src="assets/screenshots/ss-logging.png" alt="Fast logging screen" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="ss-placeholder" style="display:none">⚡</div>
+          </div>
+          <div class="phone-island"></div>
+        </div>
+      </div>
+      <div class="feat-copy">
+        <span class="feat-label">Fast logging</span>
+        <h3 class="feat-title">Weight pre-filled.<br>Done before you sit back down.</h3>
+        <p class="feat-desc">TheLogger remembers your last weight for every exercise. Reps sit right on the row — adjust if needed, confirm, done. The whole thing takes less time than walking back to the rack.</p>
+      </div>
+    </div>
+
+    <!-- 3: PR tracking — photo left, text right -->
+    <div class="feat-section reveal">
+      <div class="feat-phone">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <img src="assets/screenshots/ss-pr.png" alt="PR celebration screen" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="ss-placeholder" style="display:none">🏆</div>
+          </div>
+          <div class="phone-island"></div>
+        </div>
+      </div>
+      <div class="feat-copy">
+        <span class="feat-label">PR tracking</span>
+        <h3 class="feat-title">Hit a record.<br>Confetti fires. Miss it — nothing.</h3>
+        <p class="feat-desc">Every set is silently compared against your entire history. A new estimated 1RM? Confetti and a celebration. Didn't beat it? The app says nothing — no guilt, just accurate data for next time.</p>
+      </div>
+    </div>
+
+    <!-- 4: Rest timer — photo right, text left -->
+    <div class="feat-section feat-section--reverse reveal">
+      <div class="feat-phone">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <img src="assets/screenshots/ss-timer.png" alt="Rest timer on Lock Screen" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="ss-placeholder" style="display:none">⏱</div>
+          </div>
+          <div class="phone-island"></div>
+        </div>
+      </div>
+      <div class="feat-copy">
+        <span class="feat-label">Rest timer</span>
+        <h3 class="feat-title">Starts itself.<br>Lives on your Lock Screen.</h3>
+        <p class="feat-desc">The moment you log a set, the rest timer fires automatically. A Live Activity keeps the countdown visible without unlocking your phone. You stop thinking about rest time entirely.</p>
+      </div>
+    </div>
+
+    <!-- 5: Progress charts — photo left, text right -->
+    <div class="feat-section reveal">
+      <div class="feat-phone">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <img src="assets/screenshots/ss-charts.png" alt="Progress charts" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="ss-placeholder" style="display:none">📈</div>
+          </div>
+          <div class="phone-island"></div>
+        </div>
+      </div>
+      <div class="feat-copy">
+        <span class="feat-label">Progress charts</span>
+        <h3 class="feat-title">See what's moving.<br>See what's stalled. Free.</h3>
+        <p class="feat-desc">Volume and estimated 1RM charted per exercise over time. No paywall to access your own data — just a clean view of what's trending up and where you've plateaued.</p>
+      </div>
+    </div>
+
   </section>
 
   <!-- ── PRIVACY ── -->
   <div class="privacy">
     <span class="pill"><span class="pill-dot"></span> All data on your device</span>
+    <span class="pill"><span class="pill-dot"></span> Camera processed on-device</span>
     <span class="pill"><span class="pill-dot"></span> No account required</span>
     <span class="pill"><span class="pill-dot"></span> No ads</span>
     <span class="pill"><span class="pill-dot"></span> No subscription</span>
@@ -586,10 +731,10 @@
 
   <!-- ── WAITLIST ── -->
   <section class="waitlist" id="waitlist">
-    <h2 class="reveal">Want in early?</h2>
+    <h2 class="reveal">Get in while it's free.</h2>
     <p class="waitlist-sub reveal">
-      I'm building this solo. When the TestFlight beta opens up, I'll send one email — no newsletter, no updates, just access.<br><br>
-      Drop your email below.
+      The app is in beta now — camera rep counting included. Every feature, no paywall.<br><br>
+      I'm building this solo. One email when you're in. No newsletter.
     </p>
 
     <form
@@ -624,7 +769,7 @@
   <footer>
     <p>
       &copy; 2026 TheLogger &nbsp;·&nbsp;
-      <a href="https://thelogger-app.netlify.app/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+      <a href="https://thelogger.app/privacy" target="_blank" rel="noopener">Privacy Policy</a>
     </p>
   </footer>
 
