@@ -193,7 +193,7 @@ struct TemplateEditView: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error auto-saving template: \(error)")
+            debugLog("Error auto-saving template: \(error)")
         }
     }
 
@@ -214,7 +214,7 @@ struct TemplateEditView: View {
                 return
             }
         } catch {
-            print("Error checking for duplicate template name: \(error)")
+            debugLog("Error checking for duplicate template name: \(error)")
         }
         performSave()
     }
@@ -236,7 +236,7 @@ struct TemplateEditView: View {
             try modelContext.save()
             dismiss()
         } catch {
-            print("Error saving template: \(error)")
+            debugLog("Error saving template: \(error)")
             if isNewTemplate {
                 modelContext.delete(templateWorkout)
             }

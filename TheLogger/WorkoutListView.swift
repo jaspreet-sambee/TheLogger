@@ -37,6 +37,7 @@ struct WorkoutListView: View {
     @State private var showConfetti = false
     @State private var lastCelebratedStreak: Int = 0
     @AppStorage("weeklyWorkoutGoal") private var weeklyWorkoutGoal: Int = 4
+    @AppStorage("startWorkoutOnLaunch") private var startWorkoutOnLaunch = false
 
     // Get recent workouts for inline display (last 5)
     private var recentWorkouts: [Workout] {
@@ -474,6 +475,7 @@ struct WorkoutListView: View {
                     .foregroundStyle(.secondary)
                     .textCase(nil)
                 }
+                .listSectionSeparator(.hidden, edges: .bottom)
 
                 // PR Timeline Widget (only show if user has completed workouts)
                 if !workoutHistory.isEmpty {
@@ -484,6 +486,7 @@ struct WorkoutListView: View {
                     }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowSeparator(.hidden)
+                    .listSectionSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
 
@@ -682,9 +685,9 @@ struct WorkoutListView: View {
                         }
 
                         try modelContext.save()
-                        print("[TheLogger] UI Testing: Cleared all data for clean test state")
+                        debugLog("[TheLogger] UI Testing: Cleared all data for clean test state")
                     } catch {
-                        print("[TheLogger] UI Testing: Failed to clear data - \(error)")
+                        debugLog("[TheLogger] UI Testing: Failed to clear data - \(error)")
                     }
                 }
                 #endif
@@ -692,7 +695,12 @@ struct WorkoutListView: View {
                 // Auto-navigate to active workout on app launch (only once)
                 if !hasCheckedActiveWorkout {
                     hasCheckedActiveWorkout = true
-                    if let activeWorkout = activeWorkout {
+
+                    // Handle "Start First Workout" from onboarding
+                    if startWorkoutOnLaunch {
+                        startWorkoutOnLaunch = false
+                        startWorkoutFromTemplate(template: nil)
+                    } else if let activeWorkout = activeWorkout {
                         navigationPath.append(activeWorkout.id.uuidString)
                     }
                 }
@@ -735,13 +743,13 @@ struct WorkoutListView: View {
             .navigationDestination(for: String.self) { workoutId in
                 // Check both workouts and templates arrays
                 if let workout = workouts.first(where: { $0.id.uuidString == workoutId }) {
-                    let _ = print("✅ Found workout: \(workout.name)")
+                    let _ = debugLog("✅ Found workout: \(workout.name)")
                     WorkoutDetailView(workout: workout, onLogAgain: { logAgainFrom(workout: $0) })
                 } else if let template = templates.first(where: { $0.id.uuidString == workoutId }) {
-                    let _ = print("✅ Found template: \(template.name)")
+                    let _ = debugLog("✅ Found template: \(template.name)")
                     WorkoutDetailView(workout: template, onLogAgain: { logAgainFrom(workout: $0) })
                 } else {
-                    let _ = print("❌ No workout found for ID: \(workoutId)")
+                    let _ = debugLog("❌ No workout found for ID: \(workoutId)")
                     Text("Workout not found")
                 }
             }
@@ -771,7 +779,7 @@ struct WorkoutListView: View {
         // Double-check no active workout exists after save
         let stillActive = workouts.first { $0.isActive }
         if stillActive != nil {
-            print("Warning: Active workout still exists, aborting new workout creation")
+            debugLog("Warning: Active workout still exists, aborting new workout creation")
             return
         }
 
@@ -817,7 +825,7 @@ struct WorkoutListView: View {
             // Navigate to the workout detail view
             navigationPath.append(newWorkout.id.uuidString)
         } catch {
-            print("Error starting workout: \(error)")
+            debugLog("Error starting workout: \(error)")
         }
     }
 
@@ -924,7 +932,7 @@ struct WorkoutListView: View {
             }
             navigationPath.append(newWorkout.id.uuidString)
         } catch {
-            print("Error starting workout: \(error)")
+            debugLog("Error starting workout: \(error)")
         }
     }
 
@@ -939,7 +947,7 @@ struct WorkoutListView: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error deleting template: \(error)")
+            debugLog("Error deleting template: \(error)")
         }
     }
     
@@ -955,7 +963,7 @@ struct WorkoutListView: View {
             exportCSVURL = tempURL
             showingExportSheet = true
         } catch {
-            print("Error creating CSV file: \(error)")
+            debugLog("Error creating CSV file: \(error)")
         }
     }
 }
@@ -1580,7 +1588,7 @@ struct WorkoutHistoryView: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error deleting workout: \(error)")
+            debugLog("Error deleting workout: \(error)")
         }
     }
 }

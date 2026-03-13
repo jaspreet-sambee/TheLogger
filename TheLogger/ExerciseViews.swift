@@ -591,55 +591,57 @@ struct ExerciseEditView: View {
                     .listRowSeparator(.hidden)
                 } else {
                     let orderedSets = exercise.setsByOrder
-                    ForEach(Array(orderedSets.enumerated()), id: \.element.id) { index, set in
-                        InlineSetRowView(
-                            set: set,
-                            setNumber: index + 1,
-                            exerciseName: exercise.name,
-                            currentWorkout: workout,
-                            modelContext: modelContext,
-                            onUpdate: { newReps, newWeight in
-                                if !(ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false) {
-                                    set.reps = newReps
-                                    set.weight = newWeight
+                    let groups = computeSetGroups(orderedSets)
+
+                    ForEach(groups) { group in
+                        if group.isMultiSet {
+                            // Grouped card: working set + trailing drop sets in one List row
+                            VStack(spacing: 0) {
+                                ForEach(Array(group.indices.enumerated()), id: \.element) { pos, setIdx in
+                                    inlineGroupedSetRow(orderedSets[setIdx], index: setIdx, orderedSets: orderedSets)
+
+                                    // Divider between rows (not after last)
+                                    if pos < group.indices.count - 1 {
+                                        Rectangle()
+                                            .fill(SetType.dropSet.color.opacity(0.15))
+                                            .frame(height: 1)
+                                            .padding(.horizontal, 12)
+                                    }
                                 }
-                                saveChanges()
-                                loadPR()
-                            },
-                            onPRSet: {
-                                // Defer fetch to next run loop so context has processed save
-                                DispatchQueue.main.async {
-                                    loadPR()
-                                }
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                                    showingPRCelebration = true
-                                }
-                                let g = UINotificationFeedbackGenerator()
-                                g.notificationOccurred(.success)
                             }
-                        )
-                        .id(set.id)
-                        .transition(.asymmetric(
-                            insertion: .push(from: .bottom).combined(with: .opacity),
-                            removal: .opacity
-                        ))
-                        .staggeredAppear(index: index, maxStagger: 8)
-                        .listRowBackground(Color.white.opacity(0.06))
-                        .listRowSeparator(.hidden)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(SetType.dropSet.color.opacity(0.2), lineWidth: 1)
+                            )
+                            .overlay(alignment: .leading) {
+                                // Continuous accent bar
+                                Capsule()
+                                    .fill(SetType.dropSet.color.opacity(0.5))
+                                    .frame(width: 3)
+                                    .padding(.vertical, 4)
+                            }
+                            .listRowBackground(Color.white.opacity(0.06))
+                            .listRowSeparator(.hidden)
+                        } else {
+                            // Standalone set: single row, unchanged visual
+                            inlineSetRow(orderedSets[group.indices[0]], index: group.indices[0], orderedSets: orderedSets)
+                        }
                     }
                     .onDelete { indexSet in
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        let currentOrderedSets = exercise.setsByOrder
+                        let currentGroups = computeSetGroups(currentOrderedSets)
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            let ordered = exercise.setsByOrder
-                            for index in indexSet where index < ordered.count {
-                                exercise.removeSet(id: ordered[index].id)
+                            for groupIdx in indexSet.sorted(by: >) where groupIdx < currentGroups.count {
+                                for setIdx in currentGroups[groupIdx].indices.sorted(by: >) {
+                                    exercise.removeSet(id: currentOrderedSets[setIdx].id)
+                                }
                             }
                         }
                         saveChanges()
-                        // Recalculate PR in case the deleted set was the PR set
                         PersonalRecordManager.recalculatePR(exerciseName: exercise.name, modelContext: modelContext)
                         loadPR()
-                        // Sync widget + live activity after deletion
                         if workout.isActive {
                             workout.syncToWidget(currentExercise: exercise)
                             let lastSet = exercise.setsByOrder.last
@@ -1031,7 +1033,9 @@ struct ExerciseEditView: View {
                 Color.clear
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        debugLog("[ExName] overlay tap: calling resignFirstResponder, exerciseNameFocused=\(exerciseNameFocused), isEditingExerciseName=\(isEditingExerciseName)")
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        debugLog("[ExName] overlay tap: after resignFirstResponder, exerciseNameFocused=\(exerciseNameFocused)")
                     }
                     .allowsHitTesting(true)
                     .transition(.opacity)
@@ -1042,6 +1046,12 @@ struct ExerciseEditView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             withAnimation(.easeOut(duration: 0.28)) { keyboardVisible = false }
+            if isEditingExerciseName {
+                debugLog("[ExName] keyboardWillHide: saving and dismissing exercise name edit")
+                saveExerciseName()
+                isEditingExerciseName = false
+                exerciseNameFocused = false
+            }
         }
         .onAppear {
             exerciseNameText = exercise.name
@@ -1059,8 +1069,11 @@ struct ExerciseEditView: View {
             }
         }
         .onChange(of: exerciseNameFocused) { oldValue, newValue in
+            debugLog("[ExName] onChange(exerciseNameFocused): \(oldValue) → \(newValue), isEditingExerciseName=\(isEditingExerciseName)")
             if !newValue && isEditingExerciseName {
+                debugLog("[ExName] onChange: saving and setting isEditingExerciseName=false")
                 saveExerciseName()
+                isEditingExerciseName = false
             }
         }
         .onChange(of: isNoteExpanded) { _, expanded in
@@ -1078,7 +1091,7 @@ struct ExerciseEditView: View {
                     .foregroundStyle(.primary)
                     .focused($exerciseNameFocused)
                     .textFieldStyle(.plain)
-                    .onSubmit { saveExerciseName() }
+                    .onSubmit { submitExerciseName() }
             } else {
                 Text(exercise.name)
                     .font(.system(.title3, weight: .semibold))
@@ -1100,6 +1113,121 @@ struct ExerciseEditView: View {
         .padding(.vertical, 4)
     }
 
+    // MARK: - Set Grouping (working set + trailing drop sets = one List row)
+
+    private struct SetGroup: Identifiable {
+        let id: UUID           // first set's ID (stable across re-renders)
+        let indices: [Int]     // indices into orderedSets
+        var isMultiSet: Bool { indices.count > 1 }
+    }
+
+    private func computeSetGroups(_ orderedSets: [WorkoutSet]) -> [SetGroup] {
+        var groups: [SetGroup] = []
+        var current: [Int] = []
+        for (i, set) in orderedSets.enumerated() {
+            if set.type == .dropSet && !current.isEmpty {
+                current.append(i)
+            } else {
+                if !current.isEmpty {
+                    groups.append(SetGroup(id: orderedSets[current[0]].id, indices: current))
+                }
+                current = [i]
+            }
+        }
+        if !current.isEmpty {
+            groups.append(SetGroup(id: orderedSets[current[0]].id, indices: current))
+        }
+        return groups
+    }
+
+    @ViewBuilder
+    private func inlineSetRow(_ set: WorkoutSet, index: Int, orderedSets: [WorkoutSet]) -> some View {
+        InlineSetRowView(
+            set: set,
+            setNumber: index + 1,
+            exerciseName: exercise.name,
+            currentWorkout: workout,
+            modelContext: modelContext,
+            onUpdate: { newReps, newWeight in
+                if !(ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false) {
+                    set.reps = newReps
+                    set.weight = newWeight
+                }
+                saveChanges()
+                loadPR()
+            },
+            onPRSet: {
+                DispatchQueue.main.async { loadPR() }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    showingPRCelebration = true
+                }
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+        )
+        .id(set.id)
+        .transition(.asymmetric(
+            insertion: .push(from: .bottom).combined(with: .opacity),
+            removal: .opacity
+        ))
+        .staggeredAppear(index: index, maxStagger: 8)
+        .listRowBackground(Color.white.opacity(0.06))
+        .listRowSeparator(.hidden)
+    }
+
+    @ViewBuilder
+    private func inlineGroupedSetRow(_ set: WorkoutSet, index: Int, orderedSets: [WorkoutSet]) -> some View {
+        InlineSetRowView(
+            set: set,
+            setNumber: index + 1,
+            exerciseName: exercise.name,
+            currentWorkout: workout,
+            modelContext: modelContext,
+            onUpdate: { newReps, newWeight in
+                if !(ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false) {
+                    set.reps = newReps
+                    set.weight = newWeight
+                }
+                saveChanges()
+                loadPR()
+            },
+            onPRSet: {
+                DispatchQueue.main.async { loadPR() }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    showingPRCelebration = true
+                }
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            },
+            onDelete: {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    exercise.removeSet(id: set.id)
+                }
+                saveChanges()
+                PersonalRecordManager.recalculatePR(exerciseName: exercise.name, modelContext: modelContext)
+                loadPR()
+                if workout.isActive {
+                    workout.syncToWidget(currentExercise: exercise)
+                    let lastSet = exercise.setsByOrder.last
+                    let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+                    Task {
+                        await LiveActivityManager.shared.updateActivity(
+                            exerciseName: exercise.name,
+                            exerciseId: exercise.id,
+                            exerciseSets: (exercise.sets ?? []).count,
+                            lastReps: timeBased ? 0 : (lastSet?.reps ?? 0),
+                            lastWeight: timeBased ? 0 : (lastSet?.weight ?? 0)
+                        )
+                    }
+                }
+            },
+            isInsideGroup: true
+        )
+        .id(set.id)
+        .transition(.asymmetric(
+            insertion: .push(from: .bottom).combined(with: .opacity),
+            removal: .opacity
+        ))
+    }
+
     @ViewBuilder
     private func exerciseDetailMatchedHeader(namespace: Namespace.ID) -> some View {
         HStack(spacing: 12) {
@@ -1109,7 +1237,7 @@ struct ExerciseEditView: View {
                     .foregroundStyle(.primary)
                     .focused($exerciseNameFocused)
                     .textFieldStyle(.plain)
-                    .onSubmit { saveExerciseName() }
+                    .onSubmit { submitExerciseName() }
             } else {
                 Text(exercise.name)
                     .font(.system(.headline, weight: .semibold))
@@ -1145,17 +1273,14 @@ struct ExerciseEditView: View {
     }
 
     private func startEditingExerciseName() {
+        debugLog("[ExName] startEditingExerciseName")
         exerciseNameText = exercise.name
         isEditingExerciseName = true
         exerciseNameFocused = true
     }
 
     private func saveExerciseName() {
-        defer {
-            isEditingExerciseName = false
-            exerciseNameFocused = false
-        }
-
+        debugLog("[ExName] saveExerciseName called, isEditingExerciseName=\(isEditingExerciseName), exerciseNameFocused=\(exerciseNameFocused)")
         let trimmed = exerciseNameText.trimmingCharacters(in: .whitespaces)
         if !trimmed.isEmpty {
             exercise.name = trimmed
@@ -1166,11 +1291,26 @@ struct ExerciseEditView: View {
         }
     }
 
+    private func submitExerciseName() {
+        debugLog("[ExName] submitExerciseName called (from .onSubmit / Done button)")
+        saveExerciseName()
+        // Defer focus change to next run loop — setting @FocusState during
+        // .onSubmit gets batched with other state changes, so the keyboard
+        // never actually dismisses. The onChange(of: exerciseNameFocused)
+        // handler then removes the TextField after focus is confirmed lost.
+        debugLog("[ExName] scheduling Task to set exerciseNameFocused=false")
+        Task { @MainActor in
+            debugLog("[ExName] Task executing: setting exerciseNameFocused=false (currently \(exerciseNameFocused))")
+            exerciseNameFocused = false
+            debugLog("[ExName] Task done: exerciseNameFocused is now \(exerciseNameFocused)")
+        }
+    }
+
     private func saveChanges() {
         do {
             try modelContext.save()
         } catch {
-            print("Error saving exercise: \(error)")
+            debugLog("Error saving exercise: \(error)")
         }
     }
 
@@ -1275,7 +1415,7 @@ struct ExerciseEditView: View {
                 noteText = memory.note ?? ""
             }
         } catch {
-            print("Error loading note: \(error)")
+            debugLog("Error loading note: \(error)")
         }
     }
 
@@ -1295,7 +1435,7 @@ struct ExerciseEditView: View {
                 try modelContext.save()
             }
         } catch {
-            print("Error saving note: \(error)")
+            debugLog("Error saving note: \(error)")
         }
     }
 
@@ -1328,7 +1468,7 @@ struct ExerciseEditView: View {
                 restTimerEnabled = memory.restTimerEnabled
             }
         } catch {
-            print("Error loading rest timer preference: \(error)")
+            debugLog("Error loading rest timer preference: \(error)")
         }
     }
 
@@ -1354,7 +1494,7 @@ struct ExerciseEditView: View {
             // Provide haptic feedback
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         } catch {
-            print("Error saving rest timer preference: \(error)")
+            debugLog("Error saving rest timer preference: \(error)")
         }
     }
 
@@ -1369,7 +1509,7 @@ struct ExerciseEditView: View {
     }
 
     private func checkForPR(weight: Double, reps: Int) {
-        print("[PR] checkForPR called - exercise=\(exercise.name), weight=\(weight), reps=\(reps)")
+        debugLog("[PR] checkForPR called - exercise=\(exercise.name), weight=\(weight), reps=\(reps)")
         let isNewPR = PersonalRecordManager.checkAndSavePR(
             exerciseName: exercise.name,
             weight: weight,
@@ -1377,7 +1517,7 @@ struct ExerciseEditView: View {
             workoutId: workout.id,
             modelContext: modelContext
         )
-        print("[PR] checkAndSavePR returned isNewPR=\(isNewPR)")
+        debugLog("[PR] checkAndSavePR returned isNewPR=\(isNewPR)")
 
         if isNewPR {
             // Reload PR and show celebration
@@ -1539,6 +1679,8 @@ struct QuickLogStrip: View {
                     case nil:       break
                     }
                     focusedField = nil
+                    // Dismiss keyboard for any other focused field (e.g. exercise name)
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
                 .fontWeight(.semibold)
             }

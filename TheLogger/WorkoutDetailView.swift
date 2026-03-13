@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import StoreKit
 
 /// Data passed to the end-workout summary sheet (ensures PRs are captured before sheet opens)
 struct EndSummaryData: Identifiable {
@@ -716,7 +717,7 @@ struct WorkoutDetailView: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error saving workout: \(error)")
+            debugLog("Error saving workout: \(error)")
         }
     }
 
@@ -777,7 +778,7 @@ struct WorkoutDetailView: View {
                 try modelContext.save()
             }
         } catch {
-            print("Error with exercise memory: \(error)")
+            debugLog("Error with exercise memory: \(error)")
         }
 
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -839,6 +840,9 @@ struct WorkoutDetailView: View {
             Task {
                 await LiveActivityManager.shared.endActivity()
             }
+            // Request review at milestone workout counts
+            requestReviewIfEligible()
+
             // Show summary with captured PR data
             endSummaryData = EndSummaryData(
                 summary: workout.summary,
@@ -848,8 +852,18 @@ struct WorkoutDetailView: View {
                 prDetails: prDetails
             )
         } catch {
-            print("Error ending workout: \(error)")
+            debugLog("Error ending workout: \(error)")
         }
+    }
+
+    private func requestReviewIfEligible() {
+        let descriptor = FetchDescriptor<Workout>(
+            predicate: #Predicate { !$0.isTemplate && $0.endTime != nil }
+        )
+        guard let count = try? modelContext.fetchCount(descriptor) else { return }
+        guard [3, 10, 25].contains(count) else { return }
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+        SKStoreReviewController.requestReview(in: scene)
     }
 
     private func discardWorkout() {
@@ -881,7 +895,7 @@ struct WorkoutDetailView: View {
             }
             dismiss()
         } catch {
-            print("Error discarding workout: \(error)")
+            debugLog("Error discarding workout: \(error)")
         }
     }
 
@@ -923,7 +937,7 @@ struct WorkoutDetailView: View {
                     modelContext.insert(newMemory)
                 }
             } catch {
-                print("Error fetching exercise memory: \(error)")
+                debugLog("Error fetching exercise memory: \(error)")
             }
         }
     }
@@ -1141,7 +1155,7 @@ struct SupersetExerciseRow: View {
                 return
             }
         } catch {
-            print("Error checking for duplicate template: \(error)")
+            debugLog("Error checking for duplicate template: \(error)")
         }
         performSaveAsTemplate(thenEnd: thenEnd)
     }
@@ -1178,7 +1192,7 @@ struct SupersetExerciseRow: View {
             }
             try modelContext.save()
         } catch {
-            print("Error saving template: \(error)")
+            debugLog("Error saving template: \(error)")
         }
 
         showingSaveAsTemplate = true

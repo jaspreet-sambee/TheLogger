@@ -23,7 +23,10 @@ struct ExerciseDetailView: View {
 
     // Computed properties for stats
     private var currentPR: ChartDataPoint? {
-        chartData.max(by: { $0.prScore < $1.prScore })
+        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
+        return chartData
+            .filter { $0.date >= cutoff }
+            .max(by: { $0.prScore < $1.prScore })
     }
 
     private var allTimeBest: ChartDataPoint? {
@@ -37,10 +40,8 @@ struct ExerciseDetailView: View {
     private var averageGain: Double? {
         guard chartData.count >= 2 else { return nil }
         let sorted = chartData.sorted(by: { $0.date < $1.date })
-        let first = sorted.first!.prScore
-        let last = sorted.last!.prScore
-        guard first > 0 else { return nil }
-        return ((last - first) / first) * 100
+        guard let first = sorted.first, let last = sorted.last, first.prScore > 0 else { return nil }
+        return ((last.prScore - first.prScore) / first.prScore) * 100
     }
 
     private var filteredChartData: [ChartDataPoint] {
@@ -248,7 +249,7 @@ struct ExerciseDetailView: View {
                 StatCard(
                     icon: "medal.fill",
                     iconColor: .yellow,
-                    title: "Current PR",
+                    title: "Last 90 Days",
                     value: pr.displayString,
                     subtitle: pr.isBodyweight ? "Max reps" : "1RM: \(UnitFormatter.formatWeightCompact(pr.estimated1RM, showUnit: true))"
                 )

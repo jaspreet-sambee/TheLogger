@@ -19,7 +19,7 @@ struct PrivacyPolicyView: View {
                         .font(.system(.largeTitle, weight: .bold))
                         .foregroundStyle(.primary)
                     
-                    Text("Last updated: January 2026")
+                    Text("Last updated: March 2026")
                         .font(.system(.subheadline, weight: .regular))
                         .foregroundStyle(.secondary)
                 }
@@ -34,7 +34,7 @@ struct PrivacyPolicyView: View {
                             .font(.system(.headline, weight: .semibold))
                     }
                     
-                    Text("TheLogger is designed with your privacy as a priority. All your workout data stays on your device and is never sent to external servers.")
+                    Text("TheLogger is designed with your privacy as a priority. Your workout data is stored on your device and can be optionally backed up to your personal iCloud account — never to our servers.")
                         .font(.system(.subheadline, weight: .regular))
                         .foregroundStyle(.secondary)
                 }
@@ -58,7 +58,7 @@ struct PrivacyPolicyView: View {
                     • User preferences (name, units, settings)
                     • Exercise notes
                     
-                    This data is stored using Apple's SwiftData framework and never leaves your device unless you explicitly export it.
+                    This data is stored using Apple's SwiftData framework on your device. It may be backed up to your personal iCloud account if iCloud is enabled — it is never sent to our servers.
                     """
                 )
                 
@@ -66,13 +66,16 @@ struct PrivacyPolicyView: View {
                     title: "Data Storage",
                     icon: "iphone",
                     content: """
-                    All data is stored locally on your device using Apple's secure storage mechanisms. We do not use:
-                    
-                    • Cloud servers
+                    All data is stored locally on your device using Apple's secure storage. We do not operate any servers or collect your data.
+
+                    Optional iCloud Backup: If you have iCloud enabled on your device, your workout data may be automatically backed up via Apple's CloudKit service — this uses your personal Apple iCloud account, not our infrastructure. You can disable iCloud backup at any time in iOS Settings → [Your Name] → iCloud → TheLogger.
+
+                    We do not use:
+                    • Our own servers or databases
                     • Third-party analytics
                     • Advertising networks
-                    • User tracking
-                    
+                    • User tracking or profiling
+
                     Your data remains under your complete control at all times.
                     """
                 )
@@ -86,10 +89,18 @@ struct PrivacyPolicyView: View {
                 )
                 
                 policySection(
+                    title: "Camera",
+                    icon: "camera",
+                    content: """
+                    TheLogger uses your device's camera to count reps using on-device pose detection. Camera data is processed entirely on your device in real time — no video or images are stored, transmitted, or shared. The camera is only active when you explicitly start a camera rep counting session.
+                    """
+                )
+
+                policySection(
                     title: "Third-Party Services",
                     icon: "network",
                     content: """
-                    TheLogger does not integrate with any third-party services. The app functions entirely offline and does not require an internet connection.
+                    TheLogger does not integrate with any third-party analytics, advertising, or tracking services. The app's core functionality works entirely offline. An internet connection is only used when syncing with your personal iCloud account.
                     """
                 )
                 
@@ -98,11 +109,11 @@ struct PrivacyPolicyView: View {
                     icon: "trash",
                     content: """
                     You can delete your data at any time by:
-                    
+
                     • Deleting individual workouts within the app
-                    • Uninstalling the app (removes all app data)
-                    
-                    There is no cloud backup, so deletion is permanent.
+                    • Uninstalling the app (removes all local app data)
+
+                    If iCloud backup is enabled, you can also remove TheLogger's iCloud data via iOS Settings → [Your Name] → iCloud → Manage Account Storage → TheLogger.
                     """
                 )
                 
@@ -126,7 +137,7 @@ struct PrivacyPolicyView: View {
                     title: "Contact",
                     icon: "envelope",
                     content: """
-                    If you have questions about this privacy policy, please contact us through the App Store.
+                    If you have questions about this privacy policy, please visit thelogger.app or contact us through the App Store.
                     """
                 )
                 

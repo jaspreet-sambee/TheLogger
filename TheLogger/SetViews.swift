@@ -236,6 +236,8 @@ struct InlineSetRowView: View {
     let modelContext: ModelContext
     let onUpdate: (Int, Double) -> Void
     var onPRSet: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
+    var isInsideGroup: Bool = false
 
     // Observe unit system changes to trigger view refresh
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
@@ -247,16 +249,12 @@ struct InlineSetRowView: View {
     @State private var weightText = ""
     @State private var originalReps: Int = 0
     @State private var originalWeight: Double = 0.0
-    @State private var showFeedback = false
-    @State private var feedbackMessage = "Set logged"
     @State private var focusRepsWhenAppear = false
     @State private var focusWeightWhenAppear = false
     @State private var didAdjustViaButton = false
     @State private var didAdjustRepsViaButton = false
     @State private var isEditingDuration = false
     @State private var durationText = ""
-
-    private let feedbackMessages = ["Set logged", "Saved", "Got it", "That counts", "Nice"]
 
     private var isTimeBased: Bool {
         ExerciseLibrary.shared.find(name: exerciseName)?.isTimeBased ?? false
@@ -343,24 +341,35 @@ struct InlineSetRowView: View {
                         Label(type.rawValue, systemImage: type.icon)
                     }
                 }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(set.type.color.opacity(0.15))
-                        .frame(width: 32, height: 32)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.type)
-
-                    if set.type == .working {
-                        Text("\(setNumber)")
-                            .font(.system(.caption, weight: .semibold))
-                            .foregroundStyle(isLogged ? AppColors.accentGold : .secondary)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isLogged)
-                    } else {
-                        Image(systemName: set.type.icon)
-                            .font(.system(.caption2, weight: .semibold))
-                            .foregroundStyle(set.type.color)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.type)
+                if let onDelete {
+                    Divider()
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete Set", systemImage: "trash")
                     }
+                }
+            } label: {
+                VStack(spacing: 1) {
+                    ZStack {
+                        Circle()
+                            .fill(set.type.color.opacity(0.15))
+                            .frame(width: 32, height: 32)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.type)
+
+                        if set.type == .working {
+                            Text("\(setNumber)")
+                                .font(.system(.caption, weight: .semibold))
+                                .foregroundStyle(isLogged ? AppColors.accentGold : .secondary)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isLogged)
+                        } else {
+                            Image(systemName: set.type.icon)
+                                .font(.system(.caption2, weight: .semibold))
+                                .foregroundStyle(set.type.color)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.type)
+                        }
+                    }
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 7, weight: .medium))
+                        .foregroundStyle(.tertiary)
                 }
             }
             .buttonStyle(.plain)
@@ -576,23 +585,26 @@ struct InlineSetRowView: View {
             }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.top, isInsideGroup ? 6 : 8)
+        .padding(.bottom, isInsideGroup ? 6 : 16)
         .padding(.horizontal, 12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: isInsideGroup ? 0 : 12)
                 .fill(rowBackgroundFill)
                 .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isEditing)
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isLogged)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    set.type == .working
-                        ? (isLogged ? AppColors.accentGold.opacity(0.25) : AppColors.accent.opacity(0.2))
-                        : set.type.color.opacity(0.15),
-                    lineWidth: 1
-                )
-        )
+        .overlay {
+            if !isInsideGroup {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        set.type == .working
+                            ? (isLogged ? AppColors.accentGold.opacity(0.25) : AppColors.accent.opacity(0.2))
+                            : set.type.color.opacity(0.15),
+                        lineWidth: 1
+                    )
+            }
+        }
         .overlay(alignment: .bottomLeading) {
             // Previous set indicator
             if isTimeBased, let prev = previousDuration, !isEditingDuration {
@@ -604,7 +616,7 @@ struct InlineSetRowView: View {
                 }
                 .foregroundStyle(.tertiary)
                 .padding(.leading, 48)
-                .padding(.bottom, 2)
+                .padding(.bottom, 4)
                 .transition(.opacity.combined(with: .offset(y: 2)))
             } else if let previous = previousSet, !isEditingReps && !isEditingWeight {
                 HStack(spacing: 4) {
@@ -615,32 +627,8 @@ struct InlineSetRowView: View {
                 }
                 .foregroundStyle(.tertiary)
                 .padding(.leading, 48)
-                .padding(.bottom, 2)
+                .padding(.bottom, 4)
                 .transition(.opacity.combined(with: .offset(y: 2)))
-            }
-        }
-        .overlay(alignment: .trailing) {
-            if showFeedback {
-                HStack(spacing: 3) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(AppColors.accentGold)
-                        .symbolEffect(.bounce, value: showFeedback)
-                    Text(feedbackMessage)
-                        .font(.system(.caption2, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(
-                    Capsule()
-                        .fill(Color.white.opacity(0.18))
-                        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
-                )
-                .padding(.trailing, 4)
-                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                .animation(.easeOut(duration: 0.28), value: showFeedback)
-                .opacity(showFeedback ? 1 : 0)
             }
         }
         .onChange(of: set.reps) { oldValue, newValue in
@@ -753,7 +741,7 @@ struct InlineSetRowView: View {
     private func runPRCheckAndNotify(weight: Double, reps: Int, setType: SetType) {
         let changed = PersonalRecordManager.recalculatePR(exerciseName: exerciseName, modelContext: modelContext)
         #if DEBUG
-        print("[PR] recalculatePR exercise=\(exerciseName) changed=\(changed) hasCallback=\(onPRSet != nil)")
+        debugLog("[PR] recalculatePR exercise=\(exerciseName) changed=\(changed) hasCallback=\(onPRSet != nil)")
         #endif
         if changed { onPRSet?() }
     }
@@ -822,7 +810,7 @@ struct InlineSetRowView: View {
         let trimmed = weightText.trimmingCharacters(in: .whitespaces)
         guard let displayValue = parseWeight(trimmed), displayValue >= 0 && displayValue <= 10000 else {
             #if DEBUG
-            print("[PR] saveWeight REJECTED trimmed=\"\(trimmed)\"")
+            debugLog("[PR] saveWeight REJECTED trimmed=\"\(trimmed)\"")
             #endif
             set.weight = originalWeight
             weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(originalWeight))
@@ -835,7 +823,7 @@ struct InlineSetRowView: View {
         set.weight = storageValue
         onUpdate(set.reps, set.weight)
         #if DEBUG
-        print("[PR] saveWeight OK display=\(displayValue) storage=\(storageValue) reps=\(set.reps)")
+        debugLog("[PR] saveWeight OK display=\(displayValue) storage=\(storageValue) reps=\(set.reps)")
         #endif
         runPRCheckAndNotify(weight: storageValue, reps: set.reps, setType: set.type)
         showMicroFeedback()
@@ -855,17 +843,6 @@ struct InlineSetRowView: View {
     private func showMicroFeedback() {
         let impact = UIImpactFeedbackGenerator(style: .soft)
         impact.impactOccurred()
-
-        feedbackMessage = feedbackMessages.randomElement() ?? "Set logged"
-        withAnimation(.easeOut(duration: 0.28)) {
-            showFeedback = true
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            withAnimation(.easeOut(duration: 0.28)) {
-                showFeedback = false
-            }
-        }
     }
 }
 
@@ -928,11 +905,6 @@ struct InlineAddSetView: View {
     @State private var repsText: String = ""
     @State private var weightText: String = ""
     @State private var durationText: String = ""
-    @State private var showFeedback = false
-    @State private var feedbackMessage = "Set logged"
-
-    private let feedbackMessages = ["Set logged", "Added", "Saved", "Got it", "That counts", "Nice"]
-
     private var isTimeBased: Bool {
         !exerciseName.isEmpty && (ExerciseLibrary.shared.find(name: exerciseName)?.isTimeBased ?? false)
     }
@@ -1063,30 +1035,6 @@ struct InlineAddSetView: View {
                         .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
                 )
         )
-        .overlay(alignment: .trailing) {
-            if showFeedback {
-                HStack(spacing: 3) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(AppColors.accentGold)
-                        .symbolEffect(.bounce, value: showFeedback)
-                    Text(feedbackMessage)
-                        .font(.system(.caption2, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(
-                    Capsule()
-                        .fill(Color.white.opacity(0.18))
-                        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
-                )
-                .padding(.trailing, 4)
-                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                .animation(.easeOut(duration: 0.28), value: showFeedback)
-                .opacity(showFeedback ? 1 : 0)
-            }
-        }
         .onChange(of: focusedField) { oldValue, newValue in
             if newValue == nil && oldValue != nil {
                 repsText = "\(reps)"
@@ -1149,16 +1097,8 @@ struct InlineAddSetView: View {
     }
 
     private func showMicroFeedback() {
-        feedbackMessage = feedbackMessages.randomElement() ?? "Set logged"
-        withAnimation(.easeOut(duration: 0.28)) {
-            showFeedback = true
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            withAnimation(.easeOut(duration: 0.28)) {
-                showFeedback = false
-            }
-        }
+        let impact = UIImpactFeedbackGenerator(style: .soft)
+        impact.impactOccurred()
     }
 }
 
