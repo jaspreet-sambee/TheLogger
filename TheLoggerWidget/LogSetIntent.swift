@@ -72,7 +72,7 @@ struct LogSetIntent: LiveActivityIntent {
         PendingSetManager.addPendingSet(pendingSet)
 
         // STEP 2: Update metadata (including weight/reps for main app to read)
-        if let defaults = UserDefaults(suiteName: "group.SDL-Tutorial.TheLogger") {
+        if let defaults = UserDefaults(suiteName: "group.com.thelogger.app") {
             defaults.set(newSetCount, forKey: "liveActivitySetCount")
             defaults.set(exerciseId, forKey: "liveActivityExerciseId")
             defaults.set(weight, forKey: "liveActivityLastWeight")
@@ -116,7 +116,7 @@ struct LogSetIntent: LiveActivityIntent {
     }
 
     private static func signalMainApp(setCount: Int, timestamp: TimeInterval) {
-        let appGroupId = "group.SDL-Tutorial.TheLogger"
+        let appGroupId = "group.com.thelogger.app"
 
         // Write signal file
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) {
@@ -196,7 +196,7 @@ struct AdjustWeightIntent: LiveActivityIntent {
         logger.info("⚡ AdjustWeight START: weightChange=\(weightChange)")
 
         // Read CURRENT values from metadata (not from stale Live Activity state)
-        guard let defaults = UserDefaults(suiteName: "group.SDL-Tutorial.TheLogger") else {
+        guard let defaults = UserDefaults(suiteName: "group.com.thelogger.app") else {
             logger.error("❌ No App Group access")
             return .result()
         }
@@ -242,7 +242,7 @@ struct AdjustWeightIntent: LiveActivityIntent {
 
         // Also signal main app as backup (for database sync)
         defaults.set(timestamp, forKey: "liveActivityLastUpdate")
-        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.SDL-Tutorial.TheLogger") {
+        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.thelogger.app") {
             let signalFile = containerURL.appendingPathComponent("update_signal.txt")
             let data = "\(actualSetCount):\(timestamp)".data(using: .utf8)
             try? data?.write(to: signalFile, options: .atomic)
@@ -304,7 +304,7 @@ struct AdjustRepsIntent: LiveActivityIntent {
         logger.info("⚡ AdjustReps START: repsChange=\(repsChange)")
 
         // Read CURRENT values from metadata (not from stale Live Activity state)
-        guard let defaults = UserDefaults(suiteName: "group.SDL-Tutorial.TheLogger") else {
+        guard let defaults = UserDefaults(suiteName: "group.com.thelogger.app") else {
             logger.error("❌ No App Group access")
             return .result()
         }
@@ -350,7 +350,7 @@ struct AdjustRepsIntent: LiveActivityIntent {
 
         // Also signal main app as backup (for database sync)
         defaults.set(timestamp, forKey: "liveActivityLastUpdate")
-        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.SDL-Tutorial.TheLogger") {
+        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.thelogger.app") {
             let signalFile = containerURL.appendingPathComponent("update_signal.txt")
             let data = "\(actualSetCount):\(timestamp)".data(using: .utf8)
             try? data?.write(to: signalFile, options: .atomic)
@@ -368,7 +368,7 @@ struct AdjustRepsIntent: LiveActivityIntent {
 
 struct PendingSetManager {
     private static let key = "pendingSets"
-    private static let appGroupId = "group.SDL-Tutorial.TheLogger"
+    private static let appGroupId = "group.com.thelogger.app"
 
     static var userDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupId)

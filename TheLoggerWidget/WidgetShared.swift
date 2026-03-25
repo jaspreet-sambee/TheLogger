@@ -10,7 +10,7 @@ import Foundation
 // MARK: - App Group Configuration
 
 enum AppGroup {
-    static let identifier = "group.SDL-Tutorial.TheLogger"
+    static let identifier = "group.com.thelogger.app"
 
     static var userDefaults: UserDefaults? {
         UserDefaults(suiteName: identifier)
@@ -71,7 +71,9 @@ struct WidgetDataManager {
         do {
             return try JSONDecoder().decode(WidgetWorkoutData.self, from: data)
         } catch {
+            #if DEBUG
             print("[Widget] Failed to decode workout data: \(error)")
+            #endif
             return nil
         }
     }

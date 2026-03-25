@@ -388,6 +388,72 @@ final class UtilityTests: XCTestCase {
         XCTAssertEqual(recommendedUnitSystem(for: jpLocale), "Metric")
     }
 
+    // MARK: - UnitFormatter: Edge Cases
+
+    func testFormatWeight_zeroWeight_doesNotCrash() {
+        let formatted = UnitFormatter.formatWeight(0, showUnit: false)
+        XCTAssertFalse(formatted.isEmpty)
+    }
+
+    func testFormatWeightCompact_zeroWeight_doesNotCrash() {
+        let formatted = UnitFormatter.formatWeightCompact(0, showUnit: true)
+        XCTAssertFalse(formatted.isEmpty)
+    }
+
+    func testFormatWeight_veryLargeWeight_doesNotCrash() {
+        UserDefaults.standard.set("Imperial", forKey: "unitSystem")
+        let formatted = UnitFormatter.formatWeight(10_000, showUnit: true)
+        XCTAssertTrue(formatted.contains("10000") || formatted.contains("10,000"))
+    }
+
+    func testFormatWeight_nearZeroWeight_doesNotCrash() {
+        UserDefaults.standard.set("Imperial", forKey: "unitSystem")
+        let formatted = UnitFormatter.formatWeight(0.01, showUnit: false)
+        XCTAssertFalse(formatted.isEmpty)
+    }
+
+    func testFormatWeight_veryLargeMetricWeight_doesNotCrash() {
+        UserDefaults.standard.set("Metric", forKey: "unitSystem")
+        let formatted = UnitFormatter.formatWeight(10_000, showUnit: true)
+        XCTAssertTrue(formatted.contains("kg"))
+    }
+
+    // MARK: - UnitFormatter: Duration Edge Cases
+
+    func testFormatDuration_exactlyOneHour() {
+        // formatDuration returns "MM:SS" format — 3600s = 60 minutes = "60:00"
+        let formatted = UnitFormatter.formatDuration(3600)
+        XCTAssertEqual(formatted, "60:00")
+    }
+
+    func testFormatDuration_exactlyOneMinute() {
+        // 60s = "1:00"
+        let formatted = UnitFormatter.formatDuration(60)
+        XCTAssertEqual(formatted, "1:00")
+    }
+
+    func testFormatDuration_zeroSeconds_doesNotCrash() {
+        let formatted = UnitFormatter.formatDuration(0)
+        XCTAssertFalse(formatted.isEmpty)
+    }
+
+    func testFormatDuration_oneSecond_doesNotCrash() {
+        let formatted = UnitFormatter.formatDuration(1)
+        XCTAssertFalse(formatted.isEmpty)
+    }
+
+    func testFormatDuration_negativeSeconds_doesNotCrash() {
+        // Negative durations shouldn't happen but should not crash
+        let formatted = UnitFormatter.formatDuration(-60)
+        XCTAssertFalse(formatted.isEmpty)
+    }
+
+    func testFormatDuration_largeDuration_doesNotCrash() {
+        // 25 hours
+        let formatted = UnitFormatter.formatDuration(25 * 3600)
+        XCTAssertFalse(formatted.isEmpty)
+    }
+
     // MARK: - Onboarding: startWorkoutOnLaunch Flag
 
     func testStartWorkoutOnLaunch_defaultsToFalse() {

@@ -6,7 +6,7 @@
 	<string>development</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.SDL-Tutorial.TheLogger</string>
+		<string>iCloud.com.thelogger.app</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
 	<array>
@@ -14,7 +14,7 @@
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.SDL-Tutorial.TheLogger</string>
+		<string>group.com.thelogger.app</string>
 	</array>
 </dict>
 </plist>

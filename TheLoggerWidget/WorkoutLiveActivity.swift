@@ -170,7 +170,7 @@ struct LockScreenView: View {
 
 extension WorkoutActivityAttributes.ContentState {
     var formattedWeight: String {
-        let defaults = UserDefaults(suiteName: "group.SDL-Tutorial.TheLogger")
+        let defaults = UserDefaults(suiteName: "group.com.thelogger.app")
         let useMetric = defaults?.string(forKey: "unitSystem") == "Metric"
         let weight = useMetric ? lastWeight * 0.453592 : lastWeight
         let unit = useMetric ? "kg" : "lbs"

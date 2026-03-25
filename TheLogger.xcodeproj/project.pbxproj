@@ -7,9 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		460AD9812F6F12FF00522761 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 460AD9802F6F12FF00522761 /* RevenueCat */; };
+		460AD9832F6F35A400522761 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 460AD9822F6F35A400522761 /* Products.storekit */; };
 		46B5F1F42F2ECAA3005CFC92 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46B5F1F32F2ECAA3005CFC92 /* WidgetKit.framework */; };
 		46B5F1F62F2ECAA3005CFC92 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46B5F1F52F2ECAA3005CFC92 /* SwiftUI.framework */; };
 		46B5F2032F2ECAA4005CFC92 /* TheLoggerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		46TD00032F3D0A00005CFC92 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 46TD00022F3D0A00005CFC92 /* TelemetryDeck */; };
 		46UITEST0012F300000000001 /* DemoScenarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46UITEST0012F300000000002 /* DemoScenarios.swift */; };
 /* End PBXBuildFile section */
 
@@ -52,6 +55,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		460AD9822F6F35A400522761 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		4678C6582F07164200E5B779 /* TheLogger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheLogger.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		468E90542F382103001E0A97 /* TheLoggerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheLoggerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TheLoggerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -107,6 +111,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				460AD9812F6F12FF00522761 /* RevenueCat in Frameworks */,
+				46TD00032F3D0A00005CFC92 /* TelemetryDeck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +145,7 @@
 		4678C64F2F07164200E5B779 = {
 			isa = PBXGroup;
 			children = (
+				460AD9822F6F35A400522761 /* Products.storekit */,
 				4678C65A2F07164200E5B779 /* TheLogger */,
 				46B5F1F72F2ECAA3005CFC92 /* TheLoggerWidget */,
 				46UITEST0012F300000000006 /* TheLoggerUITests */,
@@ -198,6 +205,8 @@
 			);
 			name = TheLogger;
 			packageProductDependencies = (
+				46TD00022F3D0A00005CFC92 /* TelemetryDeck */,
+				460AD9802F6F12FF00522761 /* RevenueCat */,
 			);
 			productName = TheLogger;
 			productReference = 4678C6582F07164200E5B779 /* TheLogger.app */;
@@ -303,6 +312,10 @@
 			);
 			mainGroup = 4678C64F2F07164200E5B779;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				46TD00012F3D0A00005CFC92 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
+				460AD97F2F6F12FF00522761 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4678C6592F07164200E5B779 /* Products */;
 			projectDirPath = "";
@@ -321,6 +334,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				460AD9832F6F35A400522761 /* Products.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -527,7 +541,7 @@
 				CODE_SIGN_ENTITLEMENTS = TheLogger/TheLogger.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 77BC8S8T5X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -543,16 +557,20 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLogger";
+				PRODUCT_BUNDLE_IDENTIFIER = com.thelogger.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -564,7 +582,7 @@
 				CODE_SIGN_ENTITLEMENTS = TheLogger/TheLogger.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 77BC8S8T5X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -580,16 +598,20 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLogger";
+				PRODUCT_BUNDLE_IDENTIFIER = com.thelogger.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -603,7 +625,7 @@
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLoggerTests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.thelogger.app.Tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -625,7 +647,7 @@
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLoggerTests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.thelogger.app.Tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -645,7 +667,7 @@
 				CODE_SIGN_ENTITLEMENTS = TheLoggerWidget/TheLoggerWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 77BC8S8T5X;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TheLoggerWidget/Info.plist;
@@ -658,7 +680,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLogger.TheLoggerWidget";
+				PRODUCT_BUNDLE_IDENTIFIER = com.thelogger.app.TheLoggerWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -678,7 +700,7 @@
 				CODE_SIGN_ENTITLEMENTS = TheLoggerWidget/TheLoggerWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 77BC8S8T5X;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TheLoggerWidget/Info.plist;
@@ -691,7 +713,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLogger.TheLoggerWidget";
+				PRODUCT_BUNDLE_IDENTIFIER = com.thelogger.app.TheLoggerWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -717,7 +739,7 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLoggerUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.thelogger.app.UITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -740,7 +762,7 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "SDL-Tutorial.TheLoggerUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.thelogger.app.UITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -798,6 +820,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		460AD97F2F6F12FF00522761 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.66.0;
+			};
+		};
+		46TD00012F3D0A00005CFC92 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		460AD9802F6F12FF00522761 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 460AD97F2F6F12FF00522761 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+		46TD00022F3D0A00005CFC92 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 46TD00012F3D0A00005CFC92 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4678C6502F07164200E5B779 /* Project object */;
 }

@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TheLogger — Log a set in 2 taps. Rest timer starts itself. PRs tracked automatically. No account, no subscription, free beta for iPhone.">
+  <meta name="description" content="TheLogger — Camera counts your reps. Log a set in 2 taps. Rest timer starts itself. PRs and streaks tracked automatically. Free to download for iPhone.">
   <meta property="og:title" content="TheLogger — The workout tracker that gets out of the way">
-  <meta property="og:description" content="Camera counts your reps. Weight pre-filled. Rest timer starts itself. PRs tracked automatically. Free for iPhone.">
+  <meta property="og:description" content="Camera counts your reps. Weight pre-filled. Rest timer starts itself. PRs and streaks tracked automatically. Free to download for iPhone.">
   <meta property="og:image" content="https://thelogger.app/assets/og-image.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:type" content="image/jpeg">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="TheLogger — The workout tracker that gets out of the way">
-  <meta name="twitter:description" content="Camera counts your reps. Weight pre-filled. Rest timer starts itself. PRs tracked automatically. Free for iPhone.">
+  <meta name="twitter:description" content="Camera counts your reps. Weight pre-filled. Rest timer starts itself. PRs and streaks tracked automatically. Free to download for iPhone.">
   <meta name="twitter:image" content="https://thelogger.app/assets/og-image.jpg">
   <title>TheLogger — The workout tracker that gets out of the way</title>
   <style>
@@ -546,6 +546,116 @@
 
     .reveal.visible { opacity: 1; transform: translateY(0); }
 
+    /* ─── PRICING ─── */
+    .pricing {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 80px 24px 72px;
+      text-align: center;
+    }
+
+    .pricing-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 32px;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      text-align: left;
+    }
+
+    .pricing-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px;
+    }
+
+    .pricing-col--pro {
+      border-color: rgba(255, 90, 107, 0.35);
+      background: rgba(255, 90, 107, 0.04);
+    }
+
+    .pricing-tier {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .pricing-col--pro .pricing-tier { color: var(--accent); }
+
+    .pricing-price {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: #fff;
+      margin-bottom: 20px;
+      line-height: 1;
+    }
+
+    .pricing-per {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .pricing-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .pricing-list li {
+      font-size: 0.84rem;
+      color: var(--muted);
+      padding-left: 18px;
+      position: relative;
+      line-height: 1.4;
+    }
+
+    .pricing-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-size: 0.75rem;
+      font-weight: 700;
+      top: 1px;
+    }
+
+    .pricing-limited {
+      color: var(--dim) !important;
+    }
+
+    .pricing-limited::before {
+      content: "–" !important;
+      color: var(--dim) !important;
+    }
+
+    .pricing-note {
+      color: var(--dim) !important;
+      font-style: italic;
+    }
+
+    .pricing-note::before {
+      content: "" !important;
+      display: none;
+    }
+
+    @media (max-width: 560px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+
     /* ─── RESPONSIVE ─── */
     @media (max-width: 560px) {
       nav { padding: 14px 20px; }
@@ -578,9 +688,9 @@
   <section class="hero">
     <p class="hero-intro">Finally, a workout tracker that gets out of the way.</p>
     <h1>Your phone counts<br><em>your reps.</em></h1>
-    <p class="tagline">Prop your phone and lift — the camera counts every rep hands-free. Or log manually in 2 taps. Rest timer starts itself. PRs tracked automatically.</p>
+    <p class="tagline">Prop your phone and lift — the camera counts every rep hands-free. Or log manually in 2 taps. Rest timer starts itself. PRs and streaks tracked automatically.</p>
     <a href="#waitlist" class="cta-primary">Get early access →</a>
-    <p class="hero-footnote">iPhone only &nbsp;·&nbsp; free &nbsp;·&nbsp; no account needed</p>
+    <p class="hero-footnote">iPhone only &nbsp;·&nbsp; free in beta &nbsp;·&nbsp; no account needed</p>
   </section>
 
   <!-- ── VIDEO ── -->
@@ -642,7 +752,7 @@
       <div class="feat-copy">
         <span class="feat-label">Camera rep counting</span>
         <h3 class="feat-title">Your phone counts your reps.<br>No wearable. No tapping.</h3>
-        <p class="feat-desc">Prop your phone, start lifting. TheLogger uses on-device pose detection to track your body and count every rep — 20 exercises supported, from squats to curls. Nothing leaves your phone. No wearable, no clicker, nothing to start or stop.</p>
+        <p class="feat-desc">Prop your phone, start lifting. TheLogger uses on-device pose detection to track your body and count every rep — Squats, Bicep Curls, Shoulder Press, Lateral Raises, and Front Raises supported, with more exercises coming soon. Nothing leaves your phone. No wearable, no clicker, nothing to start or stop.<br><br>Free users get 5 sessions per month. Unlimited with Pro.</p>
       </div>
     </div>
 
@@ -713,11 +823,82 @@
       </div>
       <div class="feat-copy">
         <span class="feat-label">Progress charts</span>
-        <h3 class="feat-title">See what's moving.<br>See what's stalled. Free.</h3>
-        <p class="feat-desc">Volume and estimated 1RM charted per exercise over time. No paywall to access your own data — just a clean view of what's trending up and where you've plateaued.</p>
+        <h3 class="feat-title">See what's moving.<br>See what's stalled.</h3>
+        <p class="feat-desc">Volume and estimated 1RM charted per exercise over time. A clean view of what's trending up, what's plateaued, and which muscle groups you've actually been hitting this week.</p>
       </div>
     </div>
 
+    <!-- 6: Shareable workout cards — photo right, text left -->
+    <div class="feat-section feat-section--reverse reveal">
+      <div class="feat-phone">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <img src="assets/screenshots/ss-share.png" alt="Shareable workout card" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="ss-placeholder" style="display:none">🖼</div>
+          </div>
+          <div class="phone-island"></div>
+        </div>
+      </div>
+      <div class="feat-copy">
+        <span class="feat-label">Shareable cards</span>
+        <h3 class="feat-title">Share your best lift.<br>One tap.</h3>
+        <p class="feat-desc">Hit a PR? The camera captures the moment — a duotone workout card with your lift, estimated 1RM, and a skeleton overlay of your form. Ready to share in one tap. No third-party app, no watermarks, nothing uploaded anywhere.<br><br>Free users get 3 cards per month. Unlimited with Pro.</p>
+      </div>
+    </div>
+
+    <!-- 7: Achievements & Streaks — photo left, text right -->
+    <div class="feat-section reveal">
+      <div class="feat-phone">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <img src="assets/screenshots/ss-achievements.png" alt="Achievements and streaks" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="ss-placeholder" style="display:none">🏅</div>
+          </div>
+          <div class="phone-island"></div>
+        </div>
+      </div>
+      <div class="feat-copy">
+        <span class="feat-label">Achievements &amp; streaks</span>
+        <h3 class="feat-title">Train consistently.<br>The app notices.</h3>
+        <p class="feat-desc">33 achievements across five categories — consistency, strength, volume, variety, and dedication. Hit a 7-day streak. Log 50 workouts. Train every muscle group. The milestones unlock quietly, so every session feels like it counts.<br><br>Full achievements require Pro. Free users get a preview of what's waiting.</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── PRICING ── -->
+  <section class="pricing reveal">
+    <p class="pricing-eyebrow">Simple pricing</p>
+    <div class="pricing-grid">
+      <div class="pricing-col">
+        <p class="pricing-tier">Free</p>
+        <p class="pricing-price">$0</p>
+        <ul class="pricing-list">
+          <li>Unlimited workout logging</li>
+          <li>Weight pre-filled from last session</li>
+          <li>Automatic rest timer + Lock Screen</li>
+          <li>PR detection &amp; confetti</li>
+          <li>Progress charts &amp; streaks</li>
+          <li>Workout templates</li>
+          <li class="pricing-limited">5 camera sessions / month</li>
+          <li class="pricing-limited">3 share cards / month</li>
+          <li class="pricing-limited">Achievement preview (first 3)</li>
+        </ul>
+      </div>
+      <div class="pricing-col pricing-col--pro">
+        <p class="pricing-tier">Pro</p>
+        <p class="pricing-price">$6.99<span class="pricing-per">/mo</span></p>
+        <ul class="pricing-list">
+          <li>Everything in Free</li>
+          <li>Unlimited camera sessions</li>
+          <li>Unlimited share cards</li>
+          <li>All 33 achievements</li>
+          <li>Data export — CSV &amp; JSON backup</li>
+          <li>Data import &amp; restore</li>
+          <li class="pricing-note">Cancel anytime</li>
+        </ul>
+      </div>
+    </div>
   </section>
 
   <!-- ── PRIVACY ── -->
@@ -726,14 +907,14 @@
     <span class="pill"><span class="pill-dot"></span> Camera processed on-device</span>
     <span class="pill"><span class="pill-dot"></span> No account required</span>
     <span class="pill"><span class="pill-dot"></span> No ads</span>
-    <span class="pill"><span class="pill-dot"></span> No subscription</span>
+    <span class="pill"><span class="pill-dot"></span> Free to download</span>
   </div>
 
   <!-- ── WAITLIST ── -->
   <section class="waitlist" id="waitlist">
     <h2 class="reveal">Get in while it's free.</h2>
     <p class="waitlist-sub reveal">
-      The app is in beta now — camera rep counting included. Every feature, no paywall.<br><br>
+      The app is in beta — free to download. Unlimited workout logging, rest timer, and PR tracking at no cost. Upgrade to Pro for unlimited camera sessions, full achievements, and data export.<br><br>
       I'm building this solo. One email when you're in. No newsletter.
     </p>
 

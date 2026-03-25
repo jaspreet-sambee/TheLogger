@@ -506,4 +506,73 @@ final class PRManagerTests: XCTestCase {
 
         XCTAssertTrue(timeline.isEmpty, "Warmup set must not appear in PR timeline")
     }
+
+    // MARK: - PR Celebration Direction Tests
+
+    func testPRCelebration_doesNotFireOnWeightReduction() {
+        // Set up initial PR at 225×5
+        let workout = Workout(name: "Test", date: Date(), isTemplate: false)
+        workout.endTime = Date()
+        modelContext.insert(workout)
+
+        let exercise = Exercise(name: "Bench Press", order: 0)
+        workout.exercises = [exercise]
+
+        let set1 = WorkoutSet(reps: 5, weight: 225, sortOrder: 0)
+        exercise.sets = [set1]
+        try? modelContext.save()
+
+        _ = PersonalRecordManager.recalculatePR(exerciseName: "Bench Press", modelContext: modelContext)
+        let oldPR = PersonalRecordManager.getPR(for: "Bench Press", modelContext: modelContext)
+        let oldScore = oldPR.map { PersonalRecordManager.prScore(weight: $0.weight, reps: $0.reps) } ?? 0
+
+        // Reduce weight to 200×5 (simulating user edit)
+        set1.weight = 200
+        try? modelContext.save()
+
+        _ = PersonalRecordManager.recalculatePR(exerciseName: "Bench Press", modelContext: modelContext)
+        let newPR = PersonalRecordManager.getPR(for: "Bench Press", modelContext: modelContext)
+        let newScore = newPR.map { PersonalRecordManager.prScore(weight: $0.weight, reps: $0.reps) } ?? 0
+
+        XCTAssertTrue(newScore < oldScore, "Reduced weight should yield lower PR score — celebration should NOT fire")
+    }
+
+    func testPRCelebration_firesOnWeightIncrease() {
+        // Set up initial PR at 200×5
+        let workout = Workout(name: "Test", date: Date(), isTemplate: false)
+        workout.endTime = Date()
+        modelContext.insert(workout)
+
+        let exercise = Exercise(name: "Bench Press", order: 0)
+        workout.exercises = [exercise]
+
+        let set1 = WorkoutSet(reps: 5, weight: 200, sortOrder: 0)
+        exercise.sets = [set1]
+        try? modelContext.save()
+
+        _ = PersonalRecordManager.recalculatePR(exerciseName: "Bench Press", modelContext: modelContext)
+        let oldPR = PersonalRecordManager.getPR(for: "Bench Press", modelContext: modelContext)
+        let oldScore = oldPR.map { PersonalRecordManager.prScore(weight: $0.weight, reps: $0.reps) } ?? 0
+
+        // Increase weight to 225×5
+        set1.weight = 225
+        try? modelContext.save()
+
+        _ = PersonalRecordManager.recalculatePR(exerciseName: "Bench Press", modelContext: modelContext)
+        let newPR = PersonalRecordManager.getPR(for: "Bench Press", modelContext: modelContext)
+        let newScore = newPR.map { PersonalRecordManager.prScore(weight: $0.weight, reps: $0.reps) } ?? 0
+
+        XCTAssertTrue(newScore > oldScore, "Increased weight should yield higher PR score — celebration SHOULD fire")
+    }
+
+    func testPRScore_isAccessibleAndReturnsExpectedValues() {
+        // Bodyweight exercise: score equals reps
+        let bwScore = PersonalRecordManager.prScore(weight: 0, reps: 20)
+        XCTAssertEqual(bwScore, 20.0, "Bodyweight PR score should equal reps")
+
+        // Weighted exercise: score equals estimated 1RM (Epley)
+        let weightedScore = PersonalRecordManager.prScore(weight: 225, reps: 5)
+        // Epley: 225 * (1 + 5/30) = 225 * 1.1667 ≈ 262.5
+        XCTAssertEqual(weightedScore, 262.5, accuracy: 0.5, "Weighted PR score should match Epley 1RM")
+    }
 }

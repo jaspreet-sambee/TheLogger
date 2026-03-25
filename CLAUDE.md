@@ -34,40 +34,117 @@ TheLogger is an iOS workout tracking app that emphasizes speed, simplicity, and 
 
 ## File Scope Rules
 
-### Models (`TheLogger/`)
-| File | Responsibility |
-|------|----------------|
-| `Workout.swift` | Core Workout model, UnitFormatter, ExerciseLibrary, RestTimerManager, PR logic |
-| `Exercise.swift` | Exercise model with sets relationship |
-| `WorkoutSet.swift` | Individual set model with SetType enum |
-
-### Views (`TheLogger/`)
-| File | Responsibility |
-|------|----------------|
-| `WorkoutDetailView.swift` | Main active workout screen with exercise list, add/end buttons |
-| `WorkoutListView.swift` | Home screen, template list, workout history, navigation |
-| `ExerciseViews.swift` | ExerciseRowView, ExerciseCard, ExerciseEditView |
-| `ExerciseSearchView.swift` | Exercise search/selection with library and history |
-| `TemplateEditView.swift` | Template creation and editing |
-| `SetViews.swift` | InlineSetRowView, InlineAddSetView, AddSetView, EditSetView, SelectAllTextField |
-| `TimerViews.swift` | RestTimerView, PRCelebrationView, ConfettiView |
-| `SummaryViews.swift` | WorkoutEndSummaryView, ExerciseProgressView |
-| `SettingsView.swift` | User preferences (units, rest timer, profile) |
-| `OnboardingView.swift` | 3-screen onboarding flow |
-| `PrivacyPolicyView.swift` | Privacy policy display |
-| `ContentView.swift` | AddWorkoutView (legacy) |
-
-### Components (`TheLogger/`)
-| File | Responsibility |
-|------|----------------|
-| `Components.swift` | CardStyle modifier, AppFont typography |
-| `Animations.swift` | RingFillProgress, LiquidWaveTimer, HapticSteppers, StaggeredAppear |
-
-### App Entry (`TheLogger/`)
+### App (`TheLogger/App/`)
 | File | Responsibility |
 |------|----------------|
 | `TheLoggerApp.swift` | App entry point, SwiftData container setup |
+| `MainTabView.swift` | Root 3-tab layout (Home / Stats / Profile) after onboarding |
 | `SchemaMigrations.swift` | VersionedSchema, SchemaMigrationPlan - required for schema changes |
+| `ContentView.swift` | AddWorkoutView (legacy) |
+| `OnboardingView.swift` | 3-screen onboarding flow |
+
+### Models (`TheLogger/Models/`)
+| File | Responsibility |
+|------|----------------|
+| `Workout.swift` | `@Model Workout` class (state, naming, superset logic) |
+| `Exercise.swift` | `@Model Exercise` with sets relationship |
+| `WorkoutSet.swift` | `@Model WorkoutSet` with SetType enum |
+| `ExerciseMemory.swift` | `@Model ExerciseMemory` — last used reps/weight/note per exercise |
+| `PersonalRecord.swift` | `@Model PersonalRecord` — PR tracking with estimated 1RM |
+| `ExerciseDisplayItem.swift` | Superset display enum (standalone vs superset grouping) |
+| `WorkoutSummary.swift` | Computed workout stats struct |
+
+### Services (`TheLogger/Services/`)
+| File | Responsibility |
+|------|----------------|
+| `UnitFormatter.swift` | `UnitSystem` enum, `UnitFormatter` (lbs↔kg), SwiftUI environment key |
+| `ExerciseLibrary.swift` | `MuscleGroup`, `LibraryExercise`, `ExerciseLibrary` (139 exercises) |
+| `PersonalRecordManager.swift` | `checkAndSavePR`, `recalculatePR` |
+| `ExerciseProgressCalculator.swift` | `ExerciseProgressComparison` enum, progress calculation |
+| `RestTimerManager.swift` | `@Observable RestTimerManager` — rest timer state machine |
+| `DataExporter.swift` | CSV/JSON export, import DTOs, round-trip backup |
+| `PRManager.swift` | PR display logic for views |
+| `ExerciseSuggester.swift` | Exercise suggestion logic |
+| `LiveActivityManager.swift` | Live Activity / Dynamic Island integration |
+| `Analytics.swift` | TelemetryDeck analytics signals |
+
+### SharedUI (`TheLogger/SharedUI/`)
+| File | Responsibility |
+|------|----------------|
+| `Components.swift` | CardStyle modifier, AppFont, AppColors |
+| `DebugHelpers.swift` | Debug logging utilities |
+| `RingAnimations.swift` | `RingFillProgress`, `SetCompletionRing` |
+| `TimerAnimations.swift` | `LiquidWaveTimer`, `CompactLiquidTimer`, `WorkoutProgressRing` |
+| `StepperAnimations.swift` | `HapticWeightStepper`, `HapticRepsStepper`, `CountingNumber` |
+| `ViewModifiers.swift` | PulsingGlow, StaggeredAppear, ButtonPressScale, GlassMorphism, etc. |
+| `HomeCards.swift` | `RecentWorkoutCard`, `WeeklyGoalRing`, `LevelAvatar`, `LevelBadge`, streak views |
+| `DecorationViews.swift` | Preview providers for animation components |
+| `SimpleNumberInput.swift` | Sheet-based number input with auto-chaining |
+| `SelectAllTextField.swift` | TextField that selects all text on focus |
+| `SetInputTextField.swift` | TextField with keyboard accessory for set logging |
+
+### Features — Workout (`TheLogger/Features/Workout/`)
+| File | Responsibility |
+|------|----------------|
+| `WorkoutDetailView.swift` | Main active workout screen with exercise list, add/end buttons |
+| `WorkoutListView.swift` | Home screen, template list, navigation |
+| `ActiveWorkoutRowView.swift` | Active workout row with live timer |
+| `WorkoutRowView.swift` | Completed workout row in history |
+| `WorkoutHistoryView.swift` | Full workout history list |
+| `HistoryWorkoutRowView.swift` | Row view within history |
+| `WorkoutSelectorView.swift` | Workout type selection sheet |
+| `TemplateCardView.swift` | Template display card |
+| `TemplateRowView.swift` | Template row in list |
+| `TemplateEditView.swift` | Template creation and editing |
+| `ExportShareSheet.swift` | UIActivityViewController wrapper |
+| `SummaryViews.swift` | WorkoutEndSummaryView, ExerciseProgressView |
+
+### Features — Exercise (`TheLogger/Features/Exercise/`)
+| File | Responsibility |
+|------|----------------|
+| `ExerciseRowView.swift` | Exercise row with progress indicator |
+| `ExerciseCard.swift` | Apple Health-style exercise card |
+| `ExerciseEditView.swift` | Full exercise editor (sets, notes, rest timer, PR, camera) |
+| `QuickLogStrip.swift` | Stepper-based quick set entry |
+| `ExerciseSearchView.swift` | Exercise search/selection with library and history |
+| `ExerciseDetailView.swift` | Exercise detail/history view |
+
+### Features — Sets (`TheLogger/Features/Sets/`)
+| File | Responsibility |
+|------|----------------|
+| `InlineSetRowView.swift` | Inline set display row + `AddExerciseNameView` |
+| `InlineAddSetView.swift` | Inline add-set form |
+| `AddSetView.swift` | Full add-set sheet |
+| `EditSetView.swift` | Edit existing set sheet |
+
+### Features — Timer (`TheLogger/Features/Timer/`)
+| File | Responsibility |
+|------|----------------|
+| `TimerViews.swift` | RestTimerView, countdown display |
+| `PRViews.swift` | PR celebration overlay, confetti |
+
+### Features — Home (`TheLogger/Features/Home/`)
+| File | Responsibility |
+|------|----------------|
+| `DashboardCards.swift` | WeeklyStatsCard, MuscleGroupBreakdownCard, VolumeTrendCard, StreakCalendarCard, WeeklyRecapCard |
+| `StatsDashboardView.swift` | Stats tab — composes all dashboard cards + achievements summary |
+| `WeeklySummaryView.swift` | Full weekly recap sheet with Charts |
+
+### Features — Settings (`TheLogger/Features/Settings/`)
+| File | Responsibility |
+|------|----------------|
+| `ProfileView.swift` | Profile tab — user info, settings nav, data & backup, about |
+| `SettingsView.swift` | User preferences (units, rest timer, goals, workout) — pushed from ProfileView |
+| `DataBackupView.swift` | JSON export/import UI |
+| `PrivacyPolicyView.swift` | Privacy policy display |
+
+### CameraRepCounter (`TheLogger/CameraRepCounter/`)
+Unchanged — 5 files for pose detection and rep counting.
+
+### Widget (`TheLogger/Widget/`)
+| File | Responsibility |
+|------|----------------|
+| `WidgetShared.swift` | Shared types between app and widget extension |
 
 ## Data Model
 
@@ -412,22 +489,26 @@ See `TEST_FIXES_SUMMARY.md` for detailed examples of test fixes and patterns.
 ## Important Files for Context
 
 When working on features, these files typically need to be read:
-- Exercise features → `ExerciseViews.swift`, `ExerciseSearchView.swift`, `Workout.swift` (ExerciseLibrary)
-- Set input/editing → `SetViews.swift`
-- Workout flow → `WorkoutDetailView.swift`, `WorkoutListView.swift`
-- Timer/PR features → `TimerViews.swift`, `Workout.swift` (RestTimerManager)
-- Summary/Progress → `SummaryViews.swift`
-- Templates → `TemplateEditView.swift`
-- UI changes → `Components.swift`, `Animations.swift`
-- Navigation → `WorkoutListView.swift`, `TheLoggerApp.swift`
-- Settings → `SettingsView.swift`, `Workout.swift` (UnitFormatter)
+- Exercise features → `Features/Exercise/ExerciseEditView.swift`, `Features/Exercise/ExerciseSearchView.swift`, `Services/ExerciseLibrary.swift`
+- Set input/editing → `Features/Sets/InlineSetRowView.swift`, `Features/Sets/InlineAddSetView.swift`
+- Workout flow → `Features/Workout/WorkoutDetailView.swift`, `Features/Workout/WorkoutListView.swift`
+- Timer/PR features → `Features/Timer/TimerViews.swift`, `Services/RestTimerManager.swift`
+- Summary/Progress → `Features/Workout/SummaryViews.swift`, `Services/ExerciseProgressCalculator.swift`
+- Templates → `Features/Workout/TemplateEditView.swift`
+- UI changes → `SharedUI/Components.swift`, `SharedUI/ViewModifiers.swift`, `SharedUI/HomeCards.swift`
+- Navigation → `App/MainTabView.swift`, `Features/Workout/WorkoutListView.swift`, `App/TheLoggerApp.swift`
+- Settings → `Features/Settings/ProfileView.swift`, `Features/Settings/SettingsView.swift`, `Services/UnitFormatter.swift`
+- Stats/Gamification dashboard → `Features/Home/StatsDashboardView.swift`, `Features/Home/DashboardCards.swift`
+- PR logic → `Models/PersonalRecord.swift`, `Services/PersonalRecordManager.swift`
+- Data export/import → `Services/DataExporter.swift`, `Features/Settings/DataBackupView.swift`
+- Schema changes → `App/SchemaMigrations.swift`
 
 ## SwiftData Schema Migration & Data Preservation
 
 **CRITICAL: User data must never be deleted by the app.**
 
 ### Migration Infrastructure
-- **File**: `SchemaMigrations.swift`
+- **File**: `App/SchemaMigrations.swift`
 - **Components**: `TheLoggerSchemaV1` (VersionedSchema), `TheLoggerMigrationPlan` (SchemaMigrationPlan)
 - TheLoggerApp creates ModelContainer with `migrationPlan: TheLoggerMigrationPlan.self`
 
@@ -459,3 +540,43 @@ When working on features, these files typically need to be read:
 - Don't create new documentation files unless explicitly asked
 - Don't skip accessibility identifiers for new interactive UI elements
 - Don't commit code with failing tests or commented-out tests
+
+## Marketing Assets & App Store Screenshots
+
+### Design Reference
+The App Store screenshot style is based on a fashion app promo video (`design_inspo.mp4`). Key design principles:
+
+### Screenshot Style Guide
+- **Background**: Warm light gradient — `(235, 228, 218)` top to `(222, 215, 205)` bottom. All 6 screenshots use the same background.
+- **Phone mockups**: Use the iPhone mockup at `marketing-video/public/assets/mockup.png` (1022×2082, screen area: left=52, top=46, width=918, height=1990, corner radius=126)
+- **Text**: Poppins font family (Bold Italic for headlines, Medium for subtitles). Dark text `(35, 30, 28)` on light backgrounds.
+- **Shadows**: Soft drop shadows (blur 35-50, opacity 60-90) for floating phone effect
+- **NO perspective transforms** — phones are shown flat or with slight Z-axis rotation (like fanned playing cards), never warped/skewed
+
+### Hero Screenshot (hero-3d.png)
+3 phones fanned out like playing cards (left: +12°, center: 0°, right: -10°), overlapping with the center phone on top. Bold italic headline centered below: "Start Strong. Stay Consistent." with subtitle.
+
+### Feature Screenshots (slides 01-06)
+Each slide: phone mockup in a frame with bold headline text and subtitle. Layouts alternate between phone-left/text-right and phone-right/text-left.
+
+| Slide | Content | Layout |
+|-------|---------|--------|
+| 01-hero | Home screen | Hero with tagline |
+| 02-camera | Gemini avatar (cam_silhouette.png) | Feature right |
+| 03-logging | ss-logging.png | Feature left |
+| 04-pr | ss-pr.png | Feature right alt |
+| 05-progress | ss-charts.png | Feature left |
+| 06-more | ss-timer.png | Multi-feature |
+
+### Asset Locations
+- **Screenshots output**: `marketing-assets/appstore-screenshots/`
+- **Raw screenshots**: `marketing-assets/raw-screenshots/`
+- **Video clips**: `marketing-video/public/assets/` (clip-*.mp4, ss-*.png)
+- **App Store Preview video**: `marketing-assets/appstore-preview.mp4` (886×1920, 25s, H.264, 30fps)
+- **Grid image**: `marketing-assets/appstore-screenshots-grid.png` (3×2 grid, 120px gaps)
+- **Camera screenshot**: Uses Gemini-generated image (`Gemini_Generated_Image_1a6p9t1a6p9t1a6p.png`) — a stock avatar with skeleton overlay baked in. Original image preserved as-is inside the phone frame.
+
+### Generation Scripts (run with Python 3 + Pillow)
+- `appstore_final.py` — Generates all 6 App Store feature screenshots
+- `make_3d_screenshot.py` — Generates the hero fanned-phones screenshot
+- `make_cam_avatar.py` — Camera screenshot compositing (legacy, replaced by Gemini image)

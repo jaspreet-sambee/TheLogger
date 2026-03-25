@@ -511,4 +511,196 @@ final class WorkoutModelTests: XCTestCase {
         let summary = WorkoutSummary(workout: workout)
         XCTAssertFalse(summary.isEmpty)
     }
+
+    // MARK: - findPreviousExercise
+
+    /// Helper: create a completed workout with exercises and insert into context
+    private func createCompletedWorkout(name: String, exercises: [(String, [(Int, Double)])]) -> Workout {
+        let workout = Workout(name: name, date: Date(), isTemplate: false)
+        workout.startTime = Date().addingTimeInterval(-3600)
+        workout.endTime = Date()
+        var exerciseList: [Exercise] = []
+        for (index, (exName, sets)) in exercises.enumerated() {
+            let exercise = Exercise(name: exName, order: index)
+            for (reps, weight) in sets {
+                exercise.addSet(reps: reps, weight: weight)
+            }
+            exerciseList.append(exercise)
+        }
+        workout.exercises = exerciseList
+        modelContext.insert(workout)
+        try? modelContext.save()
+        return workout
+    }
+
+    func testFindPreviousExercise_copiesPerSetValues() {
+        // Create a completed workout with 3 different sets
+        _ = createCompletedWorkout(name: "Push", exercises: [
+            ("Bench Press", [(10, 135), (8, 155), (6, 175)])
+        ])
+
+        // Look up the previous exercise
+        let result = Exercise.findPreviousExercise(name: "Bench Press", modelContext: modelContext)
+
+        XCTAssertNotNil(result)
+        let sets = result!.setsByOrder
+        XCTAssertEqual(sets.count, 3)
+        XCTAssertEqual(sets[0].reps, 10)
+        XCTAssertEqual(sets[0].weight, 135)
+        XCTAssertEqual(sets[1].reps, 8)
+        XCTAssertEqual(sets[1].weight, 155)
+        XCTAssertEqual(sets[2].reps, 6)
+        XCTAssertEqual(sets[2].weight, 175)
+    }
+
+    func testFindPreviousExercise_fallsBackToNilWhenNoHistory() {
+        // No completed workouts exist
+        let result = Exercise.findPreviousExercise(name: "Bench Press", modelContext: modelContext)
+        XCTAssertNil(result)
+    }
+
+    func testFindPreviousExercise_excludesCurrentWorkout() {
+        let workout = createCompletedWorkout(name: "Push", exercises: [
+            ("Bench Press", [(10, 135), (8, 155)])
+        ])
+
+        // Excluding the only workout should return nil
+        let result = Exercise.findPreviousExercise(
+            name: "Bench Press",
+            excludingWorkoutId: workout.id,
+            modelContext: modelContext
+        )
+        XCTAssertNil(result)
+    }
+
+    func testFindPreviousExercise_excludesTemplates() {
+        let template = Workout(name: "Push Template", date: Date(), isTemplate: true)
+        let exercise = Exercise(name: "Bench Press", order: 0)
+        exercise.addSet(reps: 10, weight: 135)
+        template.exercises = [exercise]
+        template.endTime = Date() // Even with endTime, templates should be excluded
+        modelContext.insert(template)
+        try? modelContext.save()
+
+        let result = Exercise.findPreviousExercise(name: "Bench Press", modelContext: modelContext)
+        XCTAssertNil(result)
+    }
+
+    func testFindPreviousExercise_copiesTimeBased() {
+        let workout = Workout(name: "Core", date: Date(), isTemplate: false)
+        workout.startTime = Date().addingTimeInterval(-3600)
+        workout.endTime = Date()
+        let exercise = Exercise(name: "Plank", order: 0)
+        exercise.addSet(reps: 0, weight: 0, durationSeconds: 60)
+        exercise.addSet(reps: 0, weight: 0, durationSeconds: 45)
+        exercise.addSet(reps: 0, weight: 0, durationSeconds: 30)
+        workout.exercises = [exercise]
+        modelContext.insert(workout)
+        try? modelContext.save()
+
+        let result = Exercise.findPreviousExercise(name: "Plank", modelContext: modelContext)
+
+        XCTAssertNotNil(result)
+        let sets = result!.setsByOrder
+        XCTAssertEqual(sets.count, 3)
+        XCTAssertEqual(sets[0].durationSeconds, 60)
+        XCTAssertEqual(sets[1].durationSeconds, 45)
+        XCTAssertEqual(sets[2].durationSeconds, 30)
+    }
+
+    func testFindPreviousExercise_returnsMostRecent() {
+        // Older workout
+        let older = Workout(name: "Push Old", date: Date().addingTimeInterval(-86400), isTemplate: false)
+        older.startTime = Date().addingTimeInterval(-90000)
+        older.endTime = Date().addingTimeInterval(-86400)
+        let oldExercise = Exercise(name: "Bench Press", order: 0)
+        oldExercise.addSet(reps: 12, weight: 100)
+        older.exercises = [oldExercise]
+        modelContext.insert(older)
+
+        // Newer workout
+        let newer = Workout(name: "Push New", date: Date(), isTemplate: false)
+        newer.startTime = Date().addingTimeInterval(-3600)
+        newer.endTime = Date()
+        let newExercise = Exercise(name: "Bench Press", order: 0)
+        newExercise.addSet(reps: 5, weight: 200)
+        newer.exercises = [newExercise]
+        modelContext.insert(newer)
+
+        try? modelContext.save()
+
+        let result = Exercise.findPreviousExercise(name: "Bench Press", modelContext: modelContext)
+
+        XCTAssertNotNil(result)
+        let sets = result!.setsByOrder
+        XCTAssertEqual(sets.count, 1)
+        XCTAssertEqual(sets[0].reps, 5)
+        XCTAssertEqual(sets[0].weight, 200)
+    }
+
+    // MARK: - Workout State Edge Cases
+
+    func testWorkout_endTimeBeforeStartTime_isCompleted() {
+        // Malformed data: endTime before startTime — should still be treated as completed (endTime is not nil)
+        let workout = Workout(name: "Test", date: Date(), isTemplate: false)
+        workout.startTime = Date()
+        workout.endTime = Date().addingTimeInterval(-3600) // 1hr before start
+        XCTAssertTrue(workout.isCompleted)
+        XCTAssertFalse(workout.isActive)
+    }
+
+    func testWorkout_sameStartAndEndTime_isCompleted() {
+        let now = Date()
+        let workout = Workout(name: "Test", date: now, isTemplate: false)
+        workout.startTime = now
+        workout.endTime = now
+        XCTAssertTrue(workout.isCompleted)
+    }
+
+    func testWorkoutDuration_sameStartAndEnd_isZero() {
+        let now = Date()
+        let workout = Workout(name: "Test", date: now, isTemplate: false)
+        workout.startTime = now
+        workout.endTime = now
+        let summary = WorkoutSummary(workout: workout)
+        XCTAssertEqual(summary.duration ?? -1, 0, accuracy: 1)
+    }
+
+    func testWorkout_isCompletedRequiresBothTimes() {
+        let workout = Workout(name: "Test", date: Date(), isTemplate: false)
+        workout.startTime = Date()
+        XCTAssertFalse(workout.isCompleted, "Without endTime, workout is not completed")
+        workout.endTime = Date()
+        XCTAssertTrue(workout.isCompleted)
+    }
+
+    // MARK: - WorkoutSet Edge Cases
+
+    func testWorkoutSet_negativeWeight_storedAsProvided() {
+        // No validation in the model — negative weights are stored as-is
+        let set = WorkoutSet(reps: 10, weight: -10)
+        XCTAssertEqual(set.weight, -10)
+    }
+
+    func testWorkoutSet_zeroReps_storedAsZero() {
+        let set = WorkoutSet(reps: 0, weight: 135)
+        XCTAssertEqual(set.reps, 0)
+    }
+
+    func testWorkoutSet_zeroWeight_storedAsZero() {
+        let set = WorkoutSet(reps: 10, weight: 0)
+        XCTAssertEqual(set.weight, 0)
+    }
+
+    func testWorkoutSet_emptySetTypeString_defaultsToWorking() {
+        let set = WorkoutSet(reps: 10, weight: 100)
+        set.setType = ""
+        XCTAssertEqual(set.type, .working)
+    }
+
+    func testWorkoutSet_garbageSetTypeString_defaultsToWorking() {
+        let set = WorkoutSet(reps: 10, weight: 100)
+        set.setType = "!@#$%"
+        XCTAssertEqual(set.type, .working)
+    }
 }

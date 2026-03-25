@@ -309,6 +309,152 @@ final class ProgressComparisonTests: XCTestCase {
         XCTAssertEqual(result.displayText, "Improved")
     }
 
+    // MARK: - Multi-set comparison
+
+    func testCompare_previousHasMultipleSets_usesHighestScoreSet() {
+        // Previous: 3 sets — best is (10, 135) score=1350
+        let prev = Exercise(name: "Bench Press", order: 0)
+        prev.addSet(reps: 8, weight: 100)   // score 800
+        prev.addSet(reps: 10, weight: 135)  // score 1350 ← best
+        prev.addSet(reps: 6, weight: 155)   // score 930
+        let prevWorkout = makeCompletedWorkout(name: "Previous", exercise: prev)
+        prevWorkout.date = Date().addingTimeInterval(-86400)
+
+        // Current: 1 set with score 1080 (worse than previous best 1350)
+        let current = makeExercise(name: "Bench Press", sets: [(8, 135)])
+        let currentWorkout = makeCompletedWorkout(name: "Current", exercise: current)
+
+        let result = ExerciseProgressCalculator.compare(
+            exercise: current,
+            currentWorkoutId: currentWorkout.id,
+            completedWorkouts: [currentWorkout, prevWorkout]
+        )
+
+        if case .regressed = result {
+            // Pass — current best (1080) < previous best (1350)
+        } else {
+            XCTFail("Expected .regressed when current best set is lower than previous best set, got \(result)")
+        }
+    }
+
+    func testCompare_currentHasMultipleSets_usesHighestScoreSet() {
+        // Previous: 1 set (8, 135) score=1080
+        let prev = makeExercise(name: "Bench Press", sets: [(8, 135)])
+        let prevWorkout = makeCompletedWorkout(name: "Previous", exercise: prev)
+        prevWorkout.date = Date().addingTimeInterval(-86400)
+
+        // Current: 3 sets — best is (10, 135) score=1350
+        let current = Exercise(name: "Bench Press", order: 0)
+        current.addSet(reps: 6, weight: 100)   // score 600
+        current.addSet(reps: 10, weight: 135)  // score 1350 ← best
+        current.addSet(reps: 8, weight: 110)   // score 880
+        let currentWorkout = makeCompletedWorkout(name: "Current", exercise: current)
+
+        let result = ExerciseProgressCalculator.compare(
+            exercise: current,
+            currentWorkoutId: currentWorkout.id,
+            completedWorkouts: [currentWorkout, prevWorkout]
+        )
+
+        if case .improved = result {
+            // Pass — current best (1350) > previous best (1080)
+        } else {
+            XCTFail("Expected .improved when current has a better set, got \(result)")
+        }
+    }
+
+    func testCompare_bothHaveMultipleSets_comparesHighestScores() {
+        // Previous best: (10, 135) = 1350
+        let prev = Exercise(name: "Bench Press", order: 0)
+        prev.addSet(reps: 8, weight: 100)
+        prev.addSet(reps: 10, weight: 135)
+        let prevWorkout = makeCompletedWorkout(name: "Previous", exercise: prev)
+        prevWorkout.date = Date().addingTimeInterval(-86400)
+
+        // Current best: (10, 135) = 1350 — matched
+        let current = Exercise(name: "Bench Press", order: 0)
+        current.addSet(reps: 6, weight: 100)
+        current.addSet(reps: 10, weight: 135)
+        let currentWorkout = makeCompletedWorkout(name: "Current", exercise: current)
+
+        let result = ExerciseProgressCalculator.compare(
+            exercise: current,
+            currentWorkoutId: currentWorkout.id,
+            completedWorkouts: [currentWorkout, prevWorkout]
+        )
+
+        if case .matched = result {
+            // Pass
+        } else {
+            XCTFail("Expected .matched when best sets are equal, got \(result)")
+        }
+    }
+
+    // MARK: - Time-based exercises
+
+    func testCompare_timeBased_plankWithZeroReps_returnsFirstTime() {
+        // Time-based exercises store reps=0; the calculator filters reps > 0.
+        // Previous Plank: 60s, reps=0 → filtered out → no valid sets → firstTime
+        let prev = Exercise(name: "Plank", order: 0)
+        prev.addSet(reps: 0, weight: 0, durationSeconds: 60)
+        let prevWorkout = makeCompletedWorkout(name: "Previous", exercise: prev)
+        prevWorkout.date = Date().addingTimeInterval(-86400)
+
+        let current = Exercise(name: "Plank", order: 0)
+        current.addSet(reps: 0, weight: 0, durationSeconds: 90)
+        let currentWorkout = makeCompletedWorkout(name: "Current", exercise: current)
+
+        let result = ExerciseProgressCalculator.compare(
+            exercise: current,
+            currentWorkoutId: currentWorkout.id,
+            completedWorkouts: [currentWorkout, prevWorkout]
+        )
+
+        // Time-based sets (reps=0) are filtered out, so both workouts appear to have
+        // no valid sets, resulting in firstTime for the current set too.
+        if case .firstTime = result {
+            // Expected — documents current behavior for time-based exercises
+        } else {
+            XCTFail("Time-based exercises (reps=0) should return .firstTime due to reps filter, got \(result)")
+        }
+    }
+
+    // MARK: - getPreviousBest
+
+    func testGetPreviousBest_returnsCorrectValues() {
+        let prev = makeExercise(name: "Bench Press", sets: [(10, 135), (8, 155), (6, 175)])
+        let prevWorkout = makeCompletedWorkout(name: "Previous", exercise: prev)
+        prevWorkout.date = Date().addingTimeInterval(-86400)
+
+        let current = makeExercise(name: "Bench Press", sets: [(5, 185)])
+        let currentWorkout = makeCompletedWorkout(name: "Current", exercise: current)
+
+        let best = ExerciseProgressCalculator.getPreviousBest(
+            exerciseName: "Bench Press",
+            currentWorkoutId: currentWorkout.id,
+            completedWorkouts: [currentWorkout, prevWorkout]
+        )
+
+        XCTAssertNotNil(best)
+        // Best set from previous: (10, 135)=1350, (8,155)=1240, (6,175)=1050 → max is (10,135)
+        XCTAssertEqual(best?.weight, 135)
+        XCTAssertEqual(best?.reps, 10)
+        XCTAssertEqual(best?.totalSets, 3)
+    }
+
+    func testGetPreviousBest_returnsNilForFirstTime() {
+        let current = makeExercise(name: "Deadlift", sets: [(5, 315)])
+        let currentWorkout = makeCompletedWorkout(name: "Only", exercise: current)
+
+        let best = ExerciseProgressCalculator.getPreviousBest(
+            exerciseName: "Deadlift",
+            currentWorkoutId: currentWorkout.id,
+            completedWorkouts: [currentWorkout]
+        )
+
+        XCTAssertNil(best)
+    }
+
     // MARK: - Helpers
 
     private func makeExercise(name: String, sets: [(Int, Double)]) -> Exercise {

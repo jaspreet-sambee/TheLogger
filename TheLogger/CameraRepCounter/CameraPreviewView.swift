@@ -23,12 +23,19 @@ struct CameraPreviewView: UIViewControllerRepresentable {
     @Binding var isTooFlat: Bool
     @Binding var isLowConfidence: Bool
     @Binding var poseConfidence: Double
+    @Binding var peakContractionFrame: UIImage?
 
     func makeUIViewController(context: Context) -> CameraViewController {
         let controller = CameraViewController()
         controller.exerciseType = exerciseType
         controller.showSkeleton = showSkeleton
         controller.delegate = context.coordinator
+
+        // Wire peak contraction capture — fires on main thread each time a new extreme is reached
+        repCounter.onPeakContraction = { [weak controller] in
+            controller?.captureCurrentFrameAsPeakContraction()
+        }
+
         return controller
     }
 
@@ -92,6 +99,12 @@ struct CameraPreviewView: UIViewControllerRepresentable {
                 }
             }
         }
+
+        func cameraViewController(_ controller: CameraViewController, didCapturePeakFrame image: UIImage) {
+            DispatchQueue.main.async {
+                self.parent.peakContractionFrame = image
+            }
+        }
     }
 }
 
@@ -103,6 +116,7 @@ protocol CameraViewControllerDelegate: AnyObject {
     func cameraViewControllerDidLoseTracking(_ controller: CameraViewController)
     func cameraViewController(_ controller: CameraViewController, didChangeTooFlat isTooFlat: Bool)
     func cameraViewController(_ controller: CameraViewController, didChangeLowConfidence isLow: Bool)
+    func cameraViewController(_ controller: CameraViewController, didCapturePeakFrame image: UIImage)
 }
 
 // MARK: - Camera View Controller
@@ -137,6 +151,27 @@ final class CameraViewController: UIViewController {
     }()
 
     private let videoQueue = DispatchQueue(label: "com.thelogger.videoQueue", qos: .userInteractive)
+
+    // MARK: - Peak Contraction Frame Capture
+
+    /// Rolling cache of the latest pixel buffer — overwritten each frame on videoQueue
+    private var latestPixelBuffer: CVPixelBuffer?
+    private let pixelBufferLock = NSLock()
+    private lazy var ciContext = CIContext()
+
+    /// Called on main thread when RepCounter fires onPeakContraction.
+    /// Snapshots the latest pixel buffer and notifies the delegate.
+    func captureCurrentFrameAsPeakContraction() {
+        pixelBufferLock.lock()
+        let pb = latestPixelBuffer
+        pixelBufferLock.unlock()
+
+        guard let pb else { return }
+        let ci = CIImage(cvPixelBuffer: pb)
+        guard let cg = ciContext.createCGImage(ci, from: ci.extent) else { return }
+        let image = UIImage(cgImage: cg)
+        delegate?.cameraViewController(self, didCapturePeakFrame: image)
+    }
 
     // MARK: - Motion / Orientation
 
@@ -263,6 +298,14 @@ final class CameraViewController: UIViewController {
 extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard !deviceIsTooFlat else { return }
+
+        // Cache latest pixel buffer so we can snapshot at peak contraction
+        if let pb = CMSampleBufferGetImageBuffer(sampleBuffer) {
+            pixelBufferLock.lock()
+            latestPixelBuffer = pb
+            pixelBufferLock.unlock()
+        }
+
         poseDetector.processFrame(sampleBuffer)
     }
 }

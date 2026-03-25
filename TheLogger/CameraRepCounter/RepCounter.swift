@@ -173,6 +173,12 @@ nonisolated final class RepCounter {
     /// Number of confidence samples during current rep cycle
     private var repConfidenceCount: Int = 0
 
+    // MARK: - Peak Contraction Callback
+
+    /// Called whenever the tracked joint reaches a new extreme depth during the down phase.
+    /// Use this to capture the frame for a share card. Fires on the calling thread (main).
+    var onPeakContraction: (() -> Void)?
+
     // MARK: - Initialization
 
     init(exerciseType: ExerciseType, forTesting: Bool = false) {
@@ -351,9 +357,14 @@ nonisolated final class RepCounter {
     // MARK: down
 
     private func processDown(angle: Double, confidence: Double) -> Bool {
-        // Track ROM extremes
+        // Track ROM extremes — fire peak contraction callback when we reach a new extreme
+        let isNewExtreme = configuration.startsAtBottom ? angle > repMaxAngle : angle < repMinAngle
         repMinAngle = min(repMinAngle, angle)
         repMaxAngle = max(repMaxAngle, angle)
+
+        if isNewExtreme {
+            onPeakContraction?()
+        }
 
         let hysteresis = configuration.hysteresis
 
@@ -484,6 +495,16 @@ nonisolated final class RepCounter {
         case .tooShallow: rejectedShallowCount += 1
         case .tooFast:    rejectedFastCount += 1
         default: break
+        }
+
+        if !forTesting {
+            let reasonStr: String
+            switch reason {
+            case .tooShallow: reasonStr = "shallow"
+            case .tooFast: reasonStr = "fast"
+            default: reasonStr = "other"
+            }
+            Analytics.send(Analytics.Signal.cameraRepRejected, parameters: ["reason": reasonStr])
         }
 
         resetRepTracking()

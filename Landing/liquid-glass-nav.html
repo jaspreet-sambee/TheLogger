@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liquid Glass Nav — TheLogger</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f0f0f5;
+    --text: #1a1a2e;
+    --glass-bg: rgba(255, 255, 255, 0.15);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    --specular-opacity: 0.5;
+    --pill-bg: rgba(0, 0, 0, 0.08);
+    --blob-1: #ff6b9d;
+    --blob-2: #c084fc;
+    --blob-3: #67e8f9;
+    --mouse-x: 50%;
+    --mouse-y: 50%;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0a0d1e;
+    --text: #f2f2f7;
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --specular-opacity: 0.25;
+    --pill-bg: rgba(255, 255, 255, 0.1);
+    --blob-1: #4338ca;
+    --blob-2: #be185d;
+    --blob-3: #0d9488;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    overflow: hidden;
+    transition: background 0.6s ease;
+  }
+
+  /* ── Animated Mesh Gradient Background ── */
+  .bg-blobs {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.7;
+    transition: background 0.6s ease, filter 0.6s ease;
+    will-change: transform;
+  }
+
+  .blob-1 {
+    width: 45vmax;
+    height: 45vmax;
+    background: var(--blob-1);
+    top: -10%;
+    left: -5%;
+    animation: drift1 18s ease-in-out infinite;
+  }
+
+  .blob-2 {
+    width: 40vmax;
+    height: 40vmax;
+    background: var(--blob-2);
+    top: 30%;
+    right: -10%;
+    animation: drift2 22s ease-in-out infinite;
+  }
+
+  .blob-3 {
+    width: 35vmax;
+    height: 35vmax;
+    background: var(--blob-3);
+    bottom: -10%;
+    left: 25%;
+    animation: drift3 20s ease-in-out infinite;
+  }
+
+  @keyframes drift1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(10vw, 8vh) scale(1.1); }
+    66%      { transform: translate(-5vw, 15vh) scale(0.95); }
+  }
+
+  @keyframes drift2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(-12vw, -6vh) scale(0.9); }
+    66%      { transform: translate(5vw, 10vh) scale(1.08); }
+  }
+
+  @keyframes drift3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(8vw, -10vh) scale(1.05); }
+    66%      { transform: translate(-10vw, -5vh) scale(0.92); }
+  }
+
+  /* ── Liquid Glass Nav ── */
+  nav.glass-nav {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+    border-radius: 999px;
+    -webkit-backdrop-filter: blur(50px) saturate(200%);
+    backdrop-filter: blur(50px) saturate(200%);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.4),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.1),
+      0 8px 32px rgba(0, 0, 0, 0.15),
+      0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Specular highlight */
+  nav.glass-nav::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 50%;
+    border-radius: 999px 999px 50% 50%;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, var(--specular-opacity)),
+      transparent
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Interactive glare */
+  nav.glass-nav::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: radial-gradient(
+      circle at var(--mouse-x) var(--mouse-y),
+      rgba(255, 255, 255, 0.15),
+      transparent 60%
+    );
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* ── Active Pill ── */
+  .active-pill {
+    position: absolute;
+    top: 6px;
+    height: calc(100% - 12px);
+    border-radius: 999px;
+    background: var(--pill-bg);
+    z-index: 0;
+    transition:
+      left 0.5s cubic-bezier(0.34, 1.2, 0.64, 1),
+      width 0.5s cubic-bezier(0.34, 1.2, 0.64, 1),
+      background 0.5s ease;
+    pointer-events: none;
+  }
+
+  /* ── Nav Items ── */
+  .nav-item {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: transform 0.15s ease, color 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+  }
+
+  .nav-item:active {
+    transform: scale(0.92);
+  }
+
+  .nav-item:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+  }
+
+  .nav-item svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    flex-shrink: 0;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(128, 128, 128, 0.3);
+    flex-shrink: 0;
+    margin: 0 4px;
+  }
+
+  /* ── Theme Toggle ── */
+  .theme-toggle {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .theme-toggle:active {
+    transform: scale(0.92);
+  }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+  }
+
+  .theme-toggle svg {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .icon-sun {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+
+  .icon-moon {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+
+  [data-theme="dark"] .icon-sun {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.5);
+  }
+
+  [data-theme="dark"] .icon-moon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+
+  /* ── Label ── */
+  .demo-label {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0.5;
+    z-index: 10;
+    transition: color 0.5s ease;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- Animated Mesh Gradient -->
+<div class="bg-blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- Liquid Glass Nav -->
+<nav class="glass-nav" id="glassNav">
+  <div class="active-pill" id="activePill"></div>
+
+  <button class="nav-item active" data-index="0">
+    <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+    Home
+  </button>
+
+  <button class="nav-item" data-index="1">
+    <svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+    Call
+  </button>
+
+  <button class="nav-item" data-index="2">
+    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    List
+  </button>
+
+  <div class="divider"></div>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+    <!-- Sun -->
+    <svg class="icon-sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+    <!-- Moon -->
+    <svg class="icon-moon" viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+    </svg>
+  </button>
+</nav>
+
+<div class="demo-label">Liquid Glass Nav — TheLogger</div>
+
+<script>
+(function() {
+  const nav = document.getElementById('glassNav');
+  const pill = document.getElementById('activePill');
+  const items = nav.querySelectorAll('.nav-item');
+  const toggle = document.getElementById('themeToggle');
+
+  // Position pill on active item
+  function movePill(target) {
+    pill.style.left = target.offsetLeft + 'px';
+    pill.style.width = target.offsetWidth + 'px';
+  }
+
+  // Initialize pill position
+  const initialActive = nav.querySelector('.nav-item.active');
+  if (initialActive) {
+    // Skip transition on first paint
+    pill.style.transition = 'none';
+    movePill(initialActive);
+    // Re-enable after layout
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        pill.style.transition = '';
+      });
+    });
+  }
+
+  // Nav item clicks
+  items.forEach(item => {
+    item.addEventListener('click', () => {
+      items.forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      movePill(item);
+    });
+  });
+
+  // Interactive glare
+  nav.addEventListener('mousemove', e => {
+    const rect = nav.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+    const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
+    nav.style.setProperty('--mouse-x', x + '%');
+    nav.style.setProperty('--mouse-y', y + '%');
+  });
+
+  nav.addEventListener('mouseleave', () => {
+    nav.style.setProperty('--mouse-x', '50%');
+    nav.style.setProperty('--mouse-y', '50%');
+  });
+
+  // Theme toggle
+  toggle.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  });
+
+  // Recalc pill on resize
+  window.addEventListener('resize', () => {
+    const active = nav.querySelector('.nav-item.active');
+    if (active) movePill(active);
+  });
+})();
+</script>
+</body>
+</html>

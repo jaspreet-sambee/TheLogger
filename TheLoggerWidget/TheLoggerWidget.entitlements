@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.SDL-Tutorial.TheLogger</string>
+		<string>group.com.thelogger.app</string>
 	</array>
 </dict>
 </plist>

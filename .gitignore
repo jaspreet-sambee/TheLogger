@@ -25,5 +25,13 @@ marketing-video/
 
 # Dev tools & scaffolding
 mimicmotion-runpod/
+one-to-all-runpod/
 .agents/
 skills-lock.json
+
+# Personal/sensitive files
+Passport*.jpg
+
+# Screen recordings & compressed video
+ScreenRecording_*
+ScreenRecording_compressed.mp4
