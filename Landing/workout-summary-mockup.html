@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workout End Summary · TheLogger Mockups</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #060608; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; padding: 48px 40px 80px; color: #fff; }
+
+  .page-header { margin-bottom: 44px; }
+  .page-header h1 { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.28); margin-bottom: 4px; }
+  .page-header p  { font-size: 12px; color: rgba(255,255,255,.16); }
+
+  .section       { margin-bottom: 72px; }
+  .section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.2); margin-bottom: 22px; }
+
+  .phones-row { display: flex; gap: 44px; align-items: flex-start; flex-wrap: wrap; }
+  .phone-wrap  { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .phone-label { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.2); text-align: center; }
+
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; margin-bottom: 10px; }
+  .tag--gold  { background: rgba(255,184,77,.12); color: #FFB84D; border: 1px solid rgba(255,184,77,.24); }
+  .tag--red   { background: rgba(232,56,74,.12); color: #E8384A; border: 1px solid rgba(232,56,74,.24); }
+  .tag--share { background: rgba(128,166,255,.1); color: #80A6FF; border: 1px solid rgba(128,166,255,.2); }
+
+  /* iPhone shell */
+  .iphone { width:390px; height:844px; background:#0A0A0F; border-radius:52px; border:1px solid rgba(255,255,255,.07); overflow:hidden; box-shadow:0 40px 80px rgba(0,0,0,.82), inset 0 1px 0 rgba(255,255,255,.05); display:flex; flex-direction:column; position:relative; }
+  .di { width:126px; height:36px; background:#000; border-radius:0 0 22px 22px; margin:0 auto; flex-shrink:0; }
+  .status-bar { display:flex; align-items:center; justify-content:space-between; padding:6px 24px 0; flex-shrink:0; }
+  .status-time  { font-size:15px; font-weight:600; }
+  .status-icons { display:flex; gap:5px; align-items:center; font-size:11px; color:rgba(255,255,255,.75); }
+
+  /* Inline nav for share editor */
+  .nav-inline { display:flex; align-items:center; justify-content:space-between; padding:12px 20px 10px; border-bottom:1px solid rgba(255,255,255,.07); flex-shrink:0; }
+  .nav-title  { font-size:17px; font-weight:600; }
+
+  /* Scroll */
+  .scroll-area { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+  .sc  { padding:20px 20px 40px; display:flex; flex-direction:column; gap:16px; }
+  .sp  { padding:16px 20px 32px; display:flex; flex-direction:column; gap:14px; }
+
+  /* Checkmark hero */
+  .check-circle { width:72px; height:72px; border-radius:50%; background:rgba(255,184,77,.12); border:2px solid rgba(255,184,77,.4); box-shadow:0 0 22px rgba(255,184,77,.3); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:700; color:#FFB84D; flex-shrink:0; }
+
+  /* Cards */
+  .card { border-radius:18px; padding:16px; flex-shrink:0; }
+  .card--red    { background:rgba(232,56,74,.06); border:1px solid rgba(232,56,74,.18); }
+  .card--white  { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+  .card--gold   { background:linear-gradient(135deg,rgba(255,184,77,.10),rgba(232,56,74,.06)); border:1px solid rgba(255,184,77,.35); }
+
+  /* PR rows */
+  .pr-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:12px; background:rgba(255,184,77,.10); border:1px solid rgba(255,184,77,.22); margin-top:8px; }
+  .pr-name { font-size:14px; font-weight:500; }
+  .pr-val  { display:flex; align-items:center; gap:5px; font-size:14px; font-weight:700; color:#E8384A; }
+  .pr-spark { font-size:11px; color:#FFB84D; }
+
+  /* Big duration */
+  .duration-card { background:rgba(232,56,74,.06); border:1px solid rgba(232,56,74,.18); border-radius:18px; padding:20px 24px 16px; text-align:center; flex-shrink:0; }
+  .duration-icon { font-size:18px; margin-bottom:6px; }
+  .duration-num  { font-size:52px; font-weight:800; letter-spacing:-2px; line-height:1; }
+  .duration-lbl  { font-size:14px; color:rgba(255,255,255,.45); font-weight:500; margin-top:4px; }
+
+  /* 2×2 stat grid */
+  .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .sg-cell { border-radius:16px; padding:14px; }
+  .sg-cell--hi  { background:rgba(232,56,74,.06); border:1px solid rgba(232,56,74,.20); }
+  .sg-cell--dim { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+  .sg-val  { font-size:32px; font-weight:800; letter-spacing:-.5px; line-height:1.1; }
+  .sg-lbl  { font-size:11px; color:rgba(255,255,255,.38); font-weight:500; margin-top:4px; }
+
+  /* Buttons */
+  .btn-share { display:flex; align-items:center; justify-content:center; gap:7px; padding:14px; border-radius:14px; background:rgba(232,56,74,.12); border:1px solid rgba(232,56,74,.3); font-size:15px; font-weight:600; color:#E8384A; }
+  .btn-done  { display:flex; align-items:center; justify-content:center; padding:15px; border-radius:14px; background:linear-gradient(135deg,#E8384A,#FF5931); font-size:17px; font-weight:700; color:#fff; box-shadow:0 6px 20px rgba(232,56,74,.35); }
+  .btn-skip  { display:flex; align-items:center; justify-content:center; padding:14px; border-radius:12px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); font-size:15px; font-weight:600; color:rgba(255,255,255,.55); }
+
+  /* Bottom fade */
+  .fade { position:absolute; bottom:0; left:0; right:0; height:80px; pointer-events:none; z-index:20; border-radius:0 0 52px 52px; background:linear-gradient(to top,#0A0A0F,transparent); }
+
+  /* ── SHARE CARD (1:1 square) ── */
+  .share-card-wrap { padding:0 32px; flex-shrink:0; }
+  .share-card-1x1 {
+    width:326px; height:326px; border-radius:16px; overflow:hidden; position:relative;
+    box-shadow:0 16px 40px rgba(0,0,0,.65);
+  }
+  .sc-bg { position:absolute; inset:0; }
+  .sc-overlay-top { position:absolute; inset:0; background:linear-gradient(to bottom,rgba(0,0,0,.68) 0%,rgba(0,0,0,.68) 28%,transparent 44%); }
+  .sc-overlay-bot { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.68) 0%,rgba(0,0,0,.68) 34%,transparent 50%); }
+  .sc-stats-top { position:absolute; top:0; left:0; right:0; padding:18px 20px 0; }
+  .sc-stats-bot { position:absolute; bottom:0; left:0; right:0; padding:0 20px 18px; }
+  .sc-name { font-size:20px; font-weight:800; letter-spacing:-.3px; line-height:1.1; color:#fff; }
+  .sc-date { font-size:9px; color:rgba(255,255,255,.5); font-weight:400; margin-top:2px; }
+  .sc-line { width:48px; height:2px; border-radius:1px; margin:8px 0 6px; }
+  .sc-statrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .sc-stat { font-size:10px; font-weight:600; color:rgba(255,255,255,.85); }
+  .sc-dot  { width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.3); flex-shrink:0; }
+  .sc-pr-badge { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:5px; font-size:9px; font-weight:800; letter-spacing:.03em; }
+  .sc-brand { position:absolute; bottom:9px; right:14px; font-size:8px; color:rgba(255,255,255,.3); font-weight:500; }
+
+  /* Stats position picker */
+  .pos-picker { display:flex; border:1px solid rgba(255,255,255,.12); border-radius:9px; overflow:hidden; margin:0 32px; flex-shrink:0; }
+  .pos-opt { flex:1; padding:8px; text-align:center; font-size:13px; font-weight:500; }
+  .pos-opt--on  { background:rgba(255,255,255,.15); color:#fff; font-weight:600; }
+  .pos-opt--off { color:rgba(255,255,255,.4); }
+
+  /* Theme circles */
+  .theme-row { display:flex; gap:14px; padding:0 20px; overflow:hidden; flex-shrink:0; }
+  .theme-circle { display:flex; flex-direction:column; align-items:center; gap:5px; flex-shrink:0; }
+  .tc-dot { width:30px; height:30px; border-radius:50%; }
+  .tc-dot--sel { outline:2px solid #fff; outline-offset:2px; box-shadow:0 0 8px currentColor; }
+  .tc-name { font-size:9px; font-weight:500; color:rgba(255,255,255,.4); }
+  .tc-name--sel { color:#fff; font-weight:600; }
+
+  /* No-PR placeholder */
+  .no-pr-row { display:flex; align-items:center; gap:8px; padding:12px 0; }
+
+  /* confetti dots (decorative) */
+  .confetti { position:absolute; top:0; left:0; right:0; height:200px; overflow:hidden; pointer-events:none; z-index:30; }
+  .conf-dot { position:absolute; width:7px; height:7px; border-radius:2px; opacity:.8; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Workout End Summary · UI Mockups</h1>
+  <p>Post-workout summary screen + share card editor</p>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ROW 1: Summary with PRs · Summary no PRs · Share Card Editor
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Summary Screen States + Share Card Editor</div>
+  <div class="phones-row">
+
+    <!-- ══ Phone 1: Summary WITH PRs ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--gold">With PRs · confetti 🎊</span>
+      <div class="phone-label">2 personal records set</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="status-bar"><span class="status-time">10:32</span><div class="status-icons"><span>●●●</span><span>WiFi</span><span>▌</span></div></div>
+
+        <!-- Confetti dots decorative -->
+        <div class="confetti" style="pointer-events:none;">
+          <div class="conf-dot" style="background:#FFB84D;top:30px;left:40px;transform:rotate(15deg);"></div>
+          <div class="conf-dot" style="background:#E8384A;top:20px;left:110px;transform:rotate(-20deg);"></div>
+          <div class="conf-dot" style="background:#4DC7B8;top:50px;left:200px;transform:rotate(30deg);"></div>
+          <div class="conf-dot" style="background:#80A6FF;top:15px;left:280px;transform:rotate(-10deg);"></div>
+          <div class="conf-dot" style="background:#FFB84D;top:60px;left:340px;transform:rotate(25deg);"></div>
+          <div class="conf-dot" style="background:#E8384A;top:80px;left:70px;transform:rotate(-35deg);"></div>
+          <div class="conf-dot" style="background:#4DC7B8;top:90px;left:160px;transform:rotate(12deg);"></div>
+          <div class="conf-dot" style="background:#FFB84D;top:45px;left:260px;transform:rotate(-18deg);"></div>
+          <div class="conf-dot" style="background:#80A6FF;top:100px;left:320px;transform:rotate(40deg);"></div>
+          <div class="conf-dot" style="background:#E8384A;top:120px;left:180px;transform:rotate(-22deg);"></div>
+          <div class="conf-dot" style="background:#FFB84D;top:130px;left:90px;transform:rotate(8deg);"></div>
+          <div class="conf-dot" style="background:#4DC7B8;top:110px;left:350px;transform:rotate(-30deg);"></div>
+        </div>
+
+        <div class="scroll-area">
+          <div class="sc">
+
+            <!-- Checkmark header -->
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:8px;">
+              <div class="check-circle">✓</div>
+              <div style="font-size:22px;font-weight:700;text-align:center;">Push Day</div>
+              <div style="font-size:12px;color:rgba(255,255,255,.38);font-weight:500;">Mar 28, 2026 at 10:30 AM</div>
+            </div>
+
+            <!-- Affirmation -->
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+              <span style="font-size:22px;">⭐</span>
+              <span style="font-size:22px;font-weight:600;">Nice work</span>
+            </div>
+
+            <!-- PR Section — gold card with 2 PRs -->
+            <div class="card card--gold">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+                <span style="font-size:20px;">🥇</span>
+                <div>
+                  <div style="font-size:15px;font-weight:700;">PRs achieved this workout</div>
+                  <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:1px;">2 new records</div>
+                </div>
+              </div>
+              <!-- PR row 1 -->
+              <div class="pr-row">
+                <span class="pr-name">Bench Press</span>
+                <div class="pr-val">225 × 8<span class="pr-spark">✦</span></div>
+              </div>
+              <!-- PR row 2 -->
+              <div class="pr-row">
+                <span class="pr-name">Squat</span>
+                <div class="pr-val">315 × 5<span class="pr-spark">✦</span></div>
+              </div>
+            </div>
+
+            <!-- Big duration -->
+            <div class="duration-card">
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+                <span style="font-size:20px;color:#E8384A;">🕐</span>
+                <span class="duration-num">1:02</span>
+              </div>
+              <div class="duration-lbl">workout time</div>
+            </div>
+
+            <!-- 2×2 stats grid -->
+            <div class="stat-grid">
+              <div class="sg-cell sg-cell--hi">
+                <div class="sg-val" style="color:#E8384A;">1:02</div>
+                <div class="sg-lbl">duration</div>
+              </div>
+              <div class="sg-cell sg-cell--dim">
+                <div class="sg-val">12.4k</div>
+                <div class="sg-lbl">volume · lbs</div>
+              </div>
+              <div class="sg-cell sg-cell--dim">
+                <div class="sg-val">5</div>
+                <div class="sg-lbl">exercises</div>
+              </div>
+              <div class="sg-cell sg-cell--dim">
+                <div class="sg-val">22</div>
+                <div class="sg-lbl">sets</div>
+              </div>
+            </div>
+
+            <!-- CTA buttons -->
+            <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px;">
+              <div class="btn-share">
+                <span style="font-size:15px;">↑</span> Share Workout
+              </div>
+              <div class="btn-done">Done</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Phone 2: Summary NO PRs ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--red">No PRs · standard</span>
+      <div class="phone-label">Regular workout, no records</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="status-bar"><span class="status-time">11:15</span><div class="status-icons"><span>●●●</span><span>WiFi</span><span>▌</span></div></div>
+
+        <div class="scroll-area">
+          <div class="sc">
+
+            <!-- Checkmark header -->
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:8px;">
+              <div class="check-circle">✓</div>
+              <div style="font-size:22px;font-weight:700;text-align:center;">Pull Day</div>
+              <div style="font-size:12px;color:rgba(255,255,255,.38);font-weight:500;">Mar 28, 2026 at 11:10 AM</div>
+            </div>
+
+            <!-- Affirmation -->
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+              <span style="font-size:22px;">⭐</span>
+              <span style="font-size:22px;font-weight:600;">Solid effort</span>
+            </div>
+
+            <!-- PR Section — no PRs -->
+            <div class="card card--white">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <span style="font-size:20px;opacity:.55;">🥇</span>
+                <div style="font-size:15px;font-weight:700;">Personal Records</div>
+              </div>
+              <div class="no-pr-row">
+                <span style="font-size:14px;color:#E8384A;opacity:.8;">🔥</span>
+                <span style="font-size:14px;color:rgba(255,255,255,.5);font-weight:500;">No PRs this workout — keep pushing!</span>
+              </div>
+            </div>
+
+            <!-- Big duration -->
+            <div class="duration-card">
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+                <span style="font-size:20px;color:#E8384A;">🕐</span>
+                <span class="duration-num">48</span>
+                <span style="font-size:24px;color:rgba(255,255,255,.45);font-weight:500;margin-bottom:-4px;">min</span>
+              </div>
+              <div class="duration-lbl">workout time</div>
+            </div>
+
+            <!-- 2×2 stats grid -->
+            <div class="stat-grid">
+              <div class="sg-cell sg-cell--hi">
+                <div class="sg-val" style="color:#E8384A;">48</div>
+                <div class="sg-lbl">duration · min</div>
+              </div>
+              <div class="sg-cell sg-cell--dim">
+                <div class="sg-val">9.8k</div>
+                <div class="sg-lbl">volume · lbs</div>
+              </div>
+              <div class="sg-cell sg-cell--dim">
+                <div class="sg-val">4</div>
+                <div class="sg-lbl">exercises</div>
+              </div>
+              <div class="sg-cell sg-cell--dim">
+                <div class="sg-val">18</div>
+                <div class="sg-lbl">sets</div>
+              </div>
+            </div>
+
+            <!-- CTA buttons -->
+            <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px;">
+              <div class="btn-share">
+                <span style="font-size:15px;">↑</span> Share Workout
+              </div>
+              <div class="btn-done">Done</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Phone 3: WorkoutSummaryEditorView — Stats Top ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--share">Share Card Editor</span>
+      <div class="phone-label">Tap "Share Workout" → editor</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="status-bar"><span class="status-time">10:32</span><div class="status-icons"><span>●●●</span><span>WiFi</span><span>▌</span></div></div>
+
+        <!-- Inline nav -->
+        <div class="nav-inline">
+          <div style="width:40px;"></div>
+          <div class="nav-title">Share Workout</div>
+          <div style="width:40px;"></div>
+        </div>
+
+        <div class="scroll-area">
+          <div class="sp">
+
+            <!-- 1:1 SHARE CARD PREVIEW — stats at top, cinematic theme -->
+            <div class="share-card-wrap" style="padding:0 32px;">
+              <div class="share-card-1x1" style="position:relative;">
+                <!-- Background: black + radial orange at top -->
+                <div class="sc-bg" style="background:radial-gradient(ellipse 120% 80% at 50% -10%, rgba(234,148,48,.55) 0%, #080A0C 60%);"></div>
+                <!-- Grain overlay -->
+                <div style="position:absolute;inset:0;opacity:.04;background-image:url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');"></div>
+                <!-- Top overlay -->
+                <div class="sc-overlay-top"></div>
+                <!-- Stats at TOP -->
+                <div class="sc-stats-top">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:0;">
+                    <div class="sc-name">Push Day</div>
+                    <div class="sc-pr-badge" style="background:#EA9430;color:#120A00;white-space:nowrap;flex-shrink:0;margin-top:2px;">🏆 2 PRs</div>
+                  </div>
+                  <div class="sc-date">March 28, 2026</div>
+                  <div class="sc-line" style="background:#EA9430;opacity:.7;"></div>
+                  <div class="sc-statrow">
+                    <span class="sc-stat">1:02</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">12,450 lbs</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">5 exercises</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">22 sets</span>
+                  </div>
+                </div>
+                <div class="sc-brand">TheLogger</div>
+              </div>
+            </div>
+
+            <!-- Stats position segmented -->
+            <div class="pos-picker">
+              <div class="pos-opt pos-opt--on">Stats Top</div>
+              <div class="pos-opt pos-opt--off">Stats Bottom</div>
+            </div>
+
+            <!-- Theme circles -->
+            <div style="flex-shrink:0;overflow:hidden;">
+              <div class="theme-row">
+                <!-- CIN selected -->
+                <div class="theme-circle">
+                  <div class="tc-dot tc-dot--sel" style="background:#EA9430;box-shadow:0 0 8px rgba(234,148,48,.6);"></div>
+                  <div class="tc-name tc-name--sel">CIN</div>
+                </div>
+                <div class="theme-circle">
+                  <div class="tc-dot" style="background:#C87828;"></div>
+                  <div class="tc-name">POR</div>
+                </div>
+                <div class="theme-circle">
+                  <div class="tc-dot" style="background:#8A9070;"></div>
+                  <div class="tc-name">BLE</div>
+                </div>
+                <div class="theme-circle">
+                  <div class="tc-dot" style="background:#5A90C8;"></div>
+                  <div class="tc-name">CHR</div>
+                </div>
+                <div class="theme-circle">
+                  <div class="tc-dot" style="background:#4858A0;"></div>
+                  <div class="tc-name">MOO</div>
+                </div>
+                <div class="theme-circle">
+                  <div class="tc-dot" style="background:#E8A020;"></div>
+                  <div class="tc-name">GOL</div>
+                </div>
+                <div class="theme-circle">
+                  <div class="tc-dot" style="background:#787068;"></div>
+                  <div class="tc-name">GRI</div>
+                </div>
+                <div class="theme-circle">
+                  <div class="tc-dot" style="background:#10B8D8;"></div>
+                  <div class="tc-name">VEL</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skip / Share buttons -->
+            <div style="display:flex;gap:10px;padding-top:4px;">
+              <div class="btn-skip" style="flex:1;">Skip</div>
+              <div style="flex:2;display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border-radius:12px;background:#E8384A;font-size:15px;font-weight:700;color:#fff;box-shadow:0 4px 14px rgba(232,56,74,.35);">
+                <span>↑</span> Share
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     ROW 2: Share card — Stats Bottom · Different themes
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Share Card Variations — Stats Position + Themes</div>
+  <div class="phones-row">
+
+    <!-- ══ Phone 4: Stats Bottom + with photo (blur bg) ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--share">Stats Bottom</span>
+      <div class="phone-label">Stats positioned at bottom</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="status-bar"><span class="status-time">10:32</span><div class="status-icons"><span>●●●</span><span>WiFi</span><span>▌</span></div></div>
+        <div class="nav-inline">
+          <div style="width:40px;"></div>
+          <div class="nav-title">Share Workout</div>
+          <div style="width:40px;"></div>
+        </div>
+        <div class="scroll-area">
+          <div class="sp">
+
+            <!-- 1:1 card — stats at BOTTOM, Golden Hour theme -->
+            <div class="share-card-wrap" style="padding:0 32px;">
+              <div class="share-card-1x1">
+                <!-- Golden hour bg -->
+                <div class="sc-bg" style="background:radial-gradient(ellipse 130% 90% at 50% 110%, rgba(232,160,32,.6) 0%, rgba(8,6,2,1) 55%);"></div>
+                <div style="position:absolute;inset:0;opacity:.035;background-image:url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');"></div>
+                <!-- Bottom overlay -->
+                <div class="sc-overlay-bot"></div>
+                <!-- Stats at BOTTOM -->
+                <div class="sc-stats-bot">
+                  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:6px;margin-bottom:0;">
+                    <div class="sc-name">Push Day</div>
+                    <div class="sc-pr-badge" style="background:#E8A020;color:#120A00;white-space:nowrap;flex-shrink:0;margin-bottom:2px;">🏆 2 PRs</div>
+                  </div>
+                  <div class="sc-date">March 28, 2026</div>
+                  <div class="sc-line" style="background:#E8A020;opacity:.8;"></div>
+                  <div class="sc-statrow">
+                    <span class="sc-stat">1:02</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">12,450 lbs</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">5 exercises</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">22 sets</span>
+                  </div>
+                </div>
+                <div class="sc-brand">TheLogger</div>
+              </div>
+            </div>
+
+            <!-- Stats position: Bottom selected -->
+            <div class="pos-picker">
+              <div class="pos-opt pos-opt--off">Stats Top</div>
+              <div class="pos-opt pos-opt--on">Stats Bottom</div>
+            </div>
+
+            <!-- Theme: GOL selected -->
+            <div style="flex-shrink:0;overflow:hidden;">
+              <div class="theme-row">
+                <div class="theme-circle"><div class="tc-dot" style="background:#EA9430;"></div><div class="tc-name">CIN</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#C87828;"></div><div class="tc-name">POR</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#8A9070;"></div><div class="tc-name">BLE</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#5A90C8;"></div><div class="tc-name">CHR</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#4858A0;"></div><div class="tc-name">MOO</div></div>
+                <div class="theme-circle">
+                  <div class="tc-dot tc-dot--sel" style="background:#E8A020;box-shadow:0 0 8px rgba(232,160,32,.6);"></div>
+                  <div class="tc-name tc-name--sel">GOL</div>
+                </div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#787068;"></div><div class="tc-name">GRI</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#10B8D8;"></div><div class="tc-name">VEL</div></div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;padding-top:4px;">
+              <div class="btn-skip" style="flex:1;">Skip</div>
+              <div style="flex:2;display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border-radius:12px;background:#E8384A;font-size:15px;font-weight:700;color:#fff;box-shadow:0 4px 14px rgba(232,56,74,.35);"><span>↑</span> Share</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Phone 5: Velvia theme ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--share">Velvia Theme</span>
+      <div class="phone-label">Stats top · VEL theme</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="status-bar"><span class="status-time">10:32</span><div class="status-icons"><span>●●●</span><span>WiFi</span><span>▌</span></div></div>
+        <div class="nav-inline">
+          <div style="width:40px;"></div>
+          <div class="nav-title">Share Workout</div>
+          <div style="width:40px;"></div>
+        </div>
+        <div class="scroll-area">
+          <div class="sp">
+
+            <!-- 1:1 card — velvia theme -->
+            <div class="share-card-wrap" style="padding:0 32px;">
+              <div class="share-card-1x1">
+                <div class="sc-bg" style="background:radial-gradient(ellipse 120% 80% at 50% -10%, rgba(16,184,216,.5) 0%, #03090C 55%);"></div>
+                <div style="position:absolute;inset:0;opacity:.04;background-image:url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');"></div>
+                <div class="sc-overlay-top"></div>
+                <div class="sc-stats-top">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+                    <div class="sc-name">Push Day</div>
+                    <div class="sc-pr-badge" style="background:#10B8D8;color:#001820;white-space:nowrap;flex-shrink:0;margin-top:2px;">🏆 2 PRs</div>
+                  </div>
+                  <div class="sc-date">March 28, 2026</div>
+                  <div class="sc-line" style="background:#10B8D8;opacity:.8;"></div>
+                  <div class="sc-statrow">
+                    <span class="sc-stat">1:02</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">12,450 lbs</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">5 ex · 22 sets</span>
+                  </div>
+                </div>
+                <div class="sc-brand">TheLogger</div>
+              </div>
+            </div>
+
+            <div class="pos-picker">
+              <div class="pos-opt pos-opt--on">Stats Top</div>
+              <div class="pos-opt pos-opt--off">Stats Bottom</div>
+            </div>
+
+            <!-- VEL selected -->
+            <div style="flex-shrink:0;overflow:hidden;">
+              <div class="theme-row">
+                <div class="theme-circle"><div class="tc-dot" style="background:#EA9430;"></div><div class="tc-name">CIN</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#C87828;"></div><div class="tc-name">POR</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#8A9070;"></div><div class="tc-name">BLE</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#5A90C8;"></div><div class="tc-name">CHR</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#4858A0;"></div><div class="tc-name">MOO</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#E8A020;"></div><div class="tc-name">GOL</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#787068;"></div><div class="tc-name">GRI</div></div>
+                <div class="theme-circle">
+                  <div class="tc-dot tc-dot--sel" style="background:#10B8D8;box-shadow:0 0 8px rgba(16,184,216,.6);"></div>
+                  <div class="tc-name tc-name--sel">VEL</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;padding-top:4px;">
+              <div class="btn-skip" style="flex:1;">Skip</div>
+              <div style="flex:2;display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border-radius:12px;background:#E8384A;font-size:15px;font-weight:700;color:#fff;box-shadow:0 4px 14px rgba(232,56,74,.35);"><span>↑</span> Share</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Phone 6: Moody theme · no photo placeholder ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--share">Moody Theme</span>
+      <div class="phone-label">Stats bottom · MOO theme</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="status-bar"><span class="status-time">10:32</span><div class="status-icons"><span>●●●</span><span>WiFi</span><span>▌</span></div></div>
+        <div class="nav-inline">
+          <div style="width:40px;"></div>
+          <div class="nav-title">Share Workout</div>
+          <div style="width:40px;"></div>
+        </div>
+        <div class="scroll-area">
+          <div class="sp">
+
+            <!-- 1:1 moody card -->
+            <div class="share-card-wrap" style="padding:0 32px;">
+              <div class="share-card-1x1">
+                <div class="sc-bg" style="background:radial-gradient(ellipse 120% 90% at 50% 110%, rgba(72,88,160,.7) 0%, #060610 55%);"></div>
+                <div style="position:absolute;inset:0;opacity:.04;background-image:url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');"></div>
+                <div class="sc-overlay-bot"></div>
+                <div class="sc-stats-bot">
+                  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:6px;">
+                    <div class="sc-name">Push Day</div>
+                    <div class="sc-pr-badge" style="background:#4858A0;color:#fff;white-space:nowrap;flex-shrink:0;margin-bottom:2px;">🏆 2 PRs</div>
+                  </div>
+                  <div class="sc-date">March 28, 2026</div>
+                  <div class="sc-line" style="background:#6878C8;opacity:.8;"></div>
+                  <div class="sc-statrow">
+                    <span class="sc-stat">1:02</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">12,450 lbs</span>
+                    <div class="sc-dot"></div>
+                    <span class="sc-stat">5 ex · 22 sets</span>
+                  </div>
+                </div>
+                <div class="sc-brand">TheLogger</div>
+              </div>
+            </div>
+
+            <div class="pos-picker">
+              <div class="pos-opt pos-opt--off">Stats Top</div>
+              <div class="pos-opt pos-opt--on">Stats Bottom</div>
+            </div>
+
+            <!-- MOO selected -->
+            <div style="flex-shrink:0;overflow:hidden;">
+              <div class="theme-row">
+                <div class="theme-circle"><div class="tc-dot" style="background:#EA9430;"></div><div class="tc-name">CIN</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#C87828;"></div><div class="tc-name">POR</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#8A9070;"></div><div class="tc-name">BLE</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#5A90C8;"></div><div class="tc-name">CHR</div></div>
+                <div class="theme-circle">
+                  <div class="tc-dot tc-dot--sel" style="background:#4858A0;box-shadow:0 0 8px rgba(72,88,160,.6);"></div>
+                  <div class="tc-name tc-name--sel">MOO</div>
+                </div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#E8A020;"></div><div class="tc-name">GOL</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#787068;"></div><div class="tc-name">GRI</div></div>
+                <div class="theme-circle"><div class="tc-dot" style="background:#10B8D8;"></div><div class="tc-name">VEL</div></div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;padding-top:4px;">
+              <div class="btn-skip" style="flex:1;">Skip</div>
+              <div style="flex:2;display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border-radius:12px;background:#E8384A;font-size:15px;font-weight:700;color:#fff;box-shadow:0 4px 14px rgba(232,56,74,.35);"><span>↑</span> Share</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

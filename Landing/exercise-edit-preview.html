@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exercise Edit — TheLogger</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0d16;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    padding: 48px 32px 80px;
+    color: #fff;
+  }
+  h1 {
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.3);
+    margin-bottom: 36px; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .phones-row { display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap; }
+
+  /* ── iPhone Shell ── */
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .label {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+  }
+  .iphone {
+    width: 390px;
+    background: #0A0A0F;
+    border-radius: 52px;
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .iphone.active-glow { box-shadow: 0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,56,74,0.3), inset 0 1px 0 rgba(255,255,255,0.06); }
+  .iphone > * { position: relative; z-index: 1; }
+
+  .di {
+    width: 126px; height: 36px;
+    background: #000; border-radius: 0 0 22px 22px;
+    margin: 0 auto; flex-shrink: 0;
+  }
+  .sb {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 28px 2px;
+    font-size: 14px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .sb-icons { display: flex; align-items: center; gap: 6px; }
+
+  /* ── Nav Bar ── */
+  .nav-bar {
+    display: flex; align-items: center;
+    padding: 8px 20px 10px;
+    flex-shrink: 0;
+  }
+  .nav-back {
+    font-size: 16px; font-weight: 500; color: #E8384A;
+    display: flex; align-items: center; gap: 4px;
+    white-space: nowrap;
+  }
+  .nav-center { flex: 1; text-align: center; }
+  .nav-title {
+    font-size: 18px; font-weight: 800;
+    color: rgba(255,255,255,0.95); letter-spacing: -0.4px;
+    display: block;
+  }
+  .nav-subtitle {
+    font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.3);
+    display: block; margin-top: 1px;
+  }
+  .nav-action {
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35);
+    white-space: nowrap; min-width: 40px; text-align: right;
+  }
+
+  /* ── Screen ── */
+  .screen {
+    flex: 1; overflow-y: auto;
+    padding: 4px 0 32px;
+    background: #0A0A0F;
+  }
+
+  /* ── Section header ── */
+  .sec-hdr {
+    padding: 14px 20px 6px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sec-hdr-action {
+    font-size: 11px; font-weight: 600; color: #E8384A;
+    letter-spacing: 0; text-transform: none;
+  }
+
+  /* ── Unified Sets Container ── */
+  .sets-container {
+    margin: 0 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .set-row {
+    display: flex; align-items: center;
+    padding: 12px 14px;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+  }
+  .set-row:last-child { border-bottom: none; }
+  .set-row.pr-row { background: rgba(255,196,40,0.04); }
+  .set-row.warmup-row { background: rgba(255,208,60,0.03); }
+
+  /* Left: type circle */
+  .set-circle {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; flex-shrink: 0;
+  }
+  .set-circle.working       { background: rgba(232,56,74,0.14); color: rgba(255,255,255,0.45); }
+  .set-circle.working.done  { background: rgba(255,196,40,0.14); color: #FFC428; }
+  .set-circle.warmup        { background: rgba(255,208,60,0.14); color: #FFD03C; font-size: 13px; }
+  .set-circle.drop          { background: rgba(255,90,48,0.14);  color: #FF5A30; font-size: 13px; }
+
+  /* Center: perf */
+  .set-perf {
+    flex: 1;
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .set-weight { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.88); }
+  .set-x      { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.25); }
+  .set-reps   { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.88); }
+  .set-unit   { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.28); margin-left: 1px; }
+
+  /* Right: badges + check */
+  .set-right { display: flex; align-items: center; gap: 6px; }
+  .set-type-pill {
+    font-size: 9px; font-weight: 700; letter-spacing: .04em;
+    padding: 2px 7px; border-radius: 999px;
+  }
+  .set-type-pill.working { background: rgba(232,56,74,0.12); color: rgba(232,56,74,0.8); border: 1px solid rgba(232,56,74,0.2); }
+  .set-type-pill.warmup  { background: rgba(255,208,60,0.12); color: rgba(255,208,60,0.9); border: 1px solid rgba(255,208,60,0.25); }
+  .set-type-pill.drop    { background: rgba(255,90,48,0.12);  color: rgba(255,90,48,0.9);  border: 1px solid rgba(255,90,48,0.2); }
+  .pr-badge {
+    font-size: 10px; font-weight: 700; color: #FFC428;
+    padding: 2px 7px; border-radius: 999px;
+    background: rgba(255,196,40,0.12); border: 1px solid rgba(255,196,40,0.25);
+  }
+  .set-check { font-size: 15px; line-height: 1; color: rgba(255,255,255,0.15); }
+  .set-check.done { color: #FFC428; }
+
+  /* ── Hero Log Set ── */
+  .hero-log {
+    margin: 12px 16px 0;
+    background: rgba(232,56,74,0.05);
+    border: 1px solid rgba(232,56,74,0.15);
+    border-radius: 22px;
+    padding: 16px 14px 14px;
+    position: relative; overflow: hidden;
+  }
+  .hero-log::before {
+    content: '';
+    position: absolute; top: -20px; right: -20px;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,56,74,0.14) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-set-label {
+    font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    color: rgba(232,56,74,0.55);
+    margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .hero-controls { display: flex; gap: 10px; margin-bottom: 12px; }
+
+  /* Reps pill */
+  .hero-pill {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 16px;
+    padding: 10px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .hp-top-label {
+    font-size: 9px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: rgba(255,255,255,0.28);
+  }
+  .hp-row {
+    display: flex; align-items: center; gap: 4px;
+    width: 100%; justify-content: center;
+  }
+  .hp-val {
+    font-size: 28px; font-weight: 800; color: #fff;
+    line-height: 1; min-width: 44px; text-align: center;
+    letter-spacing: -1px;
+  }
+  /* Large ± step button (reps pill) */
+  .hp-step-lg {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(232,56,74,0.10);
+    border: 1px solid rgba(232,56,74,0.20);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #E8384A;
+    line-height: 1; flex-shrink: 0;
+  }
+
+  /* Weight pill — Option A: single ± pair + step toggle */
+  .weight-pill {
+    flex: 1.4;
+    min-width: 0;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 16px;
+    padding: 10px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    overflow: hidden;
+  }
+  .wp-main-row {
+    display: flex; align-items: center; gap: 6px; width: 100%;
+  }
+  /* Large ± button */
+  .wp-btn {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 300; color: rgba(255,255,255,0.60);
+    flex-shrink: 0;
+  }
+  .wp-center {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wp-val {
+    font-size: 26px; font-weight: 800; color: #fff;
+    line-height: 1; text-align: center; letter-spacing: -1px;
+  }
+  /* Step toggle sits below the ±/value row, full-width */
+  .wp-step-row {
+    display: flex; justify-content: center; width: 100%;
+  }
+  .step-toggle {
+    display: flex; border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.09);
+    overflow: hidden;
+  }
+  .step-opt {
+    padding: 4px 12px;
+    font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.28);
+  }
+  .step-opt.active {
+    background: rgba(232,56,74,0.18);
+    color: #E8384A;
+  }
+
+  /* ── "Same as last" chip ── */
+  .same-as-last {
+    padding: 4px 10px; border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.13);
+    font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.55);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ── Camera card — more prominent ── */
+  .camera-card {
+    margin: 10px 16px 0;
+    background: rgba(232,56,74,0.09);
+    border: 1px solid rgba(232,56,74,0.28);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+    position: relative; overflow: hidden;
+  }
+  .camera-card::before {
+    content: '';
+    position: absolute; top: -20px; right: -20px;
+    width: 90px; height: 90px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,56,74,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Set Type Picker (in hero-log) ── */
+  .set-type-picker {
+    display: flex; gap: 6px; margin-bottom: 10px;
+  }
+  .stp-opt {
+    flex: 1; height: 30px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.35);
+  }
+  .stp-opt.active {
+    border-color: rgba(232,56,74,0.35);
+    background: rgba(232,56,74,0.12);
+    color: #E8384A;
+  }
+  .stp-opt.warmup.active {
+    border-color: rgba(255,208,60,0.35);
+    background: rgba(255,208,60,0.12);
+    color: #FFD03C;
+  }
+  .stp-opt.drop.active {
+    border-color: rgba(255,90,48,0.35);
+    background: rgba(255,90,48,0.12);
+    color: #FF5A30;
+  }
+
+  /* LOG SET button */
+  .log-btn {
+    width: 100%; height: 48px; border-radius: 14px;
+    background: linear-gradient(135deg, #E8384A 0%, #C0243A 100%);
+    box-shadow: 0 6px 20px rgba(232,56,74,0.40), inset 0 1px 0 rgba(255,255,255,0.14);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 14px; font-weight: 800; color: #fff; letter-spacing: .06em;
+    position: relative; overflow: hidden;
+  }
+  .log-btn::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 50%;
+    height: 1px; background: rgba(255,255,255,0.2);
+  }
+
+  /* ── Info Chips Row (Rest Timer + PR) ── */
+  .info-strip {
+    display: flex; gap: 8px;
+    margin: 10px 16px 0;
+  }
+  .info-chip {
+    flex: 1;
+    padding: 10px 12px; border-radius: 13px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .info-chip.timer {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+  }
+  .info-chip.pr {
+    background: rgba(255,196,40,0.06);
+    border: 1px solid rgba(255,196,40,0.18);
+  }
+  .info-chip.pr-empty {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    opacity: 0.7;
+  }
+  .chip-icon { font-size: 13px; flex-shrink: 0; }
+  .chip-text { flex: 1; min-width: 0; }
+  .chip-micro {
+    font-size: 9px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    color: rgba(255,255,255,0.28);
+    margin-bottom: 2px;
+  }
+  .chip-micro.gold { color: rgba(255,196,40,0.55); }
+  .chip-val {
+    font-size: 13px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chip-val.white  { color: rgba(255,255,255,0.88); }
+  .chip-val.gold   { color: #FFC428; }
+  .chip-val.dim    { color: rgba(255,255,255,0.28); }
+  .chip-chevron {
+    font-size: 9px; color: rgba(255,255,255,0.2); flex-shrink: 0;
+  }
+  .chip-chevron.accent { color: rgba(232,56,74,0.4); }
+
+  /* ── Camera Feature Card ── */
+  .camera-card {
+    margin: 10px 16px 0;
+    background: rgba(232,56,74,0.06);
+    border: 1px solid rgba(232,56,74,0.18);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .cam-icon-wrap {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(232,56,74,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .cam-text { flex: 1; }
+  .cam-title  { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.92); margin-bottom: 3px; }
+  .cam-sub    { font-size: 12px; font-weight: 400; color: rgba(255,255,255,0.38); }
+  .cam-chev   { font-size: 12px; color: rgba(232,56,74,0.55); flex-shrink: 0; }
+
+  /* ── Progress Row ── */
+  .progress-row {
+    margin: 8px 16px 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,56,74,0.22);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .prog-icon { font-size: 16px; color: #E8384A; flex-shrink: 0; }
+  .prog-label { flex: 1; font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.88); }
+  .prog-chev  { font-size: 11px; color: rgba(255,255,255,0.25); }
+
+  /* ── Note inline ── */
+  .note-inline {
+    margin: 0 16px 6px;
+    padding: 9px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .note-inline-icon { font-size: 13px; opacity: 0.35; }
+  .note-inline-text { font-size: 13px; color: rgba(255,255,255,0.3); flex: 1; }
+  .note-inline-chevron { font-size: 10px; color: rgba(255,255,255,0.18); }
+
+  /* ── Rest Timer Hero (Phone 2) ── */
+  .rest-hero {
+    margin: 12px 16px 0;
+    background: rgba(255,196,40,0.06);
+    border: 1px solid rgba(255,196,40,0.16);
+    border-radius: 22px;
+    padding: 24px 20px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    position: relative; overflow: hidden;
+  }
+  .rest-hero::before {
+    content: '';
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,196,40,0.15) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .rest-ring-wrap { position: relative; width: 100px; height: 100px; margin-bottom: 4px; }
+  .rest-ring-wrap svg { transform: rotate(-90deg); }
+  .rest-ring-bg  { fill: none; stroke: rgba(255,196,40,0.12); stroke-width: 6; }
+  .rest-ring-fg  {
+    fill: none; stroke: #FFC428; stroke-width: 6;
+    stroke-linecap: round; stroke-dasharray: 283; stroke-dashoffset: 90;
+    filter: drop-shadow(0 0 6px rgba(255,196,40,0.5));
+  }
+  .rest-time-overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .rest-countdown { font-size: 26px; font-weight: 800; color: #FFC428; letter-spacing: -1px; }
+  .rest-label-sm  { font-size: 10px; font-weight: 600; color: rgba(255,196,40,0.5); letter-spacing: .06em; text-transform: uppercase; }
+  .rest-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .rest-add-time {
+    padding: 6px 18px; border-radius: 999px;
+    background: rgba(255,196,40,0.10); border: 1px solid rgba(255,196,40,0.2);
+    font-size: 12px; font-weight: 700; color: rgba(255,196,40,0.8);
+  }
+  .rest-skip {
+    padding: 6px 18px; border-radius: 999px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09);
+    font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35);
+  }
+
+  /* ══════════════════════════════════════════
+     CAMERA SCREEN STYLES
+     ══════════════════════════════════════════ */
+
+  /* Camera screen fills the phone content area fully */
+  .cam-screen {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(175deg, #17120E 0%, #0D0A07 50%, #070504 100%);
+    display: flex; flex-direction: column;
+  }
+  /* Film grain */
+  .cam-screen::before {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* Vignette */
+  .cam-screen::after {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse 84% 84% at 50% 44%, transparent 40%, rgba(0,0,0,0.75) 100%);
+  }
+
+  /* Coral glow behind skeleton */
+  .cam-glow {
+    position: absolute; top: 38%; left: 50%; transform: translate(-50%,-50%);
+    width: 360px; height: 360px; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse, rgba(232,56,74,0.20) 0%, rgba(232,56,74,0.06) 38%, transparent 65%);
+  }
+
+  /* Top HUD strip (overlaid on camera) */
+  .cam-hud-top {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    padding: 8px 16px 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cam-nav-back {
+    font-size: 16px; font-weight: 500; color: #E8384A;
+    display: flex; align-items: center; gap: 3px;
+  }
+  .cam-nav-center { text-align: center; }
+  .cam-nav-title { font-size: 16px; font-weight: 800; color: rgba(255,255,255,0.95); }
+  .cam-nav-sub { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.35); margin-top: 1px; }
+  .cam-nav-done {
+    font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.35);
+  }
+
+  /* Exercise context pill — overlaid below nav */
+  .cam-ctx-strip {
+    position: absolute; top: 58px; left: 0; right: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .cam-ex-pill {
+    background: rgba(10,8,6,0.68); backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.13); border-radius: 24px;
+    padding: 7px 14px; display: flex; align-items: center; gap: 8px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 14px rgba(0,0,0,0.4);
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #E8384A; box-shadow: 0 0 7px rgba(232,56,74,0.9);
+  }
+  .cam-ex-name { font-size: 13px; font-weight: 800; color: rgba(255,255,255,0.95); }
+  .cam-ex-sep { width: 1px; height: 12px; background: rgba(255,255,255,0.15); }
+  .cam-set-lbl { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45); }
+
+  /* Skeleton layer */
+  .cam-skel {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; align-items: center; justify-content: center;
+    padding-bottom: 170px;
+  }
+
+  /* Rep ring — center of camera */
+  .cam-ring-layer {
+    position: absolute; top: 42%; left: 50%;
+    transform: translate(-50%,-50%); z-index: 12;
+    text-align: center;
+  }
+  .cam-ring-wrap { position: relative; width: 130px; height: 130px; margin: 0 auto 8px; }
+  .cam-ring-svg  { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .cam-ring-track { stroke: rgba(255,255,255,0.07); fill: none; }
+  .cam-ring-prog {
+    fill: none; stroke-linecap: round;
+    filter: drop-shadow(0 0 10px rgba(232,56,74,0.8));
+  }
+  .cam-ring-prog--active { stroke: #E8384A; }
+  .cam-ring-prog--done   { stroke: #30C85A; filter: drop-shadow(0 0 10px rgba(48,200,90,0.8)); }
+  .cam-rep-num {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 58px; font-weight: 900; letter-spacing: -3px; line-height: 1;
+  }
+  .cam-rep-lbl {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: rgba(255,255,255,0.45);
+  }
+
+  /* Feedback text */
+  .cam-feedback {
+    position: absolute; z-index: 12;
+    left: 0; right: 0; text-align: center;
+    top: 65%; font-size: 16px; font-weight: 700;
+    color: rgba(255,255,255,0.8);
+  }
+  .cam-feedback .hi { color: #E8384A; }
+  .cam-feedback--done .hi { color: #30C85A; }
+
+  /* Bottom glass panel — docked */
+  .cam-bottom {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 15;
+    background: rgba(10,8,6,0.82); backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(255,255,255,0.09);
+    padding: 18px 18px 28px;
+  }
+
+  /* Confidence bar */
+  .cam-confidence {
+    display: flex; align-items: center; gap: 9px; margin-bottom: 16px;
+  }
+  .conf-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: rgba(255,255,255,0.28); white-space: nowrap;
+  }
+  .conf-track { flex: 1; height: 3px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+  .conf-fill  { height: 100%; border-radius: 2px; }
+  .conf-fill--high { background: #30C85A; box-shadow: 0 0 5px rgba(48,200,90,0.5); }
+  .conf-pct   { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.35); }
+
+  /* Rep count display */
+  .cam-count-row {
+    display: flex; align-items: flex-end; gap: 10px; margin-bottom: 12px;
+  }
+  .cam-count-big { font-size: 48px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+  .cam-count-sub {
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35);
+    margin-bottom: 8px;
+  }
+  .cam-weight-tag {
+    margin-left: auto;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px; padding: 8px 14px;
+    text-align: right;
+  }
+  .wt-val { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .wt-unit { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.3); }
+
+  /* Log button variants */
+  .cam-stop-btn {
+    width: 100%; height: 46px; border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.5);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cam-log-btn {
+    width: 100%; height: 50px; border-radius: 14px;
+    background: linear-gradient(135deg, #30C85A 0%, #22A040 100%);
+    box-shadow: 0 6px 22px rgba(34,160,64,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+    font-size: 15px; font-weight: 800; color: #fff; letter-spacing: 0.04em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    position: relative; overflow: hidden;
+  }
+  .cam-log-btn::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 50%;
+    height: 1px; background: rgba(255,255,255,0.25);
+  }
+  .cam-recount {
+    text-align: center; margin-top: 10px;
+    font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.25);
+  }
+
+  /* ── Tab Bar ── */
+  .tab-bar {
+    background: rgba(10,10,15,0.95); backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: flex-start; justify-content: space-around;
+    padding: 10px 0 0; flex-shrink: 0;
+  }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .tab-icon { font-size: 22px; opacity: 0.28; }
+  .tab-icon.active { opacity: 1; filter: drop-shadow(0 0 6px rgba(232,56,74,0.65)); }
+  .tab-lbl { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.28); padding-bottom: 8px; }
+  .tab-lbl.active { color: #e8384a; font-weight: 600; }
+
+  .gap { height: 12px; }
+  .gap-sm { height: 6px; }
+
+  /* ── Nav pencil hint ── */
+  .nav-pencil {
+    font-size: 10px; color: rgba(255,255,255,0.25);
+    margin-left: 4px; vertical-align: middle;
+  }
+
+  /* ── Set row editing state ── */
+  .set-row.editing {
+    background: rgba(232,56,74,0.08);
+    padding: 12px 14px 14px;
+    flex-direction: column; align-items: stretch;
+  }
+  .edit-top-row {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+  }
+  .edit-controls-area {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 12px;
+  }
+  /* Each control row: label + minus + value + plus */
+  .edit-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .edit-label {
+    font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.40);
+    width: 52px; flex-shrink: 0;
+  }
+  .edit-step-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 600; flex-shrink: 0;
+  }
+  .edit-step-btn.minus {
+    background: rgba(255,60,60,0.12); border: 1px solid rgba(255,60,60,0.25);
+    color: rgba(255,60,60,0.8);
+  }
+  .edit-step-btn.plus {
+    background: rgba(232,56,74,0.12); border: 1px solid rgba(232,56,74,0.25);
+    color: rgba(232,56,74,0.8);
+  }
+  .edit-val {
+    font-size: 20px; font-weight: 800; color: #fff;
+    padding: 4px 16px; border-radius: 8px;
+    background: rgba(232,56,74,0.15);
+    min-width: 52px; text-align: center;
+    flex: 1;
+  }
+  /* Bottom action buttons */
+  .edit-actions {
+    display: flex; gap: 10px; margin-top: 4px;
+  }
+  .edit-done-btn {
+    flex: 1; height: 36px; border-radius: 10px;
+    background: rgba(255,196,40,0.12); border: 1px solid rgba(255,196,40,0.25);
+    color: #FFC428;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13px; font-weight: 700;
+  }
+  .edit-delete-btn {
+    flex: 1; height: 36px; border-radius: 10px;
+    background: rgba(255,60,60,0.08); border: 1px solid rgba(255,60,60,0.18);
+    color: rgba(255,60,60,0.7);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13px; font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<h1>Exercise Edit — Current Implementation</h1>
+
+<div class="phones-row">
+
+  <!-- ══════════════════════════════════════════
+       PHONE 1 — Active: logging next set
+       ══════════════════════════════════════════ -->
+  <div class="phone-wrap">
+    <div class="label">Active — Log Next Set</div>
+    <div class="iphone active-glow">
+      <div class="di"></div>
+      <div class="sb">
+        <span>9:41</span>
+        <div class="sb-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <div class="nav-back">‹ Log Day A</div>
+        <div class="nav-center">
+          <div class="nav-title">Bench Press <span class="nav-pencil">✏️</span></div>
+          <span class="nav-subtitle">Chest · 4 sets</span>
+        </div>
+        <div class="nav-action">···</div>
+      </div>
+
+      <div class="screen">
+        <div class="gap-sm"></div>
+
+        <!-- Note (collapsed) -->
+        <div class="note-inline">
+          <span class="note-inline-icon">📝</span>
+          <span class="note-inline-text">Add a note…</span>
+          <span class="note-inline-chevron">›</span>
+        </div>
+
+        <!-- Sets section -->
+        <div class="sec-hdr">Sets <span class="sec-hdr-action">Edit</span></div>
+        <div class="sets-container">
+
+          <!-- Warmup -->
+          <div class="set-row warmup-row">
+            <div class="set-circle warmup">🔥</div>
+            <div class="set-perf">
+              <span class="set-weight">45</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">12</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill warmup">Warm-up</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+
+          <!-- Working 1 -->
+          <div class="set-row">
+            <div class="set-circle working done">1</div>
+            <div class="set-perf">
+              <span class="set-weight">135</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">10</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill working">Working</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+
+          <!-- Working 2 -->
+          <div class="set-row">
+            <div class="set-circle working done">2</div>
+            <div class="set-perf">
+              <span class="set-weight">185</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">8</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill working">Working</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+
+          <!-- Working 3 — PR -->
+          <div class="set-row pr-row">
+            <div class="set-circle working done">3</div>
+            <div class="set-perf">
+              <span class="set-weight">225</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">5</span>
+            </div>
+            <div class="set-right">
+              <span class="pr-badge">🏆 PR</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Hero: LOG SET area -->
+        <div class="hero-log">
+          <div class="hero-set-label">
+            Set 4
+            <span class="same-as-last">↩ Same as last</span>
+          </div>
+          <div class="hero-controls">
+
+            <!-- Reps pill -->
+            <div class="hero-pill">
+              <div class="hp-top-label">Reps</div>
+              <div class="hp-row">
+                <div class="hp-step-lg">−</div>
+                <div class="hp-val">5</div>
+                <div class="hp-step-lg">+</div>
+              </div>
+            </div>
+
+            <!-- Weight pill — single ± + step toggle below -->
+            <div class="weight-pill">
+              <div class="wp-main-row">
+                <div class="wp-btn">−</div>
+                <div class="wp-center"><div class="wp-val">225</div></div>
+                <div class="wp-btn">+</div>
+              </div>
+              <div class="wp-step-row">
+                <div class="step-toggle">
+                  <div class="step-opt">2.5</div>
+                  <div class="step-opt active">5</div>
+                  <div class="step-opt">10</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <!-- Set type picker -->
+          <div class="set-type-picker">
+            <div class="stp-opt warmup">Warm-up</div>
+            <div class="stp-opt active">Working</div>
+            <div class="stp-opt drop">Drop</div>
+            <div class="stp-opt">Failure</div>
+          </div>
+          <!-- LOG button -->
+          <div class="log-btn">✓&nbsp;&nbsp;LOG SET</div>
+        </div>
+
+        <!-- Camera Rep Counter — right below LOG SET, always visible -->
+        <div class="camera-card">
+          <div class="cam-icon-wrap">📷</div>
+          <div class="cam-text">
+            <div class="cam-title">Camera Rep Counter</div>
+            <div class="cam-sub">Auto-count reps using your camera</div>
+          </div>
+          <span class="cam-chev">›</span>
+        </div>
+
+        <!-- Info chips: Rest Timer preference + PR -->
+        <div class="info-strip">
+          <div class="info-chip timer">
+            <span class="chip-icon">⏱</span>
+            <div class="chip-text">
+              <div class="chip-micro">Rest Timer</div>
+              <div class="chip-val white">Default</div>
+            </div>
+            <span class="chip-chevron accent">⌄</span>
+          </div>
+          <div class="info-chip pr">
+            <span class="chip-icon">🏆</span>
+            <div class="chip-text">
+              <div class="chip-micro gold">Current PR</div>
+              <div class="chip-val gold">225 × 5</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- View Progress row -->
+        <div class="progress-row">
+          <span class="prog-icon">📈</span>
+          <span class="prog-label">View Progress</span>
+          <span class="prog-chev">›</span>
+        </div>
+
+        <div class="gap"></div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-lbl active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PHONE 2 — Rest timer counting down
+       ══════════════════════════════════════════ -->
+  <div class="phone-wrap">
+    <div class="label">Active — Rest Timer</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb">
+        <span>9:41</span>
+        <div class="sb-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <div class="nav-back">‹ Log Day A</div>
+        <div class="nav-center">
+          <div class="nav-title">Bench Press <span class="nav-pencil">✏️</span></div>
+          <span class="nav-subtitle">Chest · 4 sets</span>
+        </div>
+        <div class="nav-action">···</div>
+      </div>
+
+      <div class="screen">
+        <div class="gap-sm"></div>
+
+        <!-- Note with content -->
+        <div class="note-inline">
+          <span class="note-inline-icon" style="opacity:1; color:#E8384A;">📝</span>
+          <span class="note-inline-text" style="color:rgba(255,255,255,0.7);">Pause 1s at chest, control down</span>
+          <span class="note-inline-chevron">›</span>
+        </div>
+
+        <!-- Sets -->
+        <div class="sec-hdr">Sets <span class="sec-hdr-action">Edit</span></div>
+        <div class="sets-container">
+          <div class="set-row warmup-row">
+            <div class="set-circle warmup">🔥</div>
+            <div class="set-perf">
+              <span class="set-weight">45</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">12</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill warmup">Warm-up</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+          <div class="set-row">
+            <div class="set-circle working done">1</div>
+            <div class="set-perf">
+              <span class="set-weight">135</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">10</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill working">Working</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+          <div class="set-row">
+            <div class="set-circle working done">2</div>
+            <div class="set-perf">
+              <span class="set-weight">185</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">8</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill working">Working</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+          <!-- Just-logged PR set -->
+          <div class="set-row pr-row">
+            <div class="set-circle working done">3</div>
+            <div class="set-perf">
+              <span class="set-weight">225</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">5</span>
+            </div>
+            <div class="set-right">
+              <span class="pr-badge">🏆 PR</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rest Timer hero (replaces LOG SET area while resting) -->
+        <div class="rest-hero">
+          <div class="rest-ring-wrap">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle class="rest-ring-bg" cx="50" cy="50" r="45"/>
+              <circle class="rest-ring-fg" cx="50" cy="50" r="45"/>
+            </svg>
+            <div class="rest-time-overlay">
+              <div class="rest-countdown">1:28</div>
+              <div class="rest-label-sm">Resting</div>
+            </div>
+          </div>
+          <div class="rest-actions">
+            <div class="rest-add-time">+ 30s</div>
+            <div class="rest-skip">Skip</div>
+          </div>
+        </div>
+
+        <!-- Camera Rep Counter — always visible -->
+        <div class="camera-card">
+          <div class="cam-icon-wrap">📷</div>
+          <div class="cam-text">
+            <div class="cam-title">Camera Rep Counter</div>
+            <div class="cam-sub">Auto-count reps using your camera</div>
+          </div>
+          <span class="cam-chev">›</span>
+        </div>
+
+        <!-- Info chips: dimmed timer (active) + glowing PR -->
+        <div class="info-strip">
+          <div class="info-chip timer" style="opacity:0.55;">
+            <span class="chip-icon">⏱</span>
+            <div class="chip-text">
+              <div class="chip-micro">Rest Timer</div>
+              <div class="chip-val white">2:00 · Always</div>
+            </div>
+          </div>
+          <div class="info-chip pr">
+            <span class="chip-icon">🏆</span>
+            <div class="chip-text">
+              <div class="chip-micro gold">New PR!</div>
+              <div class="chip-val gold" style="filter:drop-shadow(0 0 6px rgba(255,196,40,0.5));">225 × 5</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="progress-row">
+          <span class="prog-icon">📈</span>
+          <span class="prog-label">View Progress</span>
+          <span class="prog-chev">›</span>
+        </div>
+
+        <div class="gap"></div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-lbl active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PHONE 3 — Completed workout (read-only)
+       ══════════════════════════════════════════ -->
+  <div class="phone-wrap">
+    <div class="label">Completed — View Mode</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb">
+        <span>9:41</span>
+        <div class="sb-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <div class="nav-back">‹ Push Day</div>
+        <div class="nav-center">
+          <div class="nav-title">Bench Press</div>
+          <span class="nav-subtitle">Chest · March 27</span>
+        </div>
+        <div class="nav-action"></div>
+      </div>
+
+      <div class="screen">
+        <div class="gap-sm"></div>
+
+        <div class="note-inline">
+          <span class="note-inline-icon" style="opacity:1; color:rgba(255,255,255,0.4);">📝</span>
+          <span class="note-inline-text" style="color:rgba(255,255,255,0.55);">Pause 1s at chest, control down</span>
+          <span class="note-inline-chevron">›</span>
+        </div>
+
+        <div class="sec-hdr">Sets</div>
+        <div class="sets-container">
+          <div class="set-row warmup-row">
+            <div class="set-circle warmup">🔥</div>
+            <div class="set-perf">
+              <span class="set-weight">45</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">12</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill warmup">Warm-up</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+          <div class="set-row">
+            <div class="set-circle working done">1</div>
+            <div class="set-perf">
+              <span class="set-weight">135</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">10</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill working">Working</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+          <div class="set-row">
+            <div class="set-circle working done">2</div>
+            <div class="set-perf">
+              <span class="set-weight">185</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">8</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill working">Working</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+          <div class="set-row pr-row">
+            <div class="set-circle working done">3</div>
+            <div class="set-perf">
+              <span class="set-weight">225</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">5</span>
+            </div>
+            <div class="set-right">
+              <span class="pr-badge">🏆 PR</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Read-only: compact stat chips -->
+        <div class="info-strip" style="margin-top:12px;">
+          <div class="info-chip pr">
+            <span class="chip-icon">🏆</span>
+            <div class="chip-text">
+              <div class="chip-micro gold">PR Set</div>
+              <div class="chip-val gold">225 × 5</div>
+            </div>
+          </div>
+          <div class="info-chip timer">
+            <span class="chip-icon">⚡</span>
+            <div class="chip-text">
+              <div class="chip-micro">Volume</div>
+              <div class="chip-val white">4,320 lbs</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- View Progress (full-width in view mode) -->
+        <div class="progress-row" style="margin-top:10px;">
+          <span class="prog-icon">📈</span>
+          <span class="prog-label">View Progress</span>
+          <span class="prog-chev">›</span>
+        </div>
+
+        <div class="gap"></div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-lbl active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       PHONE 4 — Camera: Counting Reps (mid-set)
+       ══════════════════════════════════════════ -->
+  <div class="phone-wrap">
+    <div class="label">Camera — Counting Reps</div>
+    <div class="iphone active-glow" style="box-shadow: 0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,56,74,0.28), inset 0 1px 0 rgba(255,255,255,0.06);">
+      <div class="di"></div>
+      <div class="sb">
+        <span>9:41</span>
+        <div class="sb-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+
+      <!-- Camera fills the rest of the phone -->
+      <div class="cam-screen">
+
+        <svg width="0" height="0" style="position:absolute">
+          <defs>
+            <linearGradient id="camRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#FF6B3E"/>
+              <stop offset="100%" stop-color="#E8384A"/>
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <!-- Ambient glow -->
+        <div class="cam-glow"></div>
+
+        <!-- Top HUD -->
+        <div class="cam-hud-top">
+          <div class="cam-nav-back">‹ Bench Press</div>
+          <div class="cam-nav-center">
+            <div class="cam-nav-title">Camera</div>
+            <div class="cam-nav-sub">Set 4 · Bench Press</div>
+          </div>
+          <div class="cam-nav-done">Done</div>
+        </div>
+
+        <!-- Exercise context pill -->
+        <div class="cam-ctx-strip">
+          <div class="cam-ex-pill">
+            <div class="live-dot"></div>
+            <span class="cam-ex-name">Bench Press</span>
+            <div class="cam-ex-sep"></div>
+            <span class="cam-set-lbl">Set 4 · 225 lbs</span>
+          </div>
+        </div>
+
+        <!-- Bench press skeleton overlay -->
+        <div class="cam-skel">
+          <svg width="220" height="300" viewBox="0 0 220 300" fill="none"
+               style="opacity:0.68; filter:drop-shadow(0 0 12px rgba(232,56,74,0.55))">
+            <!-- Head -->
+            <circle cx="110" cy="40" r="20" stroke="#E8384A" stroke-width="2.5"/>
+            <!-- Torso spine -->
+            <line x1="110" y1="60" x2="110" y2="126" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Shoulder bar -->
+            <line x1="52" y1="90" x2="168" y2="90" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Left arm — raised pressing up -->
+            <line x1="52" y1="90" x2="28" y2="46" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="28" y1="46" x2="20" y2="24" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Right arm — raised pressing up -->
+            <line x1="168" y1="90" x2="192" y2="46" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="192" y1="46" x2="200" y2="24" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Hip bar -->
+            <line x1="78" y1="126" x2="142" y2="126" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Left leg bent -->
+            <line x1="78" y1="126" x2="62" y2="204" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="62" y1="204" x2="48" y2="258" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Right leg bent -->
+            <line x1="142" y1="126" x2="158" y2="204" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="158" y1="204" x2="172" y2="258" stroke="#E8384A" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Barbell bar -->
+            <line x1="6" y1="22" x2="214" y2="22" stroke="rgba(232,56,74,0.5)" stroke-width="3.5" stroke-linecap="round"/>
+            <!-- Weight plates -->
+            <rect x="8" y="12" width="12" height="20" rx="2.5" stroke="rgba(232,56,74,0.42)" stroke-width="2" fill="none"/>
+            <rect x="200" y="12" width="12" height="20" rx="2.5" stroke="rgba(232,56,74,0.42)" stroke-width="2" fill="none"/>
+            <!-- Joints -->
+            <circle cx="52"  cy="90"  r="5"   fill="#E8384A" opacity="0.9"/>
+            <circle cx="168" cy="90"  r="5"   fill="#E8384A" opacity="0.9"/>
+            <circle cx="28"  cy="46"  r="4"   fill="#E8384A" opacity="0.8"/>
+            <circle cx="192" cy="46"  r="4"   fill="#E8384A" opacity="0.8"/>
+            <circle cx="78"  cy="126" r="5"   fill="#E8384A" opacity="0.9"/>
+            <circle cx="142" cy="126" r="5"   fill="#E8384A" opacity="0.9"/>
+            <circle cx="62"  cy="204" r="4.5" fill="#E8384A" opacity="0.85"/>
+            <circle cx="158" cy="204" r="4.5" fill="#E8384A" opacity="0.85"/>
+          </svg>
+        </div>
+
+        <!-- Rep ring — 5 reps, ~62% filled -->
+        <div class="cam-ring-layer">
+          <div class="cam-ring-wrap">
+            <svg class="cam-ring-svg" viewBox="0 0 130 130">
+              <circle class="cam-ring-track" cx="65" cy="65" r="52" stroke-width="7"/>
+              <circle class="cam-ring-prog cam-ring-prog--active" cx="65" cy="65" r="52"
+                stroke-width="7" stroke-dasharray="327" stroke-dashoffset="124"/>
+            </svg>
+            <div class="cam-rep-num">5</div>
+          </div>
+          <div class="cam-rep-lbl">reps</div>
+        </div>
+
+        <!-- Feedback -->
+        <div class="cam-feedback">Going up… <span class="hi">nice rep!</span></div>
+
+        <!-- Bottom panel -->
+        <div class="cam-bottom">
+          <!-- Confidence bar -->
+          <div class="cam-confidence">
+            <span class="conf-label">Confidence</span>
+            <div class="conf-track"><div class="conf-fill conf-fill--high" style="width:91%"></div></div>
+            <span class="conf-pct">91%</span>
+          </div>
+          <!-- Rep count + weight -->
+          <div class="cam-count-row">
+            <div>
+              <div class="cam-count-big" style="color:#E8384A">5</div>
+              <div class="cam-count-sub">reps counted</div>
+            </div>
+            <div class="cam-weight-tag">
+              <div class="wt-val">225</div>
+              <div class="wt-unit">lbs</div>
+            </div>
+          </div>
+          <!-- Stop button -->
+          <div class="cam-stop-btn">Stop</div>
+        </div>
+
+      </div><!-- /cam-screen -->
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PHONE 5 — Camera: Set Complete, Log it
+       ══════════════════════════════════════════ -->
+  <div class="phone-wrap">
+    <div class="label">Camera — Set Complete</div>
+    <div class="iphone" style="box-shadow: 0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(48,200,90,0.25), inset 0 1px 0 rgba(255,255,255,0.06);">
+      <div class="di"></div>
+      <div class="sb">
+        <span>9:41</span>
+        <div class="sb-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+
+      <div class="cam-screen">
+
+        <!-- Ambient glow — green for complete state -->
+        <div class="cam-glow" style="background: radial-gradient(ellipse, rgba(48,200,90,0.16) 0%, rgba(48,200,90,0.05) 38%, transparent 65%);"></div>
+
+        <!-- Top HUD -->
+        <div class="cam-hud-top">
+          <div class="cam-nav-back">‹ Bench Press</div>
+          <div class="cam-nav-center">
+            <div class="cam-nav-title">Camera</div>
+            <div class="cam-nav-sub">Set 4 · Bench Press</div>
+          </div>
+          <div class="cam-nav-done" style="color:rgba(255,255,255,0.55)">Done</div>
+        </div>
+
+        <!-- Context pill — green complete state -->
+        <div class="cam-ctx-strip">
+          <div class="cam-ex-pill" style="border-color:rgba(48,200,90,0.3); background:rgba(10,8,6,0.72)">
+            <div class="live-dot" style="background:#30C85A; box-shadow: 0 0 7px rgba(48,200,90,0.9);"></div>
+            <span class="cam-ex-name">Bench Press</span>
+            <div class="cam-ex-sep"></div>
+            <span class="cam-set-lbl" style="color:rgba(48,200,90,0.7)">Set 4 · Done</span>
+          </div>
+        </div>
+
+        <!-- Skeleton — dimmed slightly since done -->
+        <div class="cam-skel" style="opacity:0.55">
+          <svg width="220" height="300" viewBox="0 0 220 300" fill="none"
+               style="opacity:0.75; filter:drop-shadow(0 0 10px rgba(48,200,90,0.4))">
+            <circle cx="110" cy="40" r="20" stroke="#30C85A" stroke-width="2.5"/>
+            <line x1="110" y1="60" x2="110" y2="126" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="52" y1="90" x2="168" y2="90" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="52" y1="90" x2="28" y2="46" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="28" y1="46" x2="20" y2="24" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="168" y1="90" x2="192" y2="46" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="192" y1="46" x2="200" y2="24" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="78" y1="126" x2="142" y2="126" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="78" y1="126" x2="62" y2="204" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="62" y1="204" x2="48" y2="258" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="142" y1="126" x2="158" y2="204" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="158" y1="204" x2="172" y2="258" stroke="#30C85A" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="6" y1="22" x2="214" y2="22" stroke="rgba(48,200,90,0.45)" stroke-width="3.5" stroke-linecap="round"/>
+            <rect x="8" y="12" width="12" height="20" rx="2.5" stroke="rgba(48,200,90,0.38)" stroke-width="2" fill="none"/>
+            <rect x="200" y="12" width="12" height="20" rx="2.5" stroke="rgba(48,200,90,0.38)" stroke-width="2" fill="none"/>
+            <circle cx="52"  cy="90"  r="5"   fill="#30C85A" opacity="0.9"/>
+            <circle cx="168" cy="90"  r="5"   fill="#30C85A" opacity="0.9"/>
+            <circle cx="28"  cy="46"  r="4"   fill="#30C85A" opacity="0.8"/>
+            <circle cx="192" cy="46"  r="4"   fill="#30C85A" opacity="0.8"/>
+            <circle cx="78"  cy="126" r="5"   fill="#30C85A" opacity="0.9"/>
+            <circle cx="142" cy="126" r="5"   fill="#30C85A" opacity="0.9"/>
+            <circle cx="62"  cy="204" r="4.5" fill="#30C85A" opacity="0.85"/>
+            <circle cx="158" cy="204" r="4.5" fill="#30C85A" opacity="0.85"/>
+          </svg>
+        </div>
+
+        <!-- Rep ring — 8/8, full green ring -->
+        <div class="cam-ring-layer">
+          <div class="cam-ring-wrap">
+            <svg class="cam-ring-svg" viewBox="0 0 130 130">
+              <circle class="cam-ring-track" cx="65" cy="65" r="52" stroke-width="7"/>
+              <!-- Full ring (dashoffset = 0) -->
+              <circle class="cam-ring-prog cam-ring-prog--done" cx="65" cy="65" r="52"
+                stroke-width="7" stroke-dasharray="327" stroke-dashoffset="0"/>
+            </svg>
+            <div class="cam-rep-num" style="color:#30C85A">8</div>
+          </div>
+          <div class="cam-rep-lbl" style="color:rgba(48,200,90,0.6)">reps done</div>
+        </div>
+
+        <!-- Feedback — complete -->
+        <div class="cam-feedback cam-feedback--done">
+          Set complete! <span class="hi">Nice work 💪</span>
+        </div>
+
+        <!-- Bottom panel — expanded log state -->
+        <div class="cam-bottom">
+          <!-- Confidence -->
+          <div class="cam-confidence">
+            <span class="conf-label">Confidence</span>
+            <div class="conf-track"><div class="conf-fill conf-fill--high" style="width:94%"></div></div>
+            <span class="conf-pct">94%</span>
+          </div>
+          <!-- Rep count + editable weight -->
+          <div class="cam-count-row">
+            <div>
+              <div class="cam-count-big" style="color:#30C85A">8</div>
+              <div class="cam-count-sub">reps counted</div>
+            </div>
+            <div class="cam-weight-tag" style="border-color:rgba(255,255,255,0.18); background:rgba(255,255,255,0.09)">
+              <div class="wt-val">225</div>
+              <div class="wt-unit">lbs &nbsp;›</div>
+            </div>
+          </div>
+          <!-- Log Set button — green -->
+          <div class="cam-log-btn">✓&nbsp;&nbsp;LOG 8 REPS</div>
+          <div class="cam-recount">Recount</div>
+        </div>
+
+      </div><!-- /cam-screen -->
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PHONE 5 — Editing a Logged Set (inline)
+       ══════════════════════════════════════════ -->
+  <div class="phone-wrap">
+    <div class="label">Active — Editing Set 2</div>
+    <div class="iphone active-glow">
+      <div class="di"></div>
+      <div class="sb">
+        <span>9:41</span>
+        <div class="sb-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <div class="nav-back">‹ Log Day A</div>
+        <div class="nav-center">
+          <div class="nav-title">Bench Press <span class="nav-pencil">✏️</span></div>
+          <span class="nav-subtitle">Chest · 4 sets</span>
+        </div>
+        <div class="nav-action">···</div>
+      </div>
+
+      <div class="screen">
+        <div class="gap-sm"></div>
+
+        <div class="sec-hdr">Sets</div>
+        <div class="sets-container">
+          <!-- Set 1: warmup — normal display -->
+          <div class="set-row warmup-row">
+            <div class="set-circle warmup">🔥</div>
+            <div class="set-perf">
+              <span class="set-weight">45</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">12</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill warmup">Warm-up</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+
+          <!-- Set 2: EDITING — expanded with bigger controls -->
+          <div class="set-row editing">
+            <div class="edit-top-row">
+              <div class="set-circle working done">1</div>
+              <div class="set-perf">
+                <span class="set-weight">135</span><span class="set-unit">lbs</span>
+                <span class="set-x">×</span><span class="set-reps">10</span>
+              </div>
+              <div style="flex:1;"></div>
+              <span class="set-type-pill working">Working</span>
+            </div>
+            <div class="edit-controls-area">
+              <div class="edit-row">
+                <span class="edit-label">Reps</span>
+                <div class="edit-step-btn minus">−</div>
+                <div class="edit-val">10</div>
+                <div class="edit-step-btn plus">+</div>
+              </div>
+              <div class="edit-row">
+                <span class="edit-label">Weight</span>
+                <div class="edit-step-btn minus">−</div>
+                <div class="edit-val">135</div>
+                <div class="edit-step-btn plus">+</div>
+              </div>
+              <div class="edit-actions">
+                <div class="edit-done-btn">✓ Done</div>
+                <div class="edit-delete-btn">🗑 Delete</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Set 3: normal display -->
+          <div class="set-row">
+            <div class="set-circle working done">2</div>
+            <div class="set-perf">
+              <span class="set-weight">185</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">8</span>
+            </div>
+            <div class="set-right">
+              <span class="set-type-pill working">Working</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+
+          <!-- Set 4: PR row — normal display -->
+          <div class="set-row pr-row">
+            <div class="set-circle working done">3</div>
+            <div class="set-perf">
+              <span class="set-weight">225</span><span class="set-unit">lbs</span>
+              <span class="set-x">×</span><span class="set-reps">5</span>
+            </div>
+            <div class="set-right">
+              <span class="pr-badge">🏆 PR</span>
+              <span class="set-check done">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero LOG SET area (with set type picker) -->
+        <div class="hero-log">
+          <div class="hero-set-label">Set 5</div>
+          <div class="hero-controls">
+            <div class="hero-pill reps-pill">
+              <div class="hp-top-label">Reps</div>
+              <div class="hp-stepper-row">
+                <div class="hp-step-lg">−</div>
+                <div class="hp-val">10</div>
+                <div class="hp-step-lg">+</div>
+              </div>
+            </div>
+            <div class="hero-pill weight-pill">
+              <div class="wp-main-row">
+                <div class="wp-btn">−</div>
+                <div class="wp-center"><div class="wp-val">225</div></div>
+                <div class="wp-btn">+</div>
+              </div>
+              <div class="wp-step-row">
+                <div class="step-toggle">
+                  <div class="step-opt">2.5</div>
+                  <div class="step-opt active">5</div>
+                  <div class="step-opt">10</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="set-type-picker">
+            <div class="stp-opt warmup">Warm-up</div>
+            <div class="stp-opt active">Working</div>
+            <div class="stp-opt drop">Drop</div>
+            <div class="stp-opt">Failure</div>
+          </div>
+          <div class="log-btn">✓&nbsp;&nbsp;LOG SET</div>
+        </div>
+
+        <div class="gap"></div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-lbl active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

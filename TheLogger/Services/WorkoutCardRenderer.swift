@@ -79,7 +79,7 @@ enum CardTheme: String, CaseIterable {
 // MARK: - Card Background
 
 enum CardBackground: String, CaseIterable {
-    case dark, light, blur, gradient
+    case dark, light, blur, gradient, sunset, lavender, ember
 
     var displayName: String {
         switch self {
@@ -87,6 +87,9 @@ enum CardBackground: String, CaseIterable {
         case .light:    return "Light"
         case .blur:     return "Blur"
         case .gradient: return "Glow"
+        case .sunset:   return "Sunset"
+        case .lavender: return "Lavender"
+        case .ember:    return "Ember"
         }
     }
 }
@@ -137,7 +140,7 @@ enum WorkoutCardRenderer {
     nonisolated(unsafe) private static let ciContext = CIContext()
 
     /// Renders a 1080×1920 share card.
-    static func render(config: ShareCardConfig) -> UIImage? {
+    nonisolated static func render(config: ShareCardConfig) -> UIImage? {
         let cardSize = CGSize(width: 1080, height: 1920)
 
         let sourcePhoto = config.isPhotoFlipped ? config.photo.flippedHorizontally() : config.photo
@@ -531,6 +534,54 @@ enum WorkoutCardRenderer {
                     options: [.drawsAfterEndLocation]
                 )
             }
+
+        case .sunset:
+            // Warm orange → pink → soft purple (like a real sunset sky)
+            let csSun = CGColorSpaceCreateDeviceRGB()
+            let sunColors = [
+                UIColor(red: 0.95, green: 0.55, blue: 0.20, alpha: 1.0).cgColor,   // warm orange
+                UIColor(red: 0.90, green: 0.35, blue: 0.40, alpha: 1.0).cgColor,   // salmon pink
+                UIColor(red: 0.55, green: 0.25, blue: 0.55, alpha: 1.0).cgColor,   // dusky purple
+                UIColor(red: 0.25, green: 0.15, blue: 0.40, alpha: 1.0).cgColor    // deep violet
+            ]
+            if let g = CGGradient(colorsSpace: csSun, colors: sunColors as CFArray, locations: [0, 0.35, 0.7, 1.0]) {
+                cgCtx.drawLinearGradient(g,
+                    start: CGPoint(x: canvasSize.width * 0.3, y: 0),
+                    end: CGPoint(x: canvasSize.width * 0.5, y: canvasSize.height),
+                    options: [.drawsAfterEndLocation])
+            }
+
+        case .lavender:
+            // Soft pastel: lavender → blush pink → peach (like the reference image)
+            let csLav = CGColorSpaceCreateDeviceRGB()
+            let lavColors = [
+                UIColor(red: 0.72, green: 0.58, blue: 0.82, alpha: 1.0).cgColor,   // lavender
+                UIColor(red: 0.85, green: 0.65, blue: 0.78, alpha: 1.0).cgColor,   // blush pink
+                UIColor(red: 0.92, green: 0.75, blue: 0.68, alpha: 1.0).cgColor,   // warm peach
+                UIColor(red: 0.78, green: 0.62, blue: 0.85, alpha: 1.0).cgColor    // soft violet
+            ]
+            if let g = CGGradient(colorsSpace: csLav, colors: lavColors as CFArray, locations: [0, 0.4, 0.7, 1.0]) {
+                cgCtx.drawLinearGradient(g,
+                    start: CGPoint(x: 0, y: 0),
+                    end: CGPoint(x: canvasSize.width, y: canvasSize.height),
+                    options: [.drawsAfterEndLocation])
+            }
+
+        case .ember:
+            // Hot: deep orange → fiery red → warm amber
+            let csEmb = CGColorSpaceCreateDeviceRGB()
+            let embColors = [
+                UIColor(red: 1.0, green: 0.65, blue: 0.15, alpha: 1.0).cgColor,    // bright amber
+                UIColor(red: 0.95, green: 0.35, blue: 0.15, alpha: 1.0).cgColor,   // fiery orange-red
+                UIColor(red: 0.70, green: 0.12, blue: 0.20, alpha: 1.0).cgColor,   // deep crimson
+                UIColor(red: 0.35, green: 0.08, blue: 0.18, alpha: 1.0).cgColor    // dark maroon
+            ]
+            if let g = CGGradient(colorsSpace: csEmb, colors: embColors as CFArray, locations: [0, 0.35, 0.7, 1.0]) {
+                cgCtx.drawLinearGradient(g,
+                    start: CGPoint(x: canvasSize.width * 0.7, y: 0),
+                    end: CGPoint(x: canvasSize.width * 0.2, y: canvasSize.height),
+                    options: [.drawsAfterEndLocation])
+            }
         }
     }
 
@@ -587,6 +638,48 @@ enum WorkoutCardRenderer {
                         endCenter: glowCenter, endRadius: size.height * 0.85,
                         options: [.drawsAfterEndLocation]
                     )
+                }
+            case .sunset:
+                let csSun = CGColorSpaceCreateDeviceRGB()
+                let sunC = [
+                    UIColor(red: 0.95, green: 0.55, blue: 0.20, alpha: 1).cgColor,
+                    UIColor(red: 0.90, green: 0.35, blue: 0.40, alpha: 1).cgColor,
+                    UIColor(red: 0.55, green: 0.25, blue: 0.55, alpha: 1).cgColor,
+                    UIColor(red: 0.25, green: 0.15, blue: 0.40, alpha: 1).cgColor
+                ]
+                if let g = CGGradient(colorsSpace: csSun, colors: sunC as CFArray, locations: [0, 0.35, 0.7, 1]) {
+                    cgCtx.drawLinearGradient(g,
+                        start: CGPoint(x: size.width * 0.3, y: 0),
+                        end: CGPoint(x: size.width * 0.5, y: size.height),
+                        options: [.drawsAfterEndLocation])
+                }
+            case .lavender:
+                let csLav = CGColorSpaceCreateDeviceRGB()
+                let lavC = [
+                    UIColor(red: 0.72, green: 0.58, blue: 0.82, alpha: 1).cgColor,
+                    UIColor(red: 0.85, green: 0.65, blue: 0.78, alpha: 1).cgColor,
+                    UIColor(red: 0.92, green: 0.75, blue: 0.68, alpha: 1).cgColor,
+                    UIColor(red: 0.78, green: 0.62, blue: 0.85, alpha: 1).cgColor
+                ]
+                if let g = CGGradient(colorsSpace: csLav, colors: lavC as CFArray, locations: [0, 0.4, 0.7, 1]) {
+                    cgCtx.drawLinearGradient(g,
+                        start: .zero,
+                        end: CGPoint(x: size.width, y: size.height),
+                        options: [.drawsAfterEndLocation])
+                }
+            case .ember:
+                let csEmb = CGColorSpaceCreateDeviceRGB()
+                let embC = [
+                    UIColor(red: 1.0, green: 0.65, blue: 0.15, alpha: 1).cgColor,
+                    UIColor(red: 0.95, green: 0.35, blue: 0.15, alpha: 1).cgColor,
+                    UIColor(red: 0.70, green: 0.12, blue: 0.20, alpha: 1).cgColor,
+                    UIColor(red: 0.35, green: 0.08, blue: 0.18, alpha: 1).cgColor
+                ]
+                if let g = CGGradient(colorsSpace: csEmb, colors: embC as CFArray, locations: [0, 0.35, 0.7, 1]) {
+                    cgCtx.drawLinearGradient(g,
+                        start: CGPoint(x: size.width * 0.7, y: 0),
+                        end: CGPoint(x: size.width * 0.2, y: size.height),
+                        options: [.drawsAfterEndLocation])
                 }
             }
         }

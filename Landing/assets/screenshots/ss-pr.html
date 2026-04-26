@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390">
+  <title>TheLogger — PR Celebration</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 390px; height: 844px; overflow: hidden;
+      background: #0F0D0B;
+      color: #F2EDE8;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      position: relative;
+    }
+    body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0.05;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .bg-workout {
+      position: absolute; inset: 0; z-index: 0;
+      background: linear-gradient(175deg, #1A1712 0%, #0F0D0B 100%);
+    }
+    .overlay {
+      position: absolute; inset: 0; z-index: 2;
+      background: rgba(5,4,3,0.72);
+      backdrop-filter: blur(3px);
+    }
+    .gold-glow {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -58%);
+      width: 380px; height: 380px; z-index: 3; pointer-events: none;
+      background: radial-gradient(ellipse, rgba(232,168,51,0.25) 0%, rgba(232,168,51,0.08) 40%, transparent 70%);
+    }
+    .rays {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -62%) rotate(0deg);
+      width: 320px; height: 320px; z-index: 3; pointer-events: none; opacity: 0.15;
+    }
+    .dynamic-island {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 28px; background: #000; border-radius: 20px; z-index: 20;
+    }
+    .modal {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 320px; z-index: 10;
+    }
+    .card {
+      background: rgba(22,19,15,0.92);
+      border: 1px solid rgba(232,168,51,0.35);
+      border-radius: 24px; padding: 32px 28px 28px;
+      box-shadow:
+        0 0 0 1px rgba(232,168,51,0.12),
+        0 20px 60px rgba(0,0,0,0.7),
+        0 0 80px rgba(232,168,51,0.15),
+        inset 0 1px 0 rgba(255,220,140,0.12);
+      text-align: center;
+    }
+    .trophy-wrap {
+      position: relative; width: 96px; height: 96px; margin: 0 auto 20px;
+    }
+    .trophy-ring { position: absolute; inset: 0; }
+    .trophy-emoji {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 44px;
+    }
+    .pr-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(232,168,51,0.15); border: 1px solid rgba(232,168,51,0.4);
+      border-radius: 20px; padding: 5px 14px; margin-bottom: 16px;
+      box-shadow: 0 0 20px rgba(232,168,51,0.15);
+    }
+    .pr-badge-text {
+      font-size: 11px; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #E8A833;
+    }
+    .ex-name {
+      font-size: 12px; font-weight: 800; letter-spacing: 0.2em;
+      text-transform: uppercase; color: rgba(242,237,232,0.5); margin-bottom: 10px;
+    }
+    .weight {
+      font-size: 72px; font-weight: 900; letter-spacing: -4px; line-height: 0.9; color: #F2EDE8;
+    }
+    .reps { font-size: 24px; font-weight: 700; color: #F5573E; margin: 8px 0 6px; }
+    .estimated-1rm { font-size: 15px; color: rgba(242,237,232,0.5); margin-bottom: 6px; font-weight: 500; }
+    .estimated-1rm span { color: rgba(242,237,232,0.75); font-weight: 700; }
+    .prev-pr { font-size: 12px; color: rgba(242,237,232,0.3); margin-bottom: 24px; }
+    .divider { width: 40px; height: 1px; background: rgba(232,168,51,0.3); margin: 0 auto 20px; }
+    .keep-going {
+      width: 100%; border: none; border-radius: 14px; padding: 16px;
+      background: linear-gradient(135deg, #F0B833 0%, #D48820 100%);
+      color: #1A1000; font-size: 16px; font-weight: 800; letter-spacing: -0.1px;
+      font-family: inherit;
+      box-shadow: 0 8px 28px rgba(212,136,32,0.45), inset 0 1px 0 rgba(255,230,140,0.3);
+    }
+    .confetti { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+    .dot {
+      position: absolute; border-radius: 50%;
+      animation: fall linear infinite;
+    }
+    @keyframes fall {
+      from { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      to   { transform: translateY(900px) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-workout"></div>
+  <div class="overlay"></div>
+  <div class="dynamic-island"></div>
+  <div class="gold-glow"></div>
+  <svg class="rays" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" fill="rgba(232,168,51,1)">
+    <g transform="translate(160,160)">
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(22.5)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(45)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(67.5)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(90)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(112.5)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(135)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(157.5)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(180)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(202.5)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(225)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(247.5)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(270)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(292.5)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(315)"/>
+      <polygon points="0,-155 6,-30 -6,-30" opacity="0.9" transform="rotate(337.5)"/>
+    </g>
+  </svg>
+  <div class="confetti">
+    <div class="dot" style="width:8px;height:8px;background:#F5573E;left:12%;animation-duration:2.1s;animation-delay:0s;top:-10px"></div>
+    <div class="dot" style="width:6px;height:6px;background:#E8A833;left:28%;animation-duration:1.8s;animation-delay:0.3s;top:-10px"></div>
+    <div class="dot" style="width:10px;height:5px;border-radius:2px;background:#F2EDE8;left:45%;animation-duration:2.4s;animation-delay:0.1s;top:-10px"></div>
+    <div class="dot" style="width:7px;height:7px;background:#E8A833;left:62%;animation-duration:1.9s;animation-delay:0.5s;top:-10px"></div>
+    <div class="dot" style="width:5px;height:9px;border-radius:2px;background:#F5573E;left:78%;animation-duration:2.2s;animation-delay:0.2s;top:-10px"></div>
+    <div class="dot" style="width:9px;height:5px;border-radius:2px;background:#6B9FFF;left:88%;animation-duration:2s;animation-delay:0.7s;top:-10px"></div>
+    <div class="dot" style="width:6px;height:6px;background:#3DBDAE;left:5%;animation-duration:2.3s;animation-delay:0.4s;top:-10px"></div>
+    <div class="dot" style="width:8px;height:4px;border-radius:2px;background:#E8A833;left:55%;animation-duration:1.7s;animation-delay:0.6s;top:-10px"></div>
+    <div class="dot" style="width:7px;height:7px;background:#F5573E;left:35%;animation-duration:2.5s;animation-delay:0s;top:-10px"></div>
+    <div class="dot" style="width:5px;height:5px;background:#F2EDE8;left:72%;animation-duration:1.9s;animation-delay:0.3s;top:-10px"></div>
+    <div class="dot" style="width:8px;height:8px;background:#E8A833;left:92%;animation-duration:2.1s;animation-delay:0.8s;top:-10px"></div>
+    <div class="dot" style="width:6px;height:10px;border-radius:2px;background:#F5573E;left:20%;animation-duration:2.0s;animation-delay:1.0s;top:-10px"></div>
+  </div>
+  <div class="modal">
+    <div class="card">
+      <div class="trophy-wrap">
+        <svg class="trophy-ring" viewBox="0 0 96 96">
+          <circle cx="48" cy="48" r="44" stroke="rgba(232,168,51,0.3)" stroke-width="2" fill="none"/>
+          <circle cx="48" cy="48" r="44" stroke="rgba(232,168,51,0.15)" stroke-width="6" fill="none"/>
+        </svg>
+        <div class="trophy-emoji">🏆</div>
+      </div>
+      <div class="pr-badge"><span>✦</span><span class="pr-badge-text">New Personal Record</span></div>
+      <div class="ex-name">Bench Press</div>
+      <div class="weight">190</div>
+      <div class="reps">lbs &nbsp;×&nbsp; 5 reps</div>
+      <div class="estimated-1rm">Est. 1RM <span>224 lbs</span></div>
+      <div class="prev-pr">Previous: 185 lbs × 8 · 218 lbs 1RM</div>
+      <div class="divider"></div>
+      <button class="keep-going">Keep Going 💪</button>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Onboarding</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --accent:#ff596b; --gold:#ffb84d; --blue:#80a6ff; --teal:#4dc7b8;
+  --bg:#0a0d1f; --text:#fff; --sub:rgba(255,255,255,.52);
+  --card:rgba(255,255,255,.07); --border:rgba(255,255,255,.1);
+}
+body {
+  background:#0d0f1e;
+  display:flex; flex-direction:column; align-items:center;
+  min-height:100vh; padding:36px 20px 56px;
+  font-family:-apple-system,'SF Pro Display',BlinkMacSystemFont,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.pg-label {
+  color:rgba(255,255,255,.2); font-size:11px; letter-spacing:2.5px;
+  text-transform:uppercase; margin-bottom:22px;
+}
+
+/* ── Phone shell ── */
+.phone {
+  width:393px; height:852px;
+  border-radius:54px; overflow:hidden; position:relative;
+  border:1.5px solid rgba(255,255,255,.13);
+  box-shadow:0 0 0 7px rgba(255,255,255,.025), 0 48px 110px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.08);
+  background:#000;
+}
+/* Dynamic Island */
+.di {
+  position:absolute; top:12px; left:50%; transform:translateX(-50%);
+  width:126px; height:37px; background:#000; border-radius:20px; z-index:100;
+}
+
+/* ── Screens ── */
+.screen {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center;
+  opacity:0; pointer-events:none;
+  transform:translateX(55px);
+  transition:opacity .38s ease, transform .38s cubic-bezier(.25,.46,.45,.94);
+}
+.screen.active { opacity:1; pointer-events:all; transform:translateX(0); }
+.screen.out    { opacity:0; transform:translateX(-55px); pointer-events:none; }
+
+/* ── Page dots ── */
+.dots {
+  position:absolute; bottom:32px; left:50%; transform:translateX(-50%);
+  display:flex; gap:6px; z-index:50;
+}
+.dot {
+  height:6px; border-radius:3px; background:rgba(255,255,255,.22);
+  transition:all .4s cubic-bezier(.34,1.56,.64,1);
+}
+.dot.on { background:#fff; }
+
+/* ── Confetti ── */
+.cfwrap { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:200; }
+.cf { position:absolute; animation:cffly ease-out both; }
+@keyframes cffly {
+  0%  { transform:translate(0,0) rotate(0deg) scale(1); opacity:1; }
+  100%{ transform:translate(var(--cx),var(--cy)) rotate(var(--cr)) scale(.15); opacity:0; }
+}
+
+/* ══════════════════════════════════════════
+   SCREEN 1 — VIDEO HERO
+══════════════════════════════════════════ */
+#s0 { padding:0; background:#000; }
+
+.vid-wrap {
+  position:absolute; inset:0; overflow:hidden;
+}
+.vid-wrap video {
+  width:100%; height:100%;
+  object-fit:cover; object-position:center top;
+}
+
+/* Gradient overlays */
+.vid-top-fade {
+  position:absolute; top:0; left:0; right:0; height:180px;
+  background:linear-gradient(to bottom, rgba(0,0,0,.72) 0%, transparent 100%);
+  z-index:2;
+}
+.vid-bot-fade {
+  position:absolute; bottom:0; left:0; right:0; height:320px;
+  background:linear-gradient(to top, rgba(0,0,0,.95) 0%, rgba(0,0,0,.7) 50%, transparent 100%);
+  z-index:2;
+}
+
+/* Tag pill at top */
+.vid-tag {
+  position:absolute; top:58px; left:50%; transform:translateX(-50%);
+  z-index:10;
+  display:flex; align-items:center; gap:6px;
+  padding:6px 14px; border-radius:20px;
+  background:rgba(77,199,184,.18);
+  border:1px solid rgba(77,199,184,.4);
+  backdrop-filter:blur(10px);
+  white-space:nowrap;
+}
+.vid-tag-dot { width:7px; height:7px; border-radius:50%; background:var(--teal); animation:blink 1.4s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+.vid-tag-text { font-size:12px; font-weight:700; color:var(--teal); letter-spacing:.8px; text-transform:uppercase; }
+
+/* Bottom content over gradient */
+.vid-content {
+  position:absolute; bottom:0; left:0; right:0;
+  padding:0 26px 82px;
+  z-index:10;
+  display:flex; flex-direction:column; align-items:flex-start; gap:0;
+}
+.vid-eyebrow {
+  font-size:12px; font-weight:600; color:rgba(255,255,255,.5);
+  letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;
+}
+.vid-headline {
+  font-size:34px; font-weight:800; color:#fff;
+  letter-spacing:-.6px; line-height:1.1; margin-bottom:10px;
+}
+.vid-headline em { color:var(--teal); font-style:normal; }
+.vid-sub {
+  font-size:15px; color:rgba(255,255,255,.6); line-height:1.5;
+  margin-bottom:22px;
+}
+
+.btn-glass {
+  width:100%; padding:16px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.25);
+  backdrop-filter:blur(16px);
+  border-radius:16px;
+  color:#fff; font-family:inherit; font-size:17px; font-weight:600;
+  cursor:pointer;
+  transition:transform .12s, background .2s;
+  text-align:center;
+}
+.btn-glass:active { transform:scale(.97); background:rgba(255,255,255,.18); }
+
+/* ══════════════════════════════════════════
+   SCREEN 2 — FEATURES
+══════════════════════════════════════════ */
+#s1 {
+  background:var(--bg);
+  padding:68px 22px 84px;
+  gap:0;
+}
+
+/* Particles for non-video screens */
+.particles { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.p { position:absolute; border-radius:50%; background:rgba(255,255,255,.08); animation:pdrift linear infinite; }
+@keyframes pdrift {
+  0%  {opacity:0; transform:translate(0,0);}
+  15% {opacity:1;}
+  85% {opacity:.3;}
+  100%{opacity:0; transform:translate(var(--dx),var(--dy));}
+}
+
+.s2-kicker { font-size:12px; font-weight:600; color:var(--sub); letter-spacing:1.2px; text-transform:uppercase; margin-bottom:7px; }
+.s2-head { font-size:28px; font-weight:800; color:var(--text); letter-spacing:-.45px; line-height:1.2; margin-bottom:18px; }
+.s2-head em { color:var(--accent); font-style:normal; }
+
+/* PR demo card */
+.pr-card {
+  width:100%; background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.09);
+  border-radius:18px; padding:15px 15px 13px;
+  position:relative; overflow:hidden; margin-bottom:12px;
+}
+.pr-card-label { font-size:11px; font-weight:600; color:rgba(255,255,255,.35); letter-spacing:.9px; text-transform:uppercase; margin-bottom:11px; }
+.set-row { display:flex; align-items:center; gap:9px; height:30px; opacity:0; transform:translateY(5px); transition:opacity .3s ease, transform .3s ease; }
+.set-row.show { opacity:1; transform:translateY(0); }
+.chk { width:20px; height:20px; border-radius:10px; border:2px solid rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; font-size:10px; transition:all .28s; flex-shrink:0; }
+.chk.done { background:var(--teal); border-color:var(--teal); box-shadow:0 0 8px rgba(77,199,184,.35); }
+.sw { font-size:15px; font-weight:700; color:var(--text); }
+.sr { font-size:13px; color:var(--sub); }
+.stag { margin-left:auto; font-size:9px; font-weight:600; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,.07); color:rgba(255,255,255,.28); text-transform:uppercase; letter-spacing:.5px; }
+
+.pr-pop {
+  position:absolute; inset:0; border-radius:18px; border:1px solid rgba(255,184,77,.28);
+  background:linear-gradient(145deg,rgba(255,184,77,.13),rgba(255,89,107,.08));
+  backdrop-filter:blur(4px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  opacity:0; transform:scale(.88);
+  transition:opacity .38s cubic-bezier(.34,1.56,.64,1), transform .38s cubic-bezier(.34,1.56,.64,1);
+}
+.pr-pop.show { opacity:1; transform:scale(1); }
+.pr-trophy { font-size:30px; line-height:1; margin-bottom:2px; }
+.pr-lbl { font-size:18px; font-weight:800; color:var(--gold); }
+.pr-val { font-size:12px; color:rgba(255,255,255,.55); }
+
+/* Bottom two cards */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
+
+/* Share card */
+.share-mock {
+  background:linear-gradient(145deg,#1a0928 0%,#0c1830 45%,#120a1a 100%);
+  border:1px solid rgba(255,255,255,.1); border-radius:16px;
+  padding:13px; display:flex; flex-direction:column; gap:5px;
+  position:relative; overflow:hidden;
+}
+.share-mock::after {
+  content:''; position:absolute; top:-20px; right:-20px;
+  width:70px; height:70px; border-radius:50%;
+  background:radial-gradient(circle,rgba(255,184,77,.22),transparent 70%);
+}
+.sm-name  { font-size:11px; font-weight:800; color:#fff; }
+.sm-date  { font-size:8px; color:rgba(255,255,255,.35); margin-top:-2px; }
+.sm-div   { height:1px; background:rgba(255,255,255,.1); margin:2px 0; }
+.sm-ex    { font-size:8px; color:rgba(255,255,255,.6); display:flex; align-items:center; gap:3px; }
+.sm-dot   { width:3px; height:3px; border-radius:50%; background:var(--teal); }
+.sm-stats { display:flex; gap:5px; margin-top:2px; }
+.sm-stat  { flex:1; background:rgba(255,255,255,.08); border-radius:6px; padding:4px 3px; text-align:center; }
+.sm-sn    { font-size:10px; font-weight:800; color:#fff; }
+.sm-sl    { font-size:7px; color:rgba(255,255,255,.35); }
+.sm-pr    { font-size:8px; font-weight:700; color:var(--gold); background:rgba(255,184,77,.15); border:1px solid rgba(255,184,77,.3); border-radius:5px; padding:3px 5px; display:inline-flex; align-items:center; gap:2px; align-self:flex-start; }
+.sm-logo  { font-size:7px; color:rgba(255,255,255,.2); margin-top:auto; letter-spacing:.5px; }
+.share-footer { font-size:11px; font-weight:700; color:var(--text); margin-top:4px; }
+.share-footer-sub { font-size:10px; color:var(--sub); }
+
+/* Stats card */
+.stats-mock {
+  background:rgba(255,255,255,.05); border:1px solid var(--border);
+  border-radius:16px; padding:13px; display:flex; flex-direction:column; gap:8px;
+}
+.stats-row { display:flex; gap:6px; }
+.stat-pip { flex:1; background:rgba(255,255,255,.06); border-radius:8px; padding:7px 5px; text-align:center; }
+.sp-n { font-size:14px; font-weight:800; color:var(--text); }
+.sp-l { font-size:8px; color:var(--sub); margin-top:1px; }
+.streak-row { display:flex; gap:3px; }
+.streak-day { flex:1; height:22px; border-radius:4px; background:rgba(255,255,255,.07); transition:background .3s; }
+.streak-day.active { background:var(--accent); }
+.stats-footer { font-size:11px; font-weight:700; color:var(--text); margin-top:2px; }
+.stats-footer-sub { font-size:10px; color:var(--sub); }
+
+/* Achievements row */
+.ach-row { display:flex; gap:8px; width:100%; margin-top:0; }
+.ach-card {
+  flex:1; background:rgba(255,255,255,.055); border:1px solid var(--border);
+  border-radius:14px; padding:11px 10px;
+  display:flex; flex-direction:column; gap:4px;
+}
+.ach-icon { font-size:20px; }
+.ach-name { font-size:11px; font-weight:700; color:var(--text); }
+.ach-prog { height:3px; border-radius:2px; background:rgba(255,255,255,.1); overflow:hidden; }
+.ach-bar  { height:100%; border-radius:2px; }
+
+/* ══════════════════════════════════════════
+   SCREEN 3 — SETUP
+══════════════════════════════════════════ */
+#s2 { background:var(--bg); padding:68px 24px 84px; gap:0; }
+
+.setup-head { font-size:27px; font-weight:800; color:var(--text); letter-spacing:-.4px; margin-bottom:5px; margin-top:8px; }
+.setup-sub  { font-size:14px; color:var(--sub); margin-bottom:28px; line-height:1.5; }
+.sec-lbl    { font-size:11px; font-weight:600; color:rgba(255,255,255,.3); letter-spacing:1.2px; text-transform:uppercase; align-self:flex-start; margin-bottom:9px; }
+
+.name-field {
+  width:100%; padding:14px 15px;
+  background:rgba(255,255,255,.07); border:1.5px solid rgba(255,255,255,.12);
+  border-radius:14px; color:var(--text); font-family:inherit; font-size:16px;
+  outline:none; transition:border-color .2s; margin-bottom:24px;
+}
+.name-field:focus { border-color:rgba(255,89,107,.55); }
+.name-field::placeholder { color:rgba(255,255,255,.22); }
+
+.unit-row { display:flex; gap:10px; width:100%; margin-bottom:24px; }
+.unit-card { flex:1; padding:17px 10px; background:var(--card); border:1.5px solid var(--border); border-radius:16px; text-align:center; cursor:pointer; transition:all .26s cubic-bezier(.34,1.56,.64,1); }
+.unit-card.on { background:rgba(255,89,107,.15); border-color:var(--accent); box-shadow:0 0 20px rgba(255,89,107,.15); }
+.unit-big   { font-size:24px; font-weight:800; color:var(--text); }
+.unit-small { font-size:12px; color:var(--sub); margin-top:2px; }
+
+.goal-row  { display:flex; gap:7px; width:100%; margin-bottom:24px; }
+.goal-btn  { flex:1; padding:13px 0; background:var(--card); border:1.5px solid var(--border); border-radius:13px; color:var(--sub); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; transition:all .22s cubic-bezier(.34,1.56,.64,1); }
+.goal-btn.on { background:rgba(128,166,255,.15); border-color:var(--blue); color:var(--text); box-shadow:0 0 14px rgba(128,166,255,.14); }
+
+/* ══════════════════════════════════════════
+   SCREEN 4 — READY
+══════════════════════════════════════════ */
+#s3 { background:var(--bg); padding:68px 24px 84px; gap:0; }
+
+.ready-head { font-size:30px; font-weight:800; color:var(--text); text-align:center; letter-spacing:-.5px; line-height:1.2; margin-bottom:7px; margin-top:10px; }
+.ready-head em { color:var(--accent); font-style:normal; }
+.ready-sub  { font-size:14px; color:var(--sub); text-align:center; margin-bottom:24px; line-height:1.5; }
+
+.dashboard-preview {
+  width:100%; background:rgba(255,255,255,.04); border:1px solid var(--border);
+  border-radius:20px; padding:14px; display:flex; flex-direction:column; gap:11px;
+}
+.dp-row { display:flex; align-items:center; gap:12px; }
+.dp-ring { width:50px; height:50px; border-radius:25px; position:relative; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.dp-ring svg { position:absolute; inset:0; transform:rotate(-90deg); }
+.dp-ring-inner { z-index:1; text-align:center; }
+.dp-ring-n { font-size:14px; font-weight:800; color:var(--text); line-height:1; }
+.dp-ring-l { font-size:8px; color:var(--sub); line-height:1; margin-top:1px; }
+.dp-ring-title { font-size:13px; font-weight:600; color:var(--text); }
+.dp-ring-desc  { font-size:11px; color:var(--sub); margin-top:2px; }
+
+.dp-stats { display:flex; gap:7px; }
+.dp-stat  { flex:1; background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:10px; padding:9px; text-align:center; }
+.dp-stat-n { font-size:15px; font-weight:800; }
+.dp-stat-l { font-size:9px; color:var(--sub); margin-top:1px; }
+
+.dp-workout { background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:10px; padding:10px 13px; display:flex; align-items:center; gap:9px; }
+.dpw-dot { width:8px; height:8px; border-radius:4px; background:var(--teal); flex-shrink:0; }
+.dpw-name { font-size:13px; font-weight:600; color:var(--text); flex:1; }
+.dpw-meta { font-size:11px; color:var(--sub); }
+
+/* ── Shared buttons ── */
+.btn-primary {
+  width:100%; padding:17px; border:none; border-radius:16px;
+  background:linear-gradient(135deg,var(--accent) 0%,#e03348 100%);
+  color:#fff; font-family:inherit; font-size:17px; font-weight:600;
+  cursor:pointer; box-shadow:0 8px 28px rgba(255,89,107,.32);
+  transition:transform .12s, opacity .12s; margin-top:auto;
+}
+.btn-primary:active { transform:scale(.97); opacity:.88; }
+.btn-secondary {
+  width:100%; padding:15px; border:1.5px solid rgba(255,255,255,.17);
+  border-radius:16px; background:transparent;
+  color:rgba(255,255,255,.58); font-family:inherit; font-size:16px; font-weight:600;
+  cursor:pointer; margin-top:10px; transition:transform .12s;
+}
+.btn-secondary:active { transform:scale(.97); }
+
+.privacy-note { font-size:11px; color:rgba(255,255,255,.27); text-align:center; margin-top:11px; line-height:1.5; }
+.gap { flex:1; min-height:0; }
+</style>
+</head>
+<body>
+
+<div class="pg-label">TheLogger — Onboarding</div>
+
+<div class="phone">
+  <div class="di"></div>
+  <div class="cfwrap" id="cfwrap"></div>
+  <div class="dots" id="dots"></div>
+
+  <!-- ════════════════════════════════
+       S1 — VIDEO HERO
+  ════════════════════════════════ -->
+  <div class="screen active" id="s0">
+
+    <!-- Full-bleed video -->
+    <div class="vid-wrap">
+      <video id="heroVid" autoplay muted loop playsinline
+             src="Landing/Squat_Rep_Counter.MP4">
+      </video>
+    </div>
+
+    <!-- Top + bottom gradients -->
+    <div class="vid-top-fade"></div>
+    <div class="vid-bot-fade"></div>
+
+    <!-- Live indicator pill -->
+    <div class="vid-tag">
+      <div class="vid-tag-dot"></div>
+      <span class="vid-tag-text">AI Rep Counter</span>
+    </div>
+
+    <!-- Bottom text + CTA -->
+    <div class="vid-content">
+      <div class="vid-eyebrow">On-device · No internet needed</div>
+      <div class="vid-headline">Your phone<br>counts the <em>reps.</em></div>
+      <div class="vid-sub">Point your camera. Lift. TheLogger tracks every rep automatically — no wearable required.</div>
+      <button class="btn-glass" onclick="next()">See everything →</button>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════
+       S2 — FEATURES
+  ════════════════════════════════ -->
+  <div class="screen" id="s1">
+    <div class="particles" id="ptcls1"></div>
+
+    <div class="s2-kicker">And there's more</div>
+    <div class="s2-head">PRs, stats,<br>and <em>share cards.</em></div>
+
+    <!-- PR demo card -->
+    <div class="pr-card">
+      <div class="pr-card-label">Bench Press</div>
+      <div class="set-row show">
+        <div class="chk done">✓</div>
+        <div class="sw">185 lbs</div><div class="sr">× 8</div>
+        <div class="stag">working</div>
+      </div>
+      <div class="set-row show">
+        <div class="chk done">✓</div>
+        <div class="sw">205 lbs</div><div class="sr">× 5</div>
+        <div class="stag">working</div>
+      </div>
+      <div class="set-row" id="pr3">
+        <div class="chk" id="c3"></div>
+        <div class="sw">225 lbs</div><div class="sr">× 3</div>
+        <div class="stag">working</div>
+      </div>
+      <div class="pr-pop" id="prPop">
+        <div class="pr-trophy">🏆</div>
+        <div class="pr-lbl">New Personal Record!</div>
+        <div class="pr-val">225 lbs · Est. 1RM: 252 lbs</div>
+      </div>
+    </div>
+
+    <!-- Share card + Stats side by side -->
+    <div class="two-col">
+      <!-- Share card -->
+      <div>
+        <div class="share-mock">
+          <div class="sm-name">Push Day 💪</div>
+          <div class="sm-date">Today · 58 min</div>
+          <div class="sm-div"></div>
+          <div class="sm-ex"><span class="sm-dot"></span>Bench Press · 3 sets</div>
+          <div class="sm-ex"><span class="sm-dot"></span>OHP · 2 sets</div>
+          <div class="sm-stats">
+            <div class="sm-stat"><div class="sm-sn">12.4k</div><div class="sm-sl">lbs</div></div>
+            <div class="sm-stat"><div class="sm-sn">9</div><div class="sm-sl">sets</div></div>
+          </div>
+          <div class="sm-pr">🏆 2 new PRs</div>
+          <div class="sm-logo">THELOGGER</div>
+        </div>
+        <div class="share-footer" style="margin-top:7px">Share Cards</div>
+        <div class="share-footer-sub">Post your workouts</div>
+      </div>
+
+      <!-- Stats + Streaks -->
+      <div>
+        <div class="stats-mock">
+          <div class="stats-row">
+            <div class="stat-pip"><div class="sp-n" style="color:var(--accent)">🔥 7</div><div class="sp-l">day streak</div></div>
+            <div class="stat-pip"><div class="sp-n" style="color:var(--gold)">🏆 4</div><div class="sp-l">PRs this wk</div></div>
+          </div>
+          <div class="streak-row" id="streakRow"></div>
+        </div>
+        <div class="stats-footer" style="margin-top:7px">Streaks & Stats</div>
+        <div class="stats-footer-sub">8-week trends</div>
+      </div>
+    </div>
+
+    <!-- Achievements strip -->
+    <div class="ach-row">
+      <div class="ach-card">
+        <div class="ach-icon">🥇</div>
+        <div class="ach-name">First PR</div>
+        <div class="ach-prog"><div class="ach-bar" style="width:100%;background:var(--gold)"></div></div>
+      </div>
+      <div class="ach-card">
+        <div class="ach-icon">🔥</div>
+        <div class="ach-name">7-Day Streak</div>
+        <div class="ach-prog"><div class="ach-bar" style="width:100%;background:var(--accent)"></div></div>
+      </div>
+      <div class="ach-card">
+        <div class="ach-icon">💪</div>
+        <div class="ach-name">Moved 5 Tons</div>
+        <div class="ach-prog"><div class="ach-bar" style="width:60%;background:var(--blue)"></div></div>
+      </div>
+    </div>
+
+    <div class="gap"></div>
+    <button class="btn-primary" onclick="next()">Continue</button>
+  </div>
+
+  <!-- ════════════════════════════════
+       S3 — SETUP
+  ════════════════════════════════ -->
+  <div class="screen" id="s2">
+    <div class="particles" id="ptcls2"></div>
+
+    <div class="setup-head">Quick setup</div>
+    <div class="setup-sub">Personalise your experience<br>in two taps.</div>
+
+    <div class="sec-lbl">Your name (optional)</div>
+    <input class="name-field" id="nameInput" type="text" placeholder="What should we call you?" />
+
+    <div class="sec-lbl">Units</div>
+    <div class="unit-row">
+      <div class="unit-card on" id="u-lbs" onclick="setUnit('lbs')">
+        <div class="unit-big">lbs</div>
+        <div class="unit-small">Imperial</div>
+      </div>
+      <div class="unit-card" id="u-kg" onclick="setUnit('kg')">
+        <div class="unit-big">kg</div>
+        <div class="unit-small">Metric</div>
+      </div>
+    </div>
+
+    <div class="sec-lbl">Weekly training goal</div>
+    <div class="goal-row">
+      <button class="goal-btn" onclick="setGoal(2,this)">2×</button>
+      <button class="goal-btn" onclick="setGoal(3,this)">3×</button>
+      <button class="goal-btn on" onclick="setGoal(4,this)">4×</button>
+      <button class="goal-btn" onclick="setGoal(5,this)">5×</button>
+      <button class="goal-btn" onclick="setGoal(6,this)">6×</button>
+    </div>
+
+    <div class="gap"></div>
+    <button class="btn-primary" onclick="next()">Continue</button>
+  </div>
+
+  <!-- ════════════════════════════════
+       S4 — READY
+  ════════════════════════════════ -->
+  <div class="screen" id="s3">
+    <div class="particles" id="ptcls3"></div>
+
+    <div class="ready-head" id="readyHead">Your gym journal<br>is <em>ready.</em></div>
+    <div class="ready-sub">Everything you need to build<br>the habit and crush your PRs.</div>
+
+    <div class="dashboard-preview">
+      <div class="dp-row">
+        <div class="dp-ring">
+          <svg width="50" height="50" viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="21" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="4"/>
+            <circle cx="25" cy="25" r="21" fill="none" stroke="url(#rg1)" stroke-width="4"
+              stroke-dasharray="131.9" stroke-dashoffset="52" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="rg1" x1="0%" y1="0%" x2="100%">
+                <stop offset="0%" stop-color="#ff596b"/>
+                <stop offset="100%" stop-color="#ffb84d"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="dp-ring-inner">
+            <div class="dp-ring-n" id="goalDisp">4</div>
+            <div class="dp-ring-l">goal</div>
+          </div>
+        </div>
+        <div>
+          <div class="dp-ring-title">Weekly Goal Ring</div>
+          <div class="dp-ring-desc" id="goalDesc">Your 4× / week target</div>
+        </div>
+      </div>
+      <div class="dp-stats">
+        <div class="dp-stat"><div class="dp-stat-n" style="color:var(--teal)">📸</div><div class="dp-stat-l">Rep Counter</div></div>
+        <div class="dp-stat"><div class="dp-stat-n" style="color:var(--gold)">🏆</div><div class="dp-stat-l">Auto PRs</div></div>
+        <div class="dp-stat"><div class="dp-stat-n" style="color:var(--accent)">🔥</div><div class="dp-stat-l">Streaks</div></div>
+        <div class="dp-stat"><div class="dp-stat-n" style="color:var(--blue)">🎖</div><div class="dp-stat-l">Achievements</div></div>
+      </div>
+      <div class="dp-workout">
+        <div class="dpw-dot"></div>
+        <div class="dpw-name">Your first workout awaits</div>
+        <div class="dpw-meta">Ready →</div>
+      </div>
+    </div>
+
+    <div class="gap"></div>
+    <button class="btn-primary" onclick="finish('workout')">Start First Workout</button>
+    <button class="btn-secondary" onclick="finish('explore')">Explore First</button>
+    <div class="privacy-note">Everything stays on your device. No account, no tracking.</div>
+  </div>
+
+</div><!-- /phone -->
+
+<div style="display:flex;gap:12px;align-items:center;margin-top:20px">
+  <button onclick="prev()" id="prevBtn" style="padding:9px 18px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.55);font-family:inherit;font-size:13px;cursor:pointer;" disabled>← Back</button>
+  <span id="ctrlLbl" style="font-size:12px;color:rgba(255,255,255,.28);min-width:60px;text-align:center">1 / 4</span>
+  <button onclick="next()" id="nextBtn" style="padding:9px 18px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.55);font-family:inherit;font-size:13px;cursor:pointer;">Next →</button>
+</div>
+
+<script>
+let step = 0, selGoal = 4;
+const TOTAL = 4;
+const demoT = [];
+
+/* ── PR demo (screen 2) ── */
+function runPRDemo() {
+  demoT.forEach(clearTimeout); demoT.length = 0;
+  const r = document.getElementById('pr3');
+  const c = document.getElementById('c3');
+  const p = document.getElementById('prPop');
+  r.classList.remove('show'); c.classList.remove('done'); c.textContent=''; p.classList.remove('show');
+  const seq = [
+    [500,  () => r.classList.add('show')],
+    [1600, () => { c.classList.add('done'); c.textContent='✓'; }],
+    [2400, () => { p.classList.add('show'); smallConfetti(); }],
+    [6000, () => { p.classList.remove('show'); c.classList.remove('done'); c.textContent=''; r.classList.remove('show'); }],
+    [6600, () => runPRDemo()],
+  ];
+  seq.forEach(([ms,fn]) => demoT.push(setTimeout(fn,ms)));
+}
+
+/* ── Build streak dots ── */
+function buildStreak() {
+  const el = document.getElementById('streakRow');
+  if (!el || el.children.length) return;
+  const active = [1,2,4,5,6]; // Mon-Sun (0=Mon)
+  for (let i=0;i<7;i++) {
+    const d=document.createElement('div');
+    d.className='streak-day'+(active.includes(i)?' active':'');
+    el.appendChild(d);
+  }
+}
+
+/* ── Particles ── */
+function buildParticles(id) {
+  const c = document.getElementById(id); if (!c) return;
+  for (let i=0;i<12;i++) {
+    const p=document.createElement('div'); p.className='p';
+    const s=2+Math.random()*3, dur=9+Math.random()*13;
+    p.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*393}px;top:${Math.random()*852}px;--dx:${(Math.random()-.5)*120}px;--dy:${(Math.random()-.5)*120}px;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;`;
+    c.appendChild(p);
+  }
+}
+
+/* ── Nav ── */
+function goTo(nxt, dir) {
+  const cur = document.getElementById('s'+step);
+  const el  = document.getElementById('s'+nxt);
+  cur.classList.add('out'); cur.classList.remove('active');
+  setTimeout(() => cur.classList.remove('out'), 420);
+
+  el.style.transform = `translateX(${dir>0?55:-55}px)`;
+  el.style.opacity = '0';
+  el.classList.add('active');
+  requestAnimationFrame(() => {
+    el.style.transition='opacity .38s ease, transform .38s cubic-bezier(.25,.46,.45,.94)';
+    el.style.transform='translateX(0)'; el.style.opacity='1';
+  });
+  setTimeout(() => { el.style.transition=''; el.style.transform=''; el.style.opacity=''; }, 420);
+
+  step = nxt;
+  updateDots(); updateCtrl();
+
+  if (nxt === 1) { buildStreak(); runPRDemo(); }
+  else           { demoT.forEach(clearTimeout); demoT.length=0; }
+
+  if (nxt === 3) {
+    const name = document.getElementById('nameInput').value.trim();
+    document.getElementById('readyHead').innerHTML = name
+      ? `Ready,<br><em>${name}.</em>`
+      : `Your gym journal<br>is <em>ready.</em>`;
+    document.getElementById('goalDisp').textContent = selGoal;
+    document.getElementById('goalDesc').textContent = `Your ${selGoal}× / week target`;
+    smallConfetti();
+  }
+}
+function next() { if (step<TOTAL-1) goTo(step+1,1); }
+function prev() { if (step>0)       goTo(step-1,-1); }
+
+/* ── Dots & ctrl ── */
+function updateDots() {
+  const el=document.getElementById('dots'); el.innerHTML='';
+  for (let i=0;i<TOTAL;i++) {
+    const d=document.createElement('div');
+    d.className='dot'+(i===step?' on':'');
+    d.style.width=i===step?'22px':'6px';
+    el.appendChild(d);
+  }
+}
+function updateCtrl() {
+  document.getElementById('prevBtn').disabled=step===0;
+  document.getElementById('nextBtn').disabled=step===TOTAL-1;
+  document.getElementById('ctrlLbl').textContent=`${step+1} / ${TOTAL}`;
+}
+
+/* ── Pickers ── */
+function setUnit(u) {
+  document.getElementById('u-lbs').classList.toggle('on',u==='lbs');
+  document.getElementById('u-kg').classList.toggle('on',u==='kg');
+}
+function setGoal(g,btn) {
+  selGoal=g;
+  document.querySelectorAll('.goal-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+/* ── Confetti ── */
+function smallConfetti() {
+  const wrap=document.getElementById('cfwrap');
+  const cols=['#ff596b','#ffb84d','#80a6ff','#4dc7b8','#fff','#ffd700'];
+  for (let i=0;i<44;i++) {
+    const el=document.createElement('div'); el.className='cf';
+    const a=Math.random()*Math.PI*2, d=80+Math.random()*200;
+    el.style.cssText=`left:${180+Math.random()*36-18}px;top:50%;
+      width:${5+Math.random()*5}px;height:${5+Math.random()*5}px;
+      background:${cols[Math.floor(Math.random()*cols.length)]};
+      border-radius:${Math.random()>.5?'50%':'2px'};
+      --cx:${Math.cos(a)*d}px;--cy:${Math.sin(a)*d-100}px;
+      --cr:${Math.random()*720-360}deg;
+      animation-duration:${1.9+Math.random()*.9}s;
+      animation-delay:${Math.random()*.3}s;`;
+    wrap.appendChild(el);
+  }
+  setTimeout(()=>wrap.innerHTML='',3600);
+}
+
+function finish(t) {
+  smallConfetti();
+  const btn=event.target, orig=btn.textContent;
+  btn.textContent='🎉  Let\'s go!';
+  setTimeout(()=>btn.textContent=orig,2200);
+}
+
+/* ── Init ── */
+['ptcls1','ptcls2','ptcls3'].forEach(buildParticles);
+updateDots(); updateCtrl();
+
+/* Ensure video plays (browsers block autoplay without interaction sometimes) */
+const vid = document.getElementById('heroVid');
+vid.play().catch(() => {
+  document.addEventListener('click', () => vid.play(), {once:true});
+});
+</script>
+</body>
+</html>

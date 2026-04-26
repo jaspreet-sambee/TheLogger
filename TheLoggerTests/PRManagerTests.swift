@@ -575,4 +575,43 @@ final class PRManagerTests: XCTestCase {
         // Epley: 225 * (1 + 5/30) = 225 * 1.1667 ≈ 262.5
         XCTAssertEqual(weightedScore, 262.5, accuracy: 0.5, "Weighted PR score should match Epley 1RM")
     }
+
+    // MARK: - Camera Share Card isPR Flag
+
+    /// Verifies that a PR-beating set returns true from checkAndSavePR,
+    /// which is the value the camera onSetLogged closure captures and passes to ShareCardConfig.isPR.
+    func testCameraShareCardIsPRFlag_prBeatingSetReturnsTrue() {
+        let workout1 = Workout(name: "Push", date: Date(), isTemplate: false)
+        modelContext.insert(workout1)
+        // Establish baseline PR
+        _ = PersonalRecordManager.checkAndSavePR(
+            exerciseName: "Bench Press", weight: 185, reps: 8,
+            workoutId: workout1.id, modelContext: modelContext)
+
+        let workout2 = Workout(name: "Push 2", date: Date(), isTemplate: false)
+        modelContext.insert(workout2)
+        // Log a PR-beating set — the camera closure captures this Bool for ShareCardConfig.isPR
+        let wasPR = PersonalRecordManager.checkAndSavePR(
+            exerciseName: "Bench Press", weight: 225, reps: 5,
+            workoutId: workout2.id, modelContext: modelContext)
+
+        XCTAssertTrue(wasPR, "PR-beating camera set must return true so share card shows the PR badge")
+    }
+
+    func testCameraShareCardIsPRFlag_normalSetReturnsFalse() {
+        let workout1 = Workout(name: "Push", date: Date(), isTemplate: false)
+        modelContext.insert(workout1)
+        _ = PersonalRecordManager.checkAndSavePR(
+            exerciseName: "Bench Press", weight: 225, reps: 5,
+            workoutId: workout1.id, modelContext: modelContext)
+
+        let workout2 = Workout(name: "Push 2", date: Date(), isTemplate: false)
+        modelContext.insert(workout2)
+        // Same weight/reps — not a new PR
+        let wasPR = PersonalRecordManager.checkAndSavePR(
+            exerciseName: "Bench Press", weight: 185, reps: 3,
+            workoutId: workout2.id, modelContext: modelContext)
+
+        XCTAssertFalse(wasPR, "Non-PR camera set must return false so share card does not show PR badge")
+    }
 }

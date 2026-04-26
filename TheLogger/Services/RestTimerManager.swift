@@ -160,10 +160,16 @@ nonisolated final class RestTimerManager {
         guard isActive, n > 0 else { return }
         remainingSeconds = min(600, remainingSeconds + n)
         totalSeconds = max(totalSeconds, remainingSeconds)
+        Analytics.send(Analytics.Signal.restTimerExtended, parameters: [
+            "addedSeconds": "\(n)"
+        ])
     }
 
     /// Skip the current rest period
     func skip() {
+        Analytics.send(Analytics.Signal.restTimerSkipped, parameters: [
+            "remainingSeconds": "\(remainingSeconds)"
+        ])
         stop()
     }
 

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Stats Dashboard</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#0d0d14;
+  font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+  padding:40px 20px 60px; gap:48px;
+}
+h1 { color:rgba(255,255,255,0.4); font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; }
+.phones-row { display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+.phone-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; }
+.label { font-size:11px; font-weight:600; color:rgba(255,255,255,0.3); letter-spacing:.06em; text-transform:uppercase; }
+
+.iphone {
+  width:375px; height:812px; background:#0a0a0f;
+  border-radius:52px; border:1px solid rgba(255,255,255,0.1);
+  overflow:hidden; position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.05), 0 30px 80px rgba(0,0,0,0.8);
+}
+.iphone::before {
+  content:''; position:absolute; top:-60px; right:-40px;
+  width:240px; height:240px;
+  background:radial-gradient(circle,rgba(232,56,74,0.07) 0%,transparent 70%);
+  pointer-events:none; z-index:0;
+}
+.di { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:120px; height:34px; background:#000; border-radius:20px; z-index:20; }
+.sb { position:relative; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:14px 28px 0; height:44px; }
+.sb-time { font-size:15px; font-weight:600; color:rgba(255,255,255,0.9); }
+.sb-icons { display:flex; gap:6px; align-items:center; }
+.sb-icons svg { fill:rgba(255,255,255,0.8); }
+.nav-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 20px 12px; border-bottom:1px solid rgba(255,255,255,0.06); position:relative; z-index:5; }
+.nav-title { font-size:20px; font-weight:800; color:rgba(255,255,255,0.95); letter-spacing:-0.3px; }
+.nav-right { font-size:13px; font-weight:600; color:rgba(255,255,255,0.35); }
+.screen { position:relative; z-index:1; height:calc(812px - 44px - 83px - 52px); overflow:hidden; padding:10px 16px; }
+.tab-bar {
+  position:absolute; bottom:0; left:0; right:0; height:83px;
+  background:rgba(10,10,15,0.92); backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,0.07);
+  display:flex; align-items:flex-start; justify-content:space-around; padding:10px 0 0;
+}
+.tab-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.tab-icon { font-size:22px; opacity:0.3; }
+.tab-icon.active { opacity:1; filter:drop-shadow(0 0 6px rgba(232,56,74,0.7)); }
+.tab-lbl { font-size:10px; font-weight:500; color:rgba(255,255,255,0.3); }
+.tab-lbl.active { color:#e8384a; font-weight:600; }
+
+.sec-hdr { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,0.28); padding:4px 4px 8px; }
+
+/* Weekly stats card */
+.stats-card {
+  border-radius:18px; background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.09);
+  padding:14px 16px; margin-bottom:10px; position:relative; overflow:hidden;
+}
+.stats-card::before {
+  content:''; position:absolute; top:-30px; right:-20px;
+  width:120px; height:120px;
+  background:radial-gradient(circle,rgba(232,56,74,0.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.stats-card-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.stats-card-title { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,0.28); }
+.stats-card-period { font-size:11px; color:rgba(255,255,255,0.25); }
+.stats-cols { display:grid; grid-template-columns:repeat(4,1fr); gap:0; }
+.stats-col { text-align:center; padding:0 4px; border-right:1px solid rgba(255,255,255,0.06); }
+.stats-col:last-child { border-right:none; }
+.stats-val { font-size:20px; font-weight:800; line-height:1; margin-bottom:4px; }
+.stats-unit { font-size:10px; color:rgba(255,255,255,0.35); font-weight:500; display:block; margin-bottom:2px; }
+.delta-badge { display:inline-block; padding:2px 5px; border-radius:999px; font-size:9px; font-weight:700; margin-top:2px; }
+.delta-up { background:rgba(52,199,89,0.12); color:#34c759; }
+.delta-dn { background:rgba(255,59,48,0.12); color:#ff3b30; }
+.delta-eq { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.4); }
+
+/* Streak calendar */
+.streak-card {
+  border-radius:18px; background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.09);
+  padding:14px 16px; margin-bottom:10px;
+}
+.streak-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.streak-title { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,0.28); }
+.streak-count { display:flex; align-items:center; gap:5px; font-size:14px; font-weight:800; color:#ffc428; }
+.heatmap { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+.hmap-day {
+  aspect-ratio:1; border-radius:5px;
+}
+.hmap-day.none { background:rgba(255,255,255,0.06); }
+.hmap-day.light { background:rgba(232,56,74,0.25); }
+.hmap-day.mid { background:rgba(232,56,74,0.55); }
+.hmap-day.full { background:#e8384a; }
+
+/* Muscle breakdown */
+.muscle-card {
+  border-radius:18px; background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.09);
+  padding:14px 16px; margin-bottom:10px;
+}
+.muscle-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+.muscle-row:last-child { margin-bottom:0; }
+.muscle-icon { font-size:16px; width:24px; text-align:center; }
+.muscle-name { font-size:13px; font-weight:600; color:rgba(255,255,255,0.75); width:70px; flex-shrink:0; }
+.muscle-bar-bg { flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; }
+.muscle-bar-fill { height:100%; border-radius:3px; background:linear-gradient(to right,#e8384a,rgba(232,56,74,0.6)); }
+.muscle-count { font-size:11px; color:rgba(255,255,255,0.35); width:30px; text-align:right; }
+
+/* Achievements card */
+.achieve-card {
+  border-radius:18px; background:rgba(255,196,40,0.04);
+  border:1px solid rgba(255,196,40,0.16);
+  padding:14px 16px;
+  display:flex; align-items:center; gap:16px;
+  position:relative; overflow:hidden;
+}
+.achieve-card::before {
+  content:''; position:absolute; top:-30px; right:-20px;
+  width:120px; height:120px;
+  background:radial-gradient(circle,rgba(255,196,40,0.15) 0%,transparent 70%);
+  pointer-events:none;
+}
+.achieve-ring {
+  width:52px; height:52px; border-radius:50%; flex-shrink:0;
+  background:conic-gradient(#ffc428 0% 72%, rgba(255,196,40,0.15) 72% 100%);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 16px rgba(255,196,40,0.25);
+}
+.achieve-ring-inner {
+  width:40px; height:40px; border-radius:50%; background:#0a0a0f;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px;
+}
+.achieve-info { flex:1; }
+.achieve-title { font-size:14px; font-weight:700; color:rgba(255,196,40,0.9); margin-bottom:3px; }
+.achieve-sub { font-size:12px; color:rgba(255,255,255,0.4); }
+.achieve-chevron { font-size:14px; color:rgba(255,196,40,0.5); }
+
+/* Week header strip */
+.week-strip {
+  display:flex; gap:6px; padding:0 0 10px; overflow:hidden;
+}
+.week-chip {
+  padding:6px 12px; border-radius:999px; font-size:12px; font-weight:600;
+}
+.week-chip.active { background:#e8384a; color:white; }
+.week-chip.inactive { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.08); }
+</style>
+</head>
+<body>
+<h1>Group 4 — Stats Dashboard</h1>
+<div class="phones-row">
+
+  <div class="phone-wrap">
+    <div class="label">Stats Tab</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span class="sb-time">9:41</span><div class="sb-icons"><svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg></div></div>
+      <div class="nav-bar">
+        <div class="nav-title">Stats</div>
+        <div class="nav-right">This Week ▾</div>
+      </div>
+      <div class="screen">
+        <!-- Week selector -->
+        <div class="week-strip">
+          <div class="week-chip active">This Week</div>
+          <div class="week-chip inactive">Last Week</div>
+          <div class="week-chip inactive">This Month</div>
+          <div class="week-chip inactive">All Time</div>
+        </div>
+
+        <!-- Weekly stats -->
+        <div class="stats-card">
+          <div class="stats-card-hdr">
+            <span class="stats-card-title">Weekly Overview</span>
+            <span class="stats-card-period">Mar 24–30</span>
+          </div>
+          <div class="stats-cols">
+            <div class="stats-col">
+              <span class="stats-unit">lbs</span>
+              <div class="stats-val" style="color:#e8384a;">36.4k</div>
+              <span class="delta-badge delta-up">↑ 12%</span>
+            </div>
+            <div class="stats-col">
+              <span class="stats-unit">sets</span>
+              <div class="stats-val" style="color:#ffc428;">48</div>
+              <span class="delta-badge delta-up">↑ 4</span>
+            </div>
+            <div class="stats-col">
+              <span class="stats-unit">reps</span>
+              <div class="stats-val" style="color:#80a5ff;">342</div>
+              <span class="delta-badge delta-eq">— same</span>
+            </div>
+            <div class="stats-col">
+              <span class="stats-unit">sessions</span>
+              <div class="stats-val" style="color:#4dc7b8;">3</div>
+              <span class="delta-badge delta-dn">↓ 1</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Streak calendar -->
+        <div class="streak-card">
+          <div class="streak-hdr">
+            <span class="streak-title">Streak Calendar</span>
+            <div class="streak-count">🔥 7 days</div>
+          </div>
+          <div class="heatmap">
+            <div class="hmap-day none"></div><div class="hmap-day none"></div><div class="hmap-day light"></div><div class="hmap-day mid"></div><div class="hmap-day none"></div><div class="hmap-day full"></div><div class="hmap-day light"></div>
+            <div class="hmap-day mid"></div><div class="hmap-day none"></div><div class="hmap-day full"></div><div class="hmap-day mid"></div><div class="hmap-day light"></div><div class="hmap-day full"></div><div class="hmap-day none"></div>
+            <div class="hmap-day full"></div><div class="hmap-day full"></div><div class="hmap-day mid"></div><div class="hmap-day full"></div><div class="hmap-day full"></div><div class="hmap-day mid"></div><div class="hmap-day full"></div>
+          </div>
+        </div>
+
+        <!-- Muscle breakdown -->
+        <div class="muscle-card">
+          <div class="sec-hdr" style="padding-top:0;">Muscle Groups</div>
+          <div class="muscle-row"><span class="muscle-icon">💪</span><span class="muscle-name">Chest</span><div class="muscle-bar-bg"><div class="muscle-bar-fill" style="width:85%;"></div></div><span class="muscle-count">18</span></div>
+          <div class="muscle-row"><span class="muscle-icon">🔙</span><span class="muscle-name">Back</span><div class="muscle-bar-bg"><div class="muscle-bar-fill" style="width:65%;"></div></div><span class="muscle-count">14</span></div>
+          <div class="muscle-row"><span class="muscle-icon">🦵</span><span class="muscle-name">Legs</span><div class="muscle-bar-bg"><div class="muscle-bar-fill" style="width:40%;"></div></div><span class="muscle-count">9</span></div>
+          <div class="muscle-row"><span class="muscle-icon">🤜</span><span class="muscle-name">Triceps</span><div class="muscle-bar-bg"><div class="muscle-bar-fill" style="width:30%;"></div></div><span class="muscle-count">7</span></div>
+        </div>
+
+        <!-- Achievements summary -->
+        <div class="achieve-card">
+          <div class="achieve-ring"><div class="achieve-ring-inner">🏆</div></div>
+          <div class="achieve-info">
+            <div class="achieve-title">18 of 25 Unlocked</div>
+            <div class="achieve-sub">3 new this week · View all</div>
+          </div>
+          <div class="achieve-chevron">›</div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon">🏠</div><div class="tab-lbl">Home</div></div>
+        <div class="tab-item"><div class="tab-icon active">📊</div><div class="tab-lbl active">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

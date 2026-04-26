@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Stats Redesign</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08080c;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px 80px;gap:20px;-webkit-font-smoothing:antialiased;}
+.page-heading{color:rgba(255,255,255,.4);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
+.phones-row{display:flex;gap:48px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.phone-label{font-size:11px;font-weight:600;color:rgba(255,255,255,.3);letter-spacing:.06em;text-transform:uppercase;}
+
+/* iPhone */
+.iphone{width:390px;height:844px;background:#0a0a0f;border-radius:52px;border:1px solid rgba(255,255,255,.08);overflow:hidden;position:relative;flex-shrink:0;box-shadow:0 0 0 1px rgba(255,255,255,.03),0 40px 100px rgba(0,0,0,.85);}
+.di{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:20;}
+.sb{position:relative;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:14px 28px 0;height:44px;}
+.sb-time{font-size:15px;font-weight:600;color:rgba(255,255,255,.9);}
+.sb-icons{display:flex;gap:6px;align-items:center;}
+.sb-icons svg{fill:rgba(255,255,255,.8);}
+.nav-large{padding:6px 20px 10px;}
+.nav-large-title{font-size:30px;font-weight:700;color:rgba(255,255,255,.95);letter-spacing:-.5px;}
+
+/* Scrollable area */
+.scroll{position:relative;z-index:1;height:calc(844px - 44px - 42px - 83px);overflow-y:auto;padding:0 16px;scrollbar-width:none;}
+.scroll::-webkit-scrollbar{display:none;}
+
+/* Tab bar */
+.tab-bar{position:absolute;bottom:0;left:0;right:0;height:83px;background:rgba(10,10,15,.94);backdrop-filter:blur(30px);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:flex-start;justify-content:space-around;padding:8px 0 0;z-index:20;}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.tab-item svg{width:24px;height:24px;}
+.tab-item .inactive{fill:rgba(255,255,255,.25);}
+.tab-item .active{fill:#e8384a;}
+.tab-lbl{font-size:10px;font-weight:500;color:rgba(255,255,255,.25);}
+.tab-lbl.active{color:#e8384a;font-weight:600;}
+
+/* Period chips */
+.chip-row{display:flex;gap:7px;margin-bottom:14px;overflow:hidden;}
+.chip{padding:8px 14px;border-radius:100px;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0;}
+.chip-on{background:#e8384a;color:#fff;}
+.chip-off{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.45);}
+
+/* ─── Card base ─── */
+.card{border-radius:18px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;}
+
+/* ─── WEEKLY OVERVIEW ─── */
+.card-weekly{
+  background:linear-gradient(135deg, rgba(232,56,74,.10) 0%, rgba(255,90,48,.06) 50%, rgba(10,10,15,.95) 100%);
+  border:1px solid rgba(232,56,74,.20);
+}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-title{font-size:15px;font-weight:600;color:rgba(255,255,255,.92);}
+.card-sub{font-size:11px;font-weight:500;color:rgba(255,255,255,.25);}
+.chevron{font-size:12px;color:rgba(255,255,255,.2);}
+
+.stats4{display:flex;align-items:center;}
+.s4col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.s4div{width:1px;height:44px;background:rgba(255,255,255,.08);}
+.s4val{font-size:22px;font-weight:800;letter-spacing:-.3px;}
+.s4lbl{font-size:10px;color:rgba(255,255,255,.4);font-weight:500;display:flex;align-items:center;gap:4px;}
+.s4dot{width:5px;height:5px;border-radius:50%;}
+.s4delta{font-size:10px;font-weight:700;padding:2px 6px;border-radius:100px;}
+.d-pos{color:#33c759;background:rgba(51,199,89,.12);}
+.d-neg{color:#ff453a;background:rgba(255,69,58,.12);}
+
+/* ─── ACHIEVEMENTS ─── */
+.card-ach{
+  background:linear-gradient(135deg, rgba(255,184,77,.10) 0%, rgba(255,150,50,.04) 50%, rgba(10,10,15,.95) 100%);
+  border:1px solid rgba(255,184,77,.22);
+}
+.ach-ring{width:40px;height:40px;flex-shrink:0;}
+.ach-tiles{display:flex;gap:8px;margin-top:14px;}
+.ach-tile{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);}
+.ach-tile-on{background:rgba(255,184,77,.10);border-color:rgba(255,184,77,.25);}
+.ach-icon{font-size:18px;}
+.ach-name{font-size:9px;font-weight:600;color:rgba(255,255,255,.7);}
+.ach-name-dim{color:rgba(255,255,255,.25);}
+.ach-status{font-size:8px;font-weight:700;padding:1px 6px;border-radius:10px;}
+.ach-done{color:#33c759;background:rgba(51,199,89,.12);}
+.ach-locked{color:rgba(255,255,255,.18);background:rgba(255,255,255,.05);}
+
+/* ─── STREAK ─── */
+.card-streak{
+  background:linear-gradient(135deg, rgba(255,90,48,.08) 0%, rgba(232,56,74,.04) 50%, rgba(10,10,15,.95) 100%);
+  border:1px solid rgba(255,90,48,.18);
+}
+.streak-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.streak-val{font-size:24px;font-weight:800;color:#fff;margin-top:2px;}
+.streak-flame{font-size:20px;margin-right:4px;}
+.streak-best-lbl{font-size:11px;font-weight:500;color:rgba(255,255,255,.35);}
+.streak-best-val{font-size:15px;font-weight:700;color:#ffb84d;margin-top:2px;}
+.cal-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;}
+.cal-lbl{font-size:9px;font-weight:500;color:rgba(255,255,255,.2);text-align:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-dot{width:14px;height:14px;border-radius:50%;margin:0 auto;}
+.cal-dot-0{background:rgba(255,255,255,.06);}
+.cal-dot-1{background:rgba(232,56,74,.40);}
+.cal-dot-2{background:#e8384a;}
+.cal-dot-today{box-shadow:0 0 0 2px #e8384a;background:rgba(232,56,74,.5);}
+
+/* ─── MUSCLE GROUPS ─── */
+.card-muscle{
+  background:linear-gradient(135deg, rgba(128,166,255,.07) 0%, rgba(77,199,184,.04) 50%, rgba(10,10,15,.95) 100%);
+  border:1px solid rgba(128,166,255,.16);
+}
+.muscle-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.muscle-icon{font-size:14px;width:20px;text-align:center;}
+.muscle-name{font-size:12px;font-weight:500;color:rgba(255,255,255,.7);width:55px;flex-shrink:0;}
+.muscle-bar-bg{flex:1;height:8px;border-radius:4px;background:rgba(232,56,74,.12);overflow:hidden;}
+.muscle-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,#e8384a,#ff5a30);}
+.muscle-count{font-size:11px;font-weight:700;color:rgba(255,255,255,.4);width:22px;text-align:right;}
+
+/* ─── VOLUME TREND ─── */
+.card-volume{
+  background:linear-gradient(135deg, rgba(232,56,74,.06) 0%, rgba(10,10,15,.98) 100%);
+  border:1px solid rgba(232,56,74,.14);
+}
+.chart-placeholder{height:100px;border-radius:10px;background:rgba(255,255,255,.02);display:flex;align-items:flex-end;justify-content:space-around;padding:8px 12px;gap:4px;}
+.chart-bar{flex:1;border-radius:4px 4px 0 0;min-height:4px;}
+
+/* ─── WEEKLY RECAP ─── */
+.card-recap{
+  background:linear-gradient(135deg, rgba(232,56,74,.06) 0%, rgba(255,184,77,.04) 50%, rgba(10,10,15,.95) 100%);
+  border:1px solid rgba(232,56,74,.14);
+}
+.recap-stats{display:flex;gap:16px;margin:10px 0 12px;}
+.recap-stat{display:flex;align-items:center;gap:6px;}
+.recap-stat-icon{font-size:14px;color:rgba(232,56,74,.6);}
+.recap-stat-val{font-size:16px;font-weight:700;color:#fff;}
+.recap-stat-lbl{font-size:11px;font-weight:500;color:rgba(255,255,255,.4);}
+.recap-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;background:rgba(232,56,74,.10);border:1px solid rgba(232,56,74,.18);font-size:14px;font-weight:600;color:#e8384a;}
+.pr-badge{display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:100px;background:rgba(255,184,77,.12);font-size:11px;font-weight:600;color:#ffb84d;}
+
+/* Annotations */
+.annotations{max-width:780px;width:100%;margin-top:32px;}
+.ann-title{font-size:12px;font-weight:600;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;}
+.ann-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;}
+.ann{display:flex;align-items:flex-start;gap:10px;margin-bottom:2px;}
+.ann-num{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+.n-red{background:#e8384a;}.n-gold{background:#ffb84d;}.n-blue{background:#80a6ff;}.n-orange{background:#ff5a30;}
+.ann-text{font-size:12px;color:rgba(255,255,255,.4);line-height:1.55;}
+.ann-text strong{color:rgba(255,255,255,.7);}
+</style>
+</head>
+<body>
+
+<div class="page-heading">TheLogger — Stats Redesign</div>
+
+<div class="phones-row">
+
+<!-- ═══ PHONE: STATS ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">Stats Tab — Redesigned</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="sb">
+    <span class="sb-time">9:41</span>
+    <div class="sb-icons">
+      <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1"/><rect x="9" y="1" width="3" height="11" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 9.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-3.5a5.5 5.5 0 013.89 1.61l-1.42 1.42A3.5 3.5 0 008 8a3.5 3.5 0 00-2.47 1.03L4.11 7.61A5.5 5.5 0 018 6zm0-4a9.5 9.5 0 016.72 2.78l-1.42 1.42A7.5 7.5 0 008 4a7.5 7.5 0 00-5.3 2.2L1.28 4.78A9.5 9.5 0 018 2z"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="21" height="10" rx="3" stroke="rgba(255,255,255,.7)" stroke-width="1.2" fill="none"/><rect x="1.5" y="2.5" width="15" height="7" rx="1.5" fill="rgba(255,255,255,.85)"/><path d="M22.5 4v4a2 2 0 000-4z" fill="rgba(255,255,255,.5)"/></svg>
+    </div>
+  </div>
+
+  <div class="nav-large"><div class="nav-large-title">Stats</div></div>
+
+  <div class="scroll">
+    <!-- Period chips -->
+    <div class="chip-row">
+      <div class="chip chip-on">This Week</div>
+      <div class="chip chip-off">Last Week</div>
+      <div class="chip chip-off">This Month</div>
+      <div class="chip chip-off">All Time</div>
+    </div>
+
+    <!-- ① Weekly Overview -->
+    <div class="card card-weekly">
+      <div class="card-hdr">
+        <span class="card-title">Weekly Overview</span>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span class="card-sub">Mar 31 – Apr 5</span>
+          <span class="chevron">›</span>
+        </div>
+      </div>
+      <div class="stats4">
+        <div class="s4col">
+          <div class="s4val" style="color:#e8384a;">12.4k</div>
+          <div class="s4lbl"><span class="s4dot" style="background:#e8384a;"></span> Volume</div>
+          <div class="s4delta d-pos">+18%</div>
+        </div>
+        <div class="s4div"></div>
+        <div class="s4col">
+          <div class="s4val" style="color:#ff7340;">48</div>
+          <div class="s4lbl"><span class="s4dot" style="background:#ff7340;"></span> Sets</div>
+          <div class="s4delta d-pos">+6</div>
+        </div>
+        <div class="s4div"></div>
+        <div class="s4col">
+          <div class="s4val" style="color:#ffb366;">420</div>
+          <div class="s4lbl"><span class="s4dot" style="background:#ffb366;"></span> Reps</div>
+          <div class="s4delta d-pos">+32</div>
+        </div>
+        <div class="s4div"></div>
+        <div class="s4col">
+          <div class="s4val" style="color:#f28c80;">4</div>
+          <div class="s4lbl"><span class="s4dot" style="background:#f28c80;"></span> Workouts</div>
+          <div class="s4delta d-pos">+1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② Achievements -->
+    <div class="card card-ach">
+      <div class="card-hdr">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <svg class="ach-ring" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,184,77,.2)" stroke-width="4"/>
+            <circle cx="20" cy="20" r="16" fill="none" stroke="#ffb84d" stroke-width="4" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="67" transform="rotate(-90 20 20)"/>
+            <text x="20" y="24" font-size="10" font-weight="700" fill="#ffb84d" text-anchor="middle" font-family="-apple-system">🏆</text>
+          </svg>
+          <div>
+            <div class="card-title">Achievements</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);">14 of 42 unlocked</div>
+          </div>
+        </div>
+        <span class="chevron">›</span>
+      </div>
+      <div class="ach-tiles">
+        <div class="ach-tile ach-tile-on"><div class="ach-icon">🔥</div><div class="ach-name">On Fire</div><div class="ach-status ach-done">Unlocked</div></div>
+        <div class="ach-tile ach-tile-on"><div class="ach-icon">💪</div><div class="ach-name">Iron Will</div><div class="ach-status ach-done">Unlocked</div></div>
+        <div class="ach-tile"><div class="ach-icon" style="opacity:.3;">📊</div><div class="ach-name ach-name-dim">Data Nerd</div><div class="ach-status ach-locked">Locked</div></div>
+        <div class="ach-tile"><div class="ach-icon" style="opacity:.3;">🌈</div><div class="ach-name ach-name-dim">Variety</div><div class="ach-status ach-locked">Locked</div></div>
+      </div>
+    </div>
+
+    <!-- ③ Streak Calendar -->
+    <div class="card card-streak">
+      <div class="streak-header">
+        <div>
+          <div class="card-title">Streak</div>
+          <div style="display:flex;align-items:center;margin-top:4px;">
+            <span class="streak-flame">🔥</span>
+            <span class="streak-val">5 days</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="streak-best-lbl">Best</div>
+          <div class="streak-best-val">12 days</div>
+        </div>
+      </div>
+      <div class="cal-labels">
+        <div class="cal-lbl">M</div><div class="cal-lbl">T</div><div class="cal-lbl">W</div><div class="cal-lbl">T</div><div class="cal-lbl">F</div><div class="cal-lbl">S</div><div class="cal-lbl">S</div>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-dot cal-dot-1"></div><div class="cal-dot cal-dot-2"></div><div class="cal-dot cal-dot-1"></div><div class="cal-dot cal-dot-0"></div><div class="cal-dot cal-dot-0"></div><div class="cal-dot cal-dot-1"></div><div class="cal-dot cal-dot-0"></div>
+        <div class="cal-dot cal-dot-2"></div><div class="cal-dot cal-dot-1"></div><div class="cal-dot cal-dot-2"></div><div class="cal-dot cal-dot-0"></div><div class="cal-dot cal-dot-1"></div><div class="cal-dot cal-dot-0"></div><div class="cal-dot cal-dot-0"></div>
+        <div class="cal-dot cal-dot-1"></div><div class="cal-dot cal-dot-2"></div><div class="cal-dot cal-dot-2"></div><div class="cal-dot cal-dot-1"></div><div class="cal-dot cal-dot-0"></div><div class="cal-dot cal-dot-0"></div><div class="cal-dot cal-dot-1"></div>
+        <div class="cal-dot cal-dot-2"></div><div class="cal-dot cal-dot-1"></div><div class="cal-dot cal-dot-2"></div><div class="cal-dot cal-dot-0"></div><div class="cal-dot cal-dot-today"></div><div class="cal-dot cal-dot-0"></div><div class="cal-dot cal-dot-0"></div>
+      </div>
+    </div>
+
+    <!-- ④ Muscle Groups -->
+    <div class="card card-muscle">
+      <div class="card-hdr">
+        <span class="card-title">Muscle Groups</span>
+        <span class="chevron">›</span>
+      </div>
+      <div class="muscle-row"><span class="muscle-icon">💪</span><span class="muscle-name">Chest</span><div class="muscle-bar-bg"><div class="muscle-bar" style="width:100%;"></div></div><span class="muscle-count">18</span></div>
+      <div class="muscle-row"><span class="muscle-icon">🦵</span><span class="muscle-name">Legs</span><div class="muscle-bar-bg"><div class="muscle-bar" style="width:72%;"></div></div><span class="muscle-count">13</span></div>
+      <div class="muscle-row"><span class="muscle-icon">🔙</span><span class="muscle-name">Back</span><div class="muscle-bar-bg"><div class="muscle-bar" style="width:61%;"></div></div><span class="muscle-count">11</span></div>
+      <div class="muscle-row"><span class="muscle-icon">🏋️</span><span class="muscle-name">Shoulders</span><div class="muscle-bar-bg"><div class="muscle-bar" style="width:44%;"></div></div><span class="muscle-count">8</span></div>
+      <div class="muscle-row"><span class="muscle-icon">💪</span><span class="muscle-name">Arms</span><div class="muscle-bar-bg"><div class="muscle-bar" style="width:33%;"></div></div><span class="muscle-count">6</span></div>
+    </div>
+
+    <!-- ⑤ Volume Trend -->
+    <div class="card card-volume">
+      <div class="card-hdr">
+        <span class="card-title">Volume Trend</span>
+        <span class="chevron">›</span>
+      </div>
+      <div class="chart-placeholder">
+        <div class="chart-bar" style="height:30%;background:linear-gradient(to top,rgba(232,56,74,.3),rgba(232,56,74,.08));"></div>
+        <div class="chart-bar" style="height:45%;background:linear-gradient(to top,rgba(232,56,74,.4),rgba(232,56,74,.1));"></div>
+        <div class="chart-bar" style="height:55%;background:linear-gradient(to top,rgba(232,56,74,.5),rgba(232,56,74,.12));"></div>
+        <div class="chart-bar" style="height:40%;background:linear-gradient(to top,rgba(232,56,74,.4),rgba(232,56,74,.1));"></div>
+        <div class="chart-bar" style="height:65%;background:linear-gradient(to top,rgba(232,56,74,.55),rgba(232,56,74,.15));"></div>
+        <div class="chart-bar" style="height:60%;background:linear-gradient(to top,rgba(232,56,74,.5),rgba(232,56,74,.12));"></div>
+        <div class="chart-bar" style="height:80%;background:linear-gradient(to top,rgba(232,56,74,.7),rgba(232,56,74,.2));"></div>
+        <div class="chart-bar" style="height:90%;background:linear-gradient(to top,#e8384a,rgba(232,56,74,.25));border-radius:4px 4px 0 0;"></div>
+      </div>
+    </div>
+
+    <!-- ⑥ Weekly Recap -->
+    <div class="card card-recap">
+      <div class="card-hdr">
+        <div>
+          <div class="card-title">Weekly Recap</div>
+          <div class="card-sub" style="margin-top:2px;">Mar 31 – Apr 5</div>
+        </div>
+        <div class="pr-badge">🏅 2 PRs</div>
+      </div>
+      <div class="recap-stats">
+        <div class="recap-stat">
+          <span class="recap-stat-icon">🏋️</span>
+          <div>
+            <div class="recap-stat-val">4</div>
+            <div class="recap-stat-lbl">workouts</div>
+          </div>
+        </div>
+        <div class="recap-stat">
+          <span class="recap-stat-icon">📦</span>
+          <div>
+            <div class="recap-stat-val">48</div>
+            <div class="recap-stat-lbl">sets</div>
+          </div>
+        </div>
+        <div class="recap-stat">
+          <span class="recap-stat-icon">⚖️</span>
+          <div>
+            <div class="recap-stat-val">12.4k</div>
+            <div class="recap-stat-lbl">lbs</div>
+          </div>
+        </div>
+      </div>
+      <div class="recap-btn">View Full Recap ›</div>
+    </div>
+
+    <div style="height:20px;"></div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-item"><svg viewBox="0 0 24 24"><path class="inactive" d="M3 12l9-9 9 9v9a1 1 0 01-1 1h-5v-6h-4v6H6a1 1 0 01-1-1v-9z"/></svg><div class="tab-lbl">Home</div></div>
+    <div class="tab-item"><svg viewBox="0 0 24 24"><path class="active" d="M4 20V8h4v12H4zm6 0V4h4v16h-4zm6 0v-8h4v8h-4z"/></svg><div class="tab-lbl active">Stats</div></div>
+    <div class="tab-item"><svg viewBox="0 0 24 24"><path class="inactive" d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/></svg><div class="tab-lbl">Profile</div></div>
+  </div>
+</div>
+</div>
+
+</div><!-- /phones-row -->
+
+<!-- Annotations -->
+<div class="annotations">
+  <div class="ann-title">What Changed</div>
+  <div class="ann-grid">
+    <div class="ann">
+      <div class="ann-num n-red">1</div>
+      <div class="ann-text"><strong>Tinted card backgrounds</strong> — Each card has a unique gradient tint matching its theme: red for weekly stats, gold for achievements, orange for streak, blue/teal for muscle groups. Replaces the flat identical dark cards.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-gold">2</div>
+      <div class="ann-text"><strong>Colored borders per card</strong> — Each card's border matches its tint color instead of all being red. Gives each section a distinct identity while keeping the palette warm.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-orange">3</div>
+      <div class="ann-text"><strong>Stat dots next to labels</strong> — Small colored dots beside "Volume", "Sets", etc. reinforce which color = which stat without making the numbers themselves rainbow.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-blue">4</div>
+      <div class="ann-text"><strong>Gradient-tinted streak dots</strong> — Calendar dots use two intensity levels (40% and 100% red) instead of flat grey, so worked-out days glow. Today gets a ring highlight.</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

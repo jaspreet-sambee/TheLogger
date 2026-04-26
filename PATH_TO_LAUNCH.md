@@ -91,6 +91,98 @@ It's a full workout logger with an integrated camera system that counts your rep
 
 ---
 
+## V2 Launch Status (as of 2026-04-24)
+
+**Branch:** `redesign-preview` — all V2 code features shipped. Audit focused on what remains before App Store submission.
+
+### V2 feature implementation — shipped in code
+
+| Phase | Feature | Location |
+|-------|---------|----------|
+| A | Tempo tracking (`tempoDown/Hold/Up` on WorkoutSet, `RepMetrics`) | `Models/WorkoutSet.swift`, `CameraRepCounter/RepCounter.swift` |
+| B | Camera auto-rest (rest timer overlay on camera feed) | `CameraRepCounter/CameraRepCounterView.swift` |
+| C | Daily + rest-day challenges | `Models/DailyChallenge.swift`, `Services/ChallengeGenerator.swift`, `Features/Challenges/RestDayChallengeView.swift` |
+| D | Smart notifications | `Services/NotificationScheduler.swift` |
+| E | Progressive overload advisor | `Services/OverloadAdvisor.swift` |
+| — | Monetization (RevenueCat + Pro gates + paywall) | `Services/ProManager.swift`, `Features/Settings/UpgradeView.swift` |
+| — | Gamification (achievements, streaks, weekly stats) | `Services/GamificationEngine.swift`, `Services/AchievementManager.swift` |
+| — | Share cards | `Services/WorkoutCardRenderer.swift`, `Services/WorkoutSummaryCardRenderer.swift` |
+
+Tests updated: 444+ unit tests across 11+ files (per `./run-tests.sh`).
+
+### 🔴 P0 — Code blockers before archive
+
+Two TEMP overrides in `WorkoutListView.swift` will ship to production as-is (NOT `#if DEBUG` guarded):
+
+1. **Rest-day challenge card always shows** — `TheLogger/Features/Workout/WorkoutListView.swift:287`
+   - Current: `if true { // TEMP: always show for testing — was: !restDayDismissed && !hasActiveWorkout`
+   - Restore: `if !restDayDismissed && !hasActiveWorkout {`
+
+2. **Daily challenge cleared on every launch** — `TheLogger/Features/Workout/WorkoutListView.swift:770-771`
+   - Remove the `// TEMP` comment line and the `DailyChallenge.clearToday()` call
+   - Without this fix, users can never complete a daily challenge — state resets on every cold start
+
+After both fixes: `./run-tests.sh` → 0 failures.
+
+### 🟡 P1 — Cleanup (safe but sloppy)
+
+3. **ProManager DEBUG force-Pro** — `TheLogger/Services/ProManager.swift:58-62`
+   - `#if DEBUG ... isPro = true ... return ... #endif` — does NOT ship (TestFlight + App Store use Release config)
+   - Flip to `isPro = false` before final local soak so dev builds exercise the real paywall + free-tier gates
+   - Not a launch blocker
+
+4. **Camera simulator placeholder** — `TheLogger/CameraRepCounter/CameraRepCounterView.swift:1387-1399`
+   - Guarded with `#if targetEnvironment(simulator)` → doesn't compile into device builds
+   - No action needed; flagged for awareness only
+
+5. **SettingsView `clearToday()` call** — `TheLogger/Features/Settings/SettingsView.swift:569`
+   - Verify this sits behind a developer/debug row. If user-visible, wrap in `#if DEBUG` or remove.
+
+### 🟢 Verified not-blockers (agent misreads or already-guarded)
+
+- **Products.storekit** — the Pro monthly subscription IS correctly defined under `subscriptionGroups` (`com.thelogger.pro.monthly`, $6.99, P1M). The empty `products` array is fine — that's for non-subscription IAPs; recurring subs go in `subscriptionGroups`. Config is correct.
+- **TelemetryDeck / Analytics** — `Analytics.initialize(appID:)` wired in `TheLoggerApp.swift:42` with a real UUID.
+- **Bundle ID + team** — `com.thelogger.app`, dev team `77BC8S8T5X` configured.
+- **`NSCameraUsageDescription`** — present in `Info.plist`.
+- **Subscription management / cancellation** — Profile's "Manage" button (`ProfileView.swift:155-163`) deep-links to App Store subscriptions; "Restore Purchases" (`UpgradeView.swift:169-186`) is in the paywall. No custom login needed.
+
+### 📋 Outside-code work (bulk of remaining effort)
+
+#### Assets
+- [ ] **Re-check App Store screenshots against V2 UI.** `marketing-assets/appstore-screenshots/` has 13 files, but the V2 `redesign-preview` branch has significant view changes across Home, Workout, Settings, Achievements, Profile. Regenerate any that look like v1 UI.
+- [ ] App Preview video (15s)
+- [ ] Confirm `Landing/privacy.html` is live at `https://thelogger.app/privacy`
+
+#### App Store Connect metadata
+- [ ] Fill in app name, subtitle, keywords (template in v1 section above)
+- [ ] App Privacy labels (Data Not Collected, per privacy posture)
+- [ ] **Rewrite app description to reflect Pro subscription.** The v1 draft above says "no subscription" — now out of date. Position free tier + Pro upgrade.
+- [ ] Configure pricing tier for `com.thelogger.pro.monthly` ($6.99/mo) in App Store Connect
+- [ ] Add IAP product to App Store Connect listing (required for subscription apps)
+
+#### QA
+- [ ] Real-device gym QA — camera with actual weights + varied lighting (the known accuracy unknown per memory)
+- [ ] Fresh-install test on device (simulates reviewer's first run)
+- [ ] `./run-tests.sh` → 0 failures (after P0 fixes)
+
+#### Git hygiene
+- [ ] 38 modified files + many untracked assets on `redesign-preview`. Before merging to `main`, decide which untracked files belong in repo (e.g., `Landing/Squat_Rep_Counter.MP4`, `test_camera_feed.MP4`, preview HTML, `IMG_*.jpeg`) vs. `.gitignore`.
+
+### Recommended order of work
+
+1. Fix the two P0s in `WorkoutListView.swift` (~5 min)
+2. Flip `ProManager.swift:60` to `isPro = false` (~30 sec)
+3. Run `./run-tests.sh` → confirm 0 failures
+4. Fresh-install + gym QA pass on a real device
+5. Regenerate any stale V2 screenshots
+6. Rewrite App Store description to reflect Pro
+7. Fill in App Store Connect metadata + confirm privacy.html deployed
+8. Archive + submit
+
+Steps 1–2 are the only code changes. Everything else is assets, metadata, and device testing.
+
+---
+
 ## Release Plan
 
 ### v1.0 — "It Counts For You"

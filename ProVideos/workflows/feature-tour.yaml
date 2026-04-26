@@ -1,0 +1,116 @@
+# ==============================================================================
+# Feature Tour — Comprehensive overview
+# ==============================================================================
+# Walks through all major features in one polished video.
+# Uses the complete workout flow as the narrative thread.
+#
+# Style: Apple keynote-style, clean transitions, feature callouts
+# Duration: ~25-30s
+# ==============================================================================
+
+name: "Feature Tour"
+description: "Everything TheLogger does — in 30 seconds"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 35
+  settle_time: 3
+  test_method: "testCompleteWorkoutDemo"
+
+output:
+  filename: "feature-tour"
+  background_color: "#0A0D1E"     # Deep dark blue
+  include_device_frame: true
+  twitter_optimized: true
+  caption: "Track workouts. Count reps with AI. Celebrate PRs. All free, all private."
+  hashtags: ["TheLogger", "WorkoutTracker", "FitnessApp", "iOS", "SwiftUI"]
+
+effects:
+  trim_start: 6.0
+  trim_end: 2.0
+
+  # Speed through navigation, real-time for features
+  speed_ramp:
+    start: 0
+    end: 8
+    speed: 1.3
+
+  # Ken Burns throughout
+  ken_burns:
+    enabled: true
+    scale_start: 1.0
+    scale_end: 1.04
+
+  zoom_moments:
+    # Home screen / dashboard
+    - time: 1.0
+      scale: 1.1
+      duration: 2.0
+      anchor: "center"
+      ease: 0.3
+
+    # Exercise search
+    - time: 5.0
+      scale: 1.2
+      duration: 2.0
+      anchor: "center"
+      ease: 0.3
+
+    # Set logging
+    - time: 9.0
+      scale: 1.3
+      duration: 2.5
+      anchor: "bottom"
+      ease: 0.3
+
+    # Completed set checkmark
+    - time: 13.0
+      scale: 1.2
+      duration: 1.0
+      anchor: "bottom_center"
+      ease: 0.2
+
+    # Workout summary
+    - time: 17.0
+      scale: 1.1
+      duration: 3.0
+      anchor: "center"
+      ease: 0.4
+
+  flash_moments:
+    - time: 13.0
+      duration: 0.08
+
+  text_overlays:
+    - text: "Start a workout."
+      start: 0.5
+      end: 4.0
+      position: "bottom"
+      fontsize: 44
+
+    - text: "Log sets instantly."
+      start: 7.0
+      end: 11.0
+      position: "bottom"
+      fontsize: 44
+
+    - text: "Track everything."
+      start: 14.0
+      end: 18.0
+      position: "bottom"
+      fontsize: 44
+
+    - text: "Free. Private. Yours."
+      start: 19.0
+      end: 24.0
+      position: "bottom"
+      fontsize: 48
+
+  music: true
+  music_volume: 0.22
+
+  vignette: true
+  color_grade: "cinematic"

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Onboarding Redesign (8 Screens)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060608;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;padding:40px 20px 80px;-webkit-font-smoothing:antialiased;color:#fff;}
+.page-heading{text-align:center;color:rgba(255,255,255,.4);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
+.page-sub{text-align:center;color:rgba(255,255,255,.2);font-size:11px;margin-bottom:32px;}
+
+/* Grid of phones */
+.grid{display:flex;flex-wrap:wrap;gap:32px;justify-content:center;}
+
+/* iPhone */
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.phone-label{font-size:10px;font-weight:600;color:rgba(255,255,255,.25);letter-spacing:.06em;text-transform:uppercase;text-align:center;}
+.iphone{
+  width:280px;height:606px;background:#0a0a0f;border-radius:38px;
+  border:1px solid rgba(255,255,255,.06);overflow:hidden;position:relative;
+  box-shadow:0 20px 60px rgba(0,0,0,.8);display:flex;flex-direction:column;
+}
+.di{width:86px;height:24px;background:#000;border-radius:14px;margin:8px auto 0;flex-shrink:0;}
+
+/* Content area */
+.content{flex:1;display:flex;flex-direction:column;padding:16px 20px 20px;overflow:hidden;position:relative;}
+
+/* Page dots */
+.dots{display:flex;gap:5px;justify-content:center;margin-bottom:16px;}
+.dot{width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.18);}
+.dot.active{width:16px;background:#e8384a;}
+
+/* Common elements */
+.screen-icon{font-size:40px;text-align:center;margin:8px 0 12px;}
+.screen-title{font-size:20px;font-weight:800;text-align:center;letter-spacing:-.3px;margin-bottom:4px;}
+.screen-sub{font-size:12px;text-align:center;color:rgba(255,255,255,.35);margin-bottom:16px;line-height:1.5;}
+
+/* Bullets */
+.bullets{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.bullet{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);}
+.bullet-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.bullet-text{font-size:12px;color:rgba(255,255,255,.7);line-height:1.4;}
+.bullet-text strong{color:rgba(255,255,255,.9);}
+
+/* CTA button */
+.btn-primary{
+  width:100%;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:6px;
+  font-size:14px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,#e8384a,#ff5a30);
+  box-shadow:0 6px 18px rgba(232,56,74,.3);position:relative;overflow:hidden;margin-top:auto;
+}
+.btn-primary::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(to bottom,rgba(255,255,255,.12),transparent);}
+.btn-secondary{
+  width:100%;height:40px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:500;color:rgba(255,255,255,.4);margin-top:8px;
+}
+.btn-gold{
+  background:linear-gradient(135deg,#f0b833,#d48820);color:#1a1000;
+  box-shadow:0 6px 18px rgba(212,136,32,.3);
+}
+.btn-gold::before{background:linear-gradient(to bottom,rgba(255,255,255,.15),transparent);}
+
+/* ─── Screen-specific ─── */
+
+/* Screen 1: Welcome */
+.s1-bg{background:radial-gradient(ellipse at 50% 30%,rgba(232,56,74,.08),transparent 60%);}
+.s1-icon{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#e8384a,#ff5a30);margin:20px auto 14px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 8px 24px rgba(232,56,74,.3);}
+.s1-app-name{font-size:26px;font-weight:900;text-align:center;letter-spacing:-1px;}
+.s1-tagline{font-size:13px;text-align:center;color:rgba(255,255,255,.35);margin:4px 0 20px;}
+.s1-input{width:100%;height:42px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);padding:0 14px;font-size:14px;color:rgba(255,255,255,.5);display:flex;align-items:center;margin-bottom:16px;}
+
+/* Screen 2: Logging */
+.s2-bg{background:radial-gradient(ellipse at 50% 35%,rgba(232,56,74,.06),transparent 60%);}
+.s2-demo{
+  padding:12px;border-radius:14px;margin-bottom:14px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(232,56,74,.15);
+}
+.s2-set-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.s2-dot{width:22px;height:22px;border-radius:50%;background:rgba(232,56,74,.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:rgba(232,56,74,.7);}
+.s2-val{font-size:13px;font-weight:600;color:rgba(255,255,255,.7);}
+.s2-check{margin-left:auto;font-size:12px;color:#ffb84d;}
+.s2-log-btn{width:100%;height:32px;border-radius:8px;background:linear-gradient(135deg,#e8384a,#ff5a30);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;margin-top:4px;}
+
+/* Screen 3: Camera */
+.s3-bg{background:radial-gradient(ellipse at 50% 35%,rgba(128,166,255,.06),transparent 60%);}
+.s3-cam{
+  width:160px;height:200px;border-radius:16px;margin:0 auto 14px;position:relative;
+  background:linear-gradient(160deg,#1a1a2e,#0f0f18);
+  border:2px solid rgba(128,166,255,.20);overflow:hidden;
+}
+.s3-silhouette{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:56px;opacity:.15;}
+.s3-counter{
+  position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+  font-size:28px;font-weight:900;color:#80a6ff;text-shadow:0 0 12px rgba(128,166,255,.4);
+}
+.s3-badge{
+  position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:6px;
+  background:rgba(128,166,255,.2);font-size:9px;font-weight:700;color:#80a6ff;
+}
+
+/* Screen 4: PRs */
+.s4-bg{background:radial-gradient(ellipse at 50% 35%,rgba(255,184,77,.06),transparent 60%);}
+.s4-card{
+  padding:16px;border-radius:16px;margin-bottom:14px;text-align:center;
+  background:rgba(22,19,15,.9);border:1px solid rgba(255,184,77,.25);
+  box-shadow:0 8px 24px rgba(255,184,77,.08);
+}
+.s4-trophy{font-size:36px;margin-bottom:6px;}
+.s4-badge{display:inline-flex;gap:4px;padding:3px 10px;border-radius:12px;background:rgba(255,184,77,.15);font-size:9px;font-weight:800;color:#ffb84d;letter-spacing:.8px;margin-bottom:8px;}
+.s4-weight{font-size:36px;font-weight:900;color:#fff;letter-spacing:-2px;}
+.s4-reps{font-size:14px;font-weight:700;color:#e8384a;margin-top:2px;}
+.s4-1rm{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px;}
+
+/* Screen 5: Streaks */
+.s5-bg{background:radial-gradient(ellipse at 50% 35%,rgba(255,90,48,.06),transparent 60%);}
+.s5-streak{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;}
+.s5-flame{font-size:24px;}
+.s5-num{font-size:28px;font-weight:900;color:#fff;}
+.s5-label{font-size:12px;color:rgba(255,255,255,.35);}
+.s5-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px;}
+.s5-day{width:100%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.06);}
+.s5-day.on{background:rgba(232,56,74,.4);}
+.s5-day.hot{background:#e8384a;}
+.s5-ach{display:flex;gap:6px;margin-bottom:14px;}
+.s5-ach-tile{flex:1;padding:8px 4px;border-radius:10px;background:rgba(255,184,77,.08);border:1px solid rgba(255,184,77,.18);text-align:center;font-size:16px;}
+.s5-ach-name{font-size:8px;font-weight:600;color:rgba(255,255,255,.5);margin-top:3px;}
+
+/* Screen 6: Stats */
+.s6-bg{background:radial-gradient(ellipse at 50% 35%,rgba(77,199,184,.06),transparent 60%);}
+.s6-mini-cards{display:flex;gap:6px;margin-bottom:12px;}
+.s6-mini{flex:1;padding:10px 6px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);text-align:center;}
+.s6-mini-val{font-size:16px;font-weight:800;color:#fff;margin-bottom:2px;}
+.s6-mini-lbl{font-size:8px;color:rgba(255,255,255,.35);font-weight:500;}
+.s6-bars{display:flex;align-items:flex-end;gap:4px;height:60px;margin-bottom:12px;padding:0 4px;}
+.s6-bar{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(to top,rgba(232,56,74,.5),rgba(232,56,74,.15));}
+
+/* Screen 7: Share */
+.s7-bg{background:radial-gradient(ellipse at 50% 35%,rgba(175,130,255,.06),transparent 60%);}
+.s7-card{
+  width:140px;height:180px;border-radius:12px;margin:0 auto 14px;position:relative;
+  background:linear-gradient(160deg,#2a1a3a,#1a1a2e);overflow:hidden;
+  border:1px solid rgba(175,130,255,.20);box-shadow:0 12px 32px rgba(0,0,0,.4);
+}
+.s7-photo{width:100%;height:120px;background:linear-gradient(135deg,#2a2a3a,#1a1a28);display:flex;align-items:center;justify-content:center;font-size:28px;opacity:.3;}
+.s7-stats{padding:8px 10px;}
+.s7-ex{font-size:10px;font-weight:700;color:#fff;}
+.s7-wr{font-size:8px;font-weight:600;color:rgba(175,130,255,.7);margin-top:1px;}
+.s7-filters{display:flex;gap:6px;justify-content:center;margin-bottom:12px;}
+.s7-filter{width:28px;height:42px;border-radius:6px;border:1px solid rgba(255,255,255,.08);}
+.s7-filter.active{border-color:#af82ff;box-shadow:0 0 8px rgba(175,130,255,.25);}
+
+/* Screen 8: Setup */
+.s8-bg{background:radial-gradient(ellipse at 50% 30%,rgba(232,56,74,.06),transparent 60%);}
+.s8-row{display:flex;gap:8px;margin-bottom:10px;}
+.s8-unit{
+  flex:1;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.5);
+}
+.s8-unit.active{background:rgba(232,56,74,.12);border-color:rgba(232,56,74,.35);color:#e8384a;}
+.s8-setting{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);margin-bottom:8px;}
+.s8-setting-label{font-size:13px;font-weight:500;color:rgba(255,255,255,.7);}
+.s8-setting-val{font-size:13px;font-weight:600;color:rgba(255,255,255,.4);}
+.s8-toggle{width:38px;height:22px;border-radius:11px;background:#34c759;position:relative;}
+.s8-toggle-thumb{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:9px;background:#fff;}
+.s8-privacy{text-align:center;font-size:10px;color:rgba(255,255,255,.2);margin:8px 0;line-height:1.5;}
+.s8-privacy svg{fill:rgba(255,255,255,.2);width:10px;height:10px;vertical-align:middle;margin-right:2px;}
+</style>
+</head>
+<body>
+
+<div class="page-heading">TheLogger — Onboarding Redesign</div>
+<div class="page-sub">8 screens · Interactive demos · Preference collection</div>
+
+<div class="grid">
+
+<!-- ═══ SCREEN 1: WELCOME ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">1. Welcome</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="content s1-bg">
+    <div class="dots"><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+      <div class="s1-icon">🏋️</div>
+      <div class="s1-app-name">TheLogger</div>
+      <div class="s1-tagline">Fast. Private. Built for the gym.</div>
+      <div class="s1-input">Your name (optional)</div>
+    </div>
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SCREEN 2: LOGGING ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">2. Quick Logging</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="content s2-bg">
+    <div class="dots"><div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="screen-icon">⚡</div>
+    <div class="screen-title">Log Sets in Seconds</div>
+    <div class="screen-sub">The fastest way to track your workout</div>
+    <div class="s2-demo">
+      <div class="s2-set-row"><div class="s2-dot">1</div><div class="s2-val">185 lbs × 8</div><div class="s2-check">✓</div></div>
+      <div class="s2-set-row"><div class="s2-dot">2</div><div class="s2-val">185 lbs × 8</div><div class="s2-check">✓</div></div>
+      <div class="s2-set-row"><div class="s2-dot" style="color:#e8384a;">3</div><div class="s2-val" style="color:rgba(255,255,255,.4);">— × —</div></div>
+      <div class="s2-log-btn">Log Set</div>
+    </div>
+    <div class="bullets">
+      <div class="bullet"><span class="bullet-icon">📝</span><div class="bullet-text"><strong>Tap to log</strong> — reps, weight, done</div></div>
+      <div class="bullet"><span class="bullet-icon">🔄</span><div class="bullet-text"><strong>Auto-remembers</strong> your last weights</div></div>
+      <div class="bullet"><span class="bullet-icon">📋</span><div class="bullet-text"><strong>Templates</strong> for quick starts</div></div>
+    </div>
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SCREEN 3: CAMERA ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">3. Camera Rep Counter</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="content s3-bg">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="screen-icon">📸</div>
+    <div class="screen-title">AI Counts Your Reps</div>
+    <div class="screen-sub">Just point your camera and lift</div>
+    <div class="s3-cam">
+      <div class="s3-silhouette">🏋️</div>
+      <div class="s3-badge">LIVE</div>
+      <div class="s3-counter">8</div>
+    </div>
+    <div class="bullets">
+      <div class="bullet"><span class="bullet-icon">🎯</span><div class="bullet-text"><strong>Squats, curls, presses</strong> & more</div></div>
+      <div class="bullet"><span class="bullet-icon">⏱️</span><div class="bullet-text"><strong>Rep tempo</strong> tracking built-in</div></div>
+      <div class="bullet"><span class="bullet-icon">🔒</span><div class="bullet-text"><strong>On-device</strong> — no data leaves your phone</div></div>
+    </div>
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SCREEN 4: PRs ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">4. Personal Records</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="content s4-bg">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="screen-title" style="margin-top:8px;">Crush Your Records</div>
+    <div class="screen-sub">We celebrate every new PR with you</div>
+    <div class="s4-card">
+      <div class="s4-trophy">🏆</div>
+      <div class="s4-badge">✦ NEW PERSONAL RECORD</div><br>
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:1.5px;margin-bottom:4px;">BENCH PRESS</div>
+      <div class="s4-weight">225</div>
+      <div class="s4-reps">lbs × 5 reps</div>
+      <div class="s4-1rm">Est. 1RM: 262 lbs</div>
+    </div>
+    <div class="bullets">
+      <div class="bullet"><span class="bullet-icon">🔔</span><div class="bullet-text"><strong>Auto-detects</strong> when you beat your best</div></div>
+      <div class="bullet"><span class="bullet-icon">📈</span><div class="bullet-text"><strong>PR timeline</strong> tracks your progress</div></div>
+    </div>
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SCREEN 5: STREAKS ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">5. Streaks & Achievements</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="content s5-bg">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="screen-icon">🔥</div>
+    <div class="screen-title">Stay Consistent</div>
+    <div class="screen-sub">Build streaks and unlock achievements</div>
+    <div class="s5-streak">
+      <span class="s5-flame">🔥</span>
+      <span class="s5-num">7</span>
+      <span class="s5-label">day streak</span>
+    </div>
+    <div class="s5-cal">
+      <div class="s5-day hot"></div><div class="s5-day hot"></div><div class="s5-day on"></div><div class="s5-day"></div><div class="s5-day on"></div><div class="s5-day"></div><div class="s5-day"></div>
+      <div class="s5-day on"></div><div class="s5-day hot"></div><div class="s5-day hot"></div><div class="s5-day on"></div><div class="s5-day"></div><div class="s5-day"></div><div class="s5-day on"></div>
+      <div class="s5-day hot"></div><div class="s5-day hot"></div><div class="s5-day hot"></div><div class="s5-day hot"></div><div class="s5-day hot"></div><div class="s5-day hot"></div><div class="s5-day hot"></div>
+    </div>
+    <div class="s5-ach">
+      <div class="s5-ach-tile">🔥<div class="s5-ach-name">On Fire</div></div>
+      <div class="s5-ach-tile">💪<div class="s5-ach-name">Iron Will</div></div>
+      <div class="s5-ach-tile">📊<div class="s5-ach-name">Data Nerd</div></div>
+      <div class="s5-ach-tile">🌈<div class="s5-ach-name">Variety</div></div>
+    </div>
+    <div class="bullets">
+      <div class="bullet"><span class="bullet-icon">🏅</span><div class="bullet-text"><strong>30+ achievements</strong> to unlock</div></div>
+      <div class="bullet"><span class="bullet-icon">🎯</span><div class="bullet-text"><strong>Rest day challenges</strong> keep you engaged</div></div>
+    </div>
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SCREEN 6: STATS ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">6. Stats Dashboard</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="content s6-bg">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div></div>
+    <div class="screen-icon">📊</div>
+    <div class="screen-title">Track Your Progress</div>
+    <div class="screen-sub">Detailed analytics of every workout</div>
+    <div class="s6-mini-cards">
+      <div class="s6-mini"><div class="s6-mini-val" style="color:#e8384a;">12.4k</div><div class="s6-mini-lbl">Volume</div></div>
+      <div class="s6-mini"><div class="s6-mini-val" style="color:#ff7340;">48</div><div class="s6-mini-lbl">Sets</div></div>
+      <div class="s6-mini"><div class="s6-mini-val" style="color:#ffb366;">420</div><div class="s6-mini-lbl">Reps</div></div>
+      <div class="s6-mini"><div class="s6-mini-val" style="color:#f28c80;">4</div><div class="s6-mini-lbl">Workouts</div></div>
+    </div>
+    <div class="s6-bars">
+      <div class="s6-bar" style="height:30%;"></div>
+      <div class="s6-bar" style="height:45%;"></div>
+      <div class="s6-bar" style="height:55%;"></div>
+      <div class="s6-bar" style="height:40%;"></div>
+      <div class="s6-bar" style="height:65%;"></div>
+      <div class="s6-bar" style="height:60%;"></div>
+      <div class="s6-bar" style="height:80%;"></div>
+      <div class="s6-bar" style="height:95%;"></div>
+    </div>
+    <div class="bullets">
+      <div class="bullet"><span class="bullet-icon">📈</span><div class="bullet-text"><strong>Volume trends</strong> over 8 weeks</div></div>
+      <div class="bullet"><span class="bullet-icon">💪</span><div class="bullet-text"><strong>Muscle balance</strong> breakdown</div></div>
+      <div class="bullet"><span class="bullet-icon">🎯</span><div class="bullet-text"><strong>Weekly goals</strong> with progress ring</div></div>
+    </div>
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SCREEN 7: SHARE ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">7. Share Cards</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="content s7-bg">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div></div>
+    <div class="screen-icon">🎬</div>
+    <div class="screen-title">Share Your Wins</div>
+    <div class="screen-sub">Cinema-grade share cards for your lifts</div>
+    <div class="s7-card">
+      <div class="s7-photo">🏋️</div>
+      <div class="s7-stats">
+        <div class="s7-ex">Bench Press</div>
+        <div class="s7-wr">225 lbs × 5 reps</div>
+      </div>
+    </div>
+    <div class="s7-filters">
+      <div class="s7-filter active" style="background:linear-gradient(160deg,#2a3a3e,#1a1a1e);"></div>
+      <div class="s7-filter" style="background:linear-gradient(160deg,#3a2e20,#2e2418);"></div>
+      <div class="s7-filter" style="background:linear-gradient(160deg,#2a2a2a,#1a1a1a);"></div>
+      <div class="s7-filter" style="background:linear-gradient(160deg,#1e2830,#181e28);"></div>
+      <div class="s7-filter" style="background:linear-gradient(160deg,#1a1a2e,#12121e);"></div>
+    </div>
+    <div class="bullets">
+      <div class="bullet"><span class="bullet-icon">📸</span><div class="bullet-text"><strong>Peak frame</strong> captured during your set</div></div>
+      <div class="bullet"><span class="bullet-icon">🎨</span><div class="bullet-text"><strong>8 film filters</strong> — Cinematic, Portra, Moody...</div></div>
+      <div class="bullet"><span class="bullet-icon">🖼️</span><div class="bullet-text"><strong>7 backgrounds</strong> including Sunset & Lavender</div></div>
+    </div>
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SCREEN 8: SETUP ═══ -->
+<div class="phone-wrap">
+<div class="phone-label">8. Setup & Start</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="content s8-bg">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot active"></div></div>
+    <div class="screen-title" style="margin-top:4px;">Almost There!</div>
+    <div class="screen-sub">Quick setup, then let's lift</div>
+
+    <!-- Units -->
+    <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.25);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;">Weight Unit</div>
+    <div class="s8-row">
+      <div class="s8-unit active">lbs</div>
+      <div class="s8-unit">kg</div>
+    </div>
+
+    <!-- Weekly Goal -->
+    <div class="s8-setting">
+      <span class="s8-setting-label">Weekly Goal</span>
+      <span class="s8-setting-val">4 workouts</span>
+    </div>
+
+    <!-- Rest Timer -->
+    <div class="s8-setting">
+      <span class="s8-setting-label">Rest Timer</span>
+      <div class="s8-toggle"><div class="s8-toggle-thumb"></div></div>
+    </div>
+
+    <div class="s8-privacy">
+      <svg viewBox="0 0 16 16"><path d="M8 1l5 2v4c0 3.5-2.2 6.5-5 7.5C5.2 13.5 3 10.5 3 7V3l5-2z"/></svg>
+      All data stays on your device. No accounts. No tracking.
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div class="btn-primary btn-gold" style="margin-bottom:0;">🚀 Start First Workout</div>
+    <div class="btn-secondary">Explore First</div>
+  </div>
+</div>
+</div>
+
+</div><!-- /grid -->
+
+</body>
+</html>

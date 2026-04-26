@@ -1,0 +1,94 @@
+# ==============================================================================
+# Camera Rep Counter — THE differentiator
+# ==============================================================================
+# Showcases AI-powered pose detection counting reps in real-time.
+# This is the hook — the feature that makes TheLogger unique.
+#
+# Style: Apple-style minimal, dark mode, dramatic zoom on skeleton overlay
+# Duration: ~15s Twitter-optimized
+# ==============================================================================
+
+name: "Camera Rep Counter"
+description: "AI counts your reps — just point your camera"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 18
+  settle_time: 2
+  # NOTE: No XCUITest exists yet for camera rep counter.
+  # Recording uses duration-based fallback — manually open the camera feature
+  # before running, or create testCameraRepCounterDemo in DemoScenarios.swift.
+  test_method: "testCameraRepCounterDemo"
+
+output:
+  filename: "camera-rep-counter"
+  background_color: "#0A0D1E"     # Deep dark blue (premium dark)
+  include_device_frame: true
+  twitter_optimized: true
+  caption: "Your camera counts reps. No wearable needed."
+  hashtags: ["TheLogger", "FitnessApp", "AI", "RepCounter", "WorkoutTracker"]
+
+effects:
+  # Remove launch overhead
+  trim_start: 7.0
+  trim_end: 1.5
+
+  # Subtle continuous zoom for cinematic feel
+  ken_burns:
+    enabled: true
+    scale_start: 1.0
+    scale_end: 1.03
+
+  # Zoom into the action
+  zoom_moments:
+    - time: 2.0       # Camera view appears
+      scale: 1.15
+      duration: 3.0
+      anchor: "center"
+      ease: 0.4
+
+    - time: 6.0       # Skeleton overlay visible, counting
+      scale: 1.3
+      duration: 2.5
+      anchor: "center"
+      ease: 0.3
+
+    - time: 10.0      # Rep count badge
+      scale: 1.2
+      duration: 2.0
+      anchor: "top"
+      ease: 0.3
+
+  # Flash on each rep count
+  flash_moments:
+    - time: 6.5
+      duration: 0.08
+    - time: 8.0
+      duration: 0.08
+    - time: 9.5
+      duration: 0.08
+
+  # Captions
+  text_overlays:
+    - text: "Your camera counts reps."
+      start: 1.0
+      end: 5.0
+      position: "bottom"
+      fontsize: 44
+
+    - text: "No wearable needed."
+      start: 8.0
+      end: 12.0
+      position: "bottom"
+      fontsize: 44
+
+  # Background music
+  music: true
+  music_volume: 0.18
+
+  # Premium look
+  vignette: true
+  color_grade: "cinematic"

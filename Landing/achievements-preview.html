@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Achievements</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#0d0d14;
+  font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+  padding:40px 20px 60px; gap:48px;
+}
+h1 { color:rgba(255,255,255,0.4); font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; }
+.phones-row { display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+.phone-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; }
+.label { font-size:11px; font-weight:600; color:rgba(255,255,255,0.3); letter-spacing:.06em; text-transform:uppercase; }
+.iphone {
+  width:375px; height:812px; background:#0a0a0f;
+  border-radius:52px; border:1px solid rgba(255,255,255,0.1);
+  overflow:hidden; position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.05), 0 30px 80px rgba(0,0,0,0.8);
+}
+.iphone::before {
+  content:''; position:absolute; top:-60px; left:50%; transform:translateX(-50%);
+  width:260px; height:260px;
+  background:radial-gradient(circle,rgba(255,196,40,0.10) 0%,transparent 70%);
+  pointer-events:none; z-index:0;
+}
+.di { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:120px; height:34px; background:#000; border-radius:20px; z-index:20; }
+.sb { position:relative; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:14px 28px 0; height:44px; }
+.sb-time { font-size:15px; font-weight:600; color:rgba(255,255,255,0.9); }
+.sb-icons { display:flex; gap:6px; align-items:center; }
+.sb-icons svg { fill:rgba(255,255,255,0.8); }
+.nav-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 20px 12px; border-bottom:1px solid rgba(255,255,255,0.06); position:relative; z-index:5; }
+.nav-back { font-size:13px; font-weight:600; color:#e8384a; }
+.nav-title { font-size:16px; font-weight:700; color:rgba(255,255,255,0.92); }
+.screen { position:relative; z-index:1; height:calc(812px - 44px - 83px); overflow:hidden; }
+.tab-bar {
+  position:absolute; bottom:0; left:0; right:0; height:83px;
+  background:rgba(10,10,15,0.92); backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,0.07);
+  display:flex; align-items:flex-start; justify-content:space-around; padding:10px 0 0;
+}
+.tab-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.tab-icon { font-size:22px; opacity:0.3; }
+.tab-icon.active { opacity:1; filter:drop-shadow(0 0 6px rgba(232,56,74,0.7)); }
+.tab-lbl { font-size:10px; font-weight:500; color:rgba(255,255,255,0.3); }
+.tab-lbl.active { color:#e8384a; font-weight:600; }
+
+/* Progress header */
+.progress-header {
+  display:flex; align-items:center; gap:16px;
+  padding:16px 20px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.progress-ring-wrap {
+  position:relative; flex-shrink:0;
+  width:56px; height:56px;
+}
+.progress-ring-svg { transform:rotate(-90deg); }
+.ring-bg { fill:none; stroke:rgba(255,196,40,0.15); stroke-width:5; }
+.ring-fill { fill:none; stroke:#ffc428; stroke-width:5; stroke-linecap:round; stroke-dasharray:151; stroke-dashoffset:42; }
+.ring-center { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#ffc428; }
+.progress-info {}
+.progress-title { font-size:18px; font-weight:800; color:rgba(255,255,255,0.95); margin-bottom:3px; }
+.progress-sub { font-size:12px; color:rgba(255,255,255,0.38); }
+
+/* Category pills */
+.cat-pills { display:flex; gap:7px; padding:12px 16px 10px; overflow:hidden; }
+.cat-pill { padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap; flex-shrink:0; }
+.cat-pill.selected { background:#e8384a; color:white; }
+.cat-pill.unselected { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.1); }
+
+/* Achievement grid */
+.achieve-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:4px 16px; }
+
+.achieve-card {
+  border-radius:18px; padding:16px 14px;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  position:relative; overflow:hidden;
+}
+.achieve-card.unlocked {
+  background:rgba(255,196,40,0.07);
+  border:1px solid rgba(255,196,40,0.22);
+  box-shadow:0 0 20px rgba(255,196,40,0.08);
+}
+.achieve-card.unlocked::before {
+  content:''; position:absolute; top:-20px; right:-20px;
+  width:80px; height:80px;
+  background:radial-gradient(circle,rgba(255,196,40,0.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.achieve-card.locked {
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.07);
+}
+.achieve-card.new-badge {
+  background:rgba(232,56,74,0.07);
+  border:1px solid rgba(232,56,74,0.22);
+}
+.achieve-card.new-badge::before {
+  content:''; position:absolute; top:-20px; right:-20px;
+  width:80px; height:80px;
+  background:radial-gradient(circle,rgba(232,56,74,0.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.achieve-emoji { font-size:32px; position:relative; z-index:1; }
+.achieve-emoji.locked { filter:grayscale(1) opacity(0.3); }
+.achieve-name { font-size:12px; font-weight:700; text-align:center; line-height:1.3; position:relative; z-index:1; }
+.achieve-name.unlocked { color:rgba(255,255,255,0.88); }
+.achieve-name.locked { color:rgba(255,255,255,0.3); }
+.achieve-sub { font-size:10px; font-weight:500; text-align:center; position:relative; z-index:1; }
+.achieve-sub.unlocked { color:rgba(255,196,40,0.7); }
+.achieve-sub.locked { color:rgba(255,255,255,0.2); }
+.achieve-sub.red { color:rgba(232,56,74,0.7); }
+.lock-overlay {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:18px; opacity:0.3;
+}
+.new-dot {
+  position:absolute; top:10px; right:10px;
+  width:8px; height:8px; border-radius:50%; background:#e8384a;
+  box-shadow:0 0 6px rgba(232,56,74,0.8);
+}
+</style>
+</head>
+<body>
+<h1>Group 6 — Achievements</h1>
+<div class="phones-row">
+
+  <div class="phone-wrap">
+    <div class="label">Achievements</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span class="sb-time">9:41</span><div class="sb-icons"><svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg></div></div>
+      <div class="screen">
+        <div class="nav-bar">
+          <div class="nav-back">← Profile</div>
+          <div class="nav-title">Achievements</div>
+          <div style="width:52px;"></div>
+        </div>
+
+        <!-- Progress ring header -->
+        <div class="progress-header">
+          <div class="progress-ring-wrap">
+            <svg class="progress-ring-svg" width="56" height="56" viewBox="0 0 56 56">
+              <circle class="ring-bg" cx="28" cy="28" r="24"/>
+              <circle class="ring-fill" cx="28" cy="28" r="24"/>
+            </svg>
+            <div class="ring-center">18</div>
+          </div>
+          <div class="progress-info">
+            <div class="progress-title">18 of 25 Unlocked</div>
+            <div class="progress-sub">3 new this week · 7 remaining</div>
+          </div>
+        </div>
+
+        <!-- Category pills -->
+        <div class="cat-pills">
+          <div class="cat-pill selected">All</div>
+          <div class="cat-pill unselected">Consistency</div>
+          <div class="cat-pill unselected">Strength</div>
+          <div class="cat-pill unselected">Volume</div>
+        </div>
+
+        <!-- Achievement grid -->
+        <div class="achieve-grid">
+
+          <div class="achieve-card unlocked">
+            <div class="achieve-emoji">🔥</div>
+            <div class="achieve-name unlocked">On Fire</div>
+            <div class="achieve-sub unlocked">7-day streak</div>
+          </div>
+
+          <div class="achieve-card new-badge">
+            <div class="new-dot"></div>
+            <div class="achieve-emoji">💪</div>
+            <div class="achieve-name unlocked">First PR</div>
+            <div class="achieve-sub red">Just unlocked!</div>
+          </div>
+
+          <div class="achieve-card unlocked">
+            <div class="achieve-emoji">🏋️</div>
+            <div class="achieve-name unlocked">Centurion</div>
+            <div class="achieve-sub unlocked">100 workouts</div>
+          </div>
+
+          <div class="achieve-card unlocked">
+            <div class="achieve-emoji">⭐️</div>
+            <div class="achieve-name unlocked">Early Bird</div>
+            <div class="achieve-sub unlocked">5 morning sessions</div>
+          </div>
+
+          <div class="achieve-card locked">
+            <div class="lock-overlay">🔒</div>
+            <div class="achieve-emoji locked">🦅</div>
+            <div class="achieve-name locked">Iron Wings</div>
+            <div class="achieve-sub locked">200 workouts</div>
+          </div>
+
+          <div class="achieve-card locked">
+            <div class="lock-overlay">🔒</div>
+            <div class="achieve-emoji locked">👑</div>
+            <div class="achieve-name locked">Legend</div>
+            <div class="achieve-sub locked">30-day streak</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon">🏠</div><div class="tab-lbl">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon active">👤</div><div class="tab-lbl active">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		460AD9812F6F12FF00522761 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 460AD9802F6F12FF00522761 /* RevenueCat */; };
 		460AD9832F6F35A400522761 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 460AD9822F6F35A400522761 /* Products.storekit */; };
+		460AD99A2F91C5BA00522761 /* test_camera_feed.MP4 in Resources */ = {isa = PBXBuildFile; fileRef = 460AD9992F91C5BA00522761 /* test_camera_feed.MP4 */; };
 		46B5F1F42F2ECAA3005CFC92 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46B5F1F32F2ECAA3005CFC92 /* WidgetKit.framework */; };
 		46B5F1F62F2ECAA3005CFC92 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46B5F1F52F2ECAA3005CFC92 /* SwiftUI.framework */; };
 		46B5F2032F2ECAA4005CFC92 /* TheLoggerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -56,6 +57,7 @@
 
 /* Begin PBXFileReference section */
 		460AD9822F6F35A400522761 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
+		460AD9992F91C5BA00522761 /* test_camera_feed.MP4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = test_camera_feed.MP4; sourceTree = "<group>"; };
 		4678C6582F07164200E5B779 /* TheLogger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheLogger.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		468E90542F382103001E0A97 /* TheLoggerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheLoggerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		46B5F1F12F2ECAA3005CFC92 /* TheLoggerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TheLoggerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -146,6 +148,7 @@
 			isa = PBXGroup;
 			children = (
 				460AD9822F6F35A400522761 /* Products.storekit */,
+				460AD9992F91C5BA00522761 /* test_camera_feed.MP4 */,
 				4678C65A2F07164200E5B779 /* TheLogger */,
 				46B5F1F72F2ECAA3005CFC92 /* TheLoggerWidget */,
 				46UITEST0012F300000000006 /* TheLoggerUITests */,
@@ -335,6 +338,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				460AD9832F6F35A400522761 /* Products.storekit in Resources */,
+				460AD99A2F91C5BA00522761 /* test_camera_feed.MP4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

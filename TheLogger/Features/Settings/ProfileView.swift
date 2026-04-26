@@ -11,12 +11,26 @@ import SwiftData
 struct ProfileView: View {
     @Environment(ProManager.self) private var proManager
     @Query(sort: \Workout.date, order: .reverse) private var workouts: [Workout]
+    @Query private var allPRs: [PersonalRecord]
     @AppStorage("userName") private var userName: String = ""
+    @AppStorage("weeklyWorkoutGoal") private var weeklyWorkoutGoal: Int = 4
     @State private var showingNameEditor = false
     @State private var showUpgrade = false
+    @State private var gamification = GamificationEngine()
 
-    private var totalWorkouts: Int {
-        workouts.filter { $0.isCompleted && !$0.isTemplate }.count
+    private var completedWorkouts: [Workout] {
+        workouts.filter { $0.isCompleted && !$0.isTemplate }
+    }
+
+    private var totalWorkouts: Int { completedWorkouts.count }
+
+    private var totalPRs: Int { allPRs.count }
+
+    private var memberSince: String? {
+        guard let earliest = completedWorkouts.last else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yyyy"
+        return formatter.string(from: earliest.date)
     }
 
     var body: some View {
@@ -25,11 +39,23 @@ struct ProfileView: View {
                 // Profile header
                 Section {
                     HStack(spacing: 14) {
-                        LevelAvatar(
-                            name: userName,
-                            totalWorkouts: totalWorkouts,
-                            size: 56
-                        )
+                        ZStack {
+                            Circle()
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: AppColors.accentGradient,
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 3
+                                )
+                                .frame(width: 72, height: 72)
+                            LevelAvatar(
+                                name: userName,
+                                totalWorkouts: totalWorkouts,
+                                size: 64
+                            )
+                        }
 
                         VStack(alignment: .leading, spacing: 4) {
                             if userName.isEmpty {
@@ -65,30 +91,98 @@ struct ProfileView: View {
                 }
                 .listRowBackground(Color.white.opacity(0.06))
 
+                // Quick stats strip
+                Section {
+                    HStack(spacing: 0) {
+                        ProfileStatItem(
+                            value: "\(totalWorkouts)",
+                            label: "Workouts",
+                            icon: "figure.strengthtraining.traditional",
+                            color: AppColors.accent
+                        )
+                        Divider()
+                            .frame(height: 32)
+                            .overlay(Color.white.opacity(0.06))
+                        ProfileStatItem(
+                            value: "\(gamification.streakData.current)",
+                            label: "Streak",
+                            icon: "flame.fill",
+                            color: Color(red: 1.0, green: 0.45, blue: 0.25)
+                        )
+                        Divider()
+                            .frame(height: 32)
+                            .overlay(Color.white.opacity(0.06))
+                        ProfileStatItem(
+                            value: "\(totalPRs)",
+                            label: "PRs",
+                            icon: "trophy.fill",
+                            color: AppColors.accentGold
+                        )
+                    }
+                    .padding(.vertical, 6)
+                }
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(
+                            LinearGradient(
+                                colors: [AppColors.accent.opacity(0.06), Color.white.opacity(0.04)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(AppColors.accent.opacity(0.12), lineWidth: 1)
+                        )
+                )
+
                 // Pro status banner
                 if proManager.isPro {
                     Section {
                         HStack(spacing: 12) {
-                            Image(systemName: "crown.fill")
-                                .foregroundStyle(AppColors.accentGold)
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 7)
+                                    .fill(AppColors.accentGold.opacity(0.85))
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: "crown.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.white)
+                            }
                             Text("Pro Member")
                                 .font(.system(.body, weight: .semibold))
                                 .foregroundStyle(.primary)
                             Spacer()
                             Button("Manage") {
-                                if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions") {
+                                // Try App Store subscriptions, fall back to Settings
+                                if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions"),
+                                   UIApplication.shared.canOpenURL(url) {
                                     UIApplication.shared.open(url)
+                                } else if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                                    UIApplication.shared.open(settingsURL)
                                 }
                             }
                             .font(.system(.caption, weight: .semibold))
                             .foregroundStyle(AppColors.accent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(AppColors.accent.opacity(0.12), in: Capsule())
                         }
                         .padding(.vertical, 4)
                     }
-                    .listRowBackground(Color.white.opacity(0.06))
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(AppColors.accentGold.opacity(0.06))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(AppColors.accentGold.opacity(0.18), lineWidth: 1)
+                            )
+                    )
                 } else {
                     Section {
-                        Button { showUpgrade = true } label: {
+                        Button {
+                            showUpgrade = true
+                            Analytics.send(Analytics.Signal.upgradePromptTapped)
+                        } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "crown.fill")
                                     .foregroundStyle(AppColors.accentGold)
@@ -111,11 +205,17 @@ struct ProfileView: View {
                         .accessibilityIdentifier("upgradeProBanner")
                     }
                     .listRowBackground(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(AppColors.accentGold.opacity(0.08))
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(
+                                LinearGradient(
+                                    colors: [AppColors.accentGold.opacity(0.12), AppColors.accentGold.opacity(0.06)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(AppColors.accentGold.opacity(0.2), lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(AppColors.accentGold.opacity(0.25), lineWidth: 1)
                             )
                     )
                 }
@@ -129,15 +229,21 @@ struct ProfileView: View {
                             Text("Settings")
                                 .font(.system(.body, weight: .medium))
                         } icon: {
-                            Image(systemName: "gearshape.fill")
-                                .foregroundStyle(.secondary)
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 7)
+                                    .fill(AppColors.accent.opacity(0.85))
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: "gearshape.fill")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(.white)
+                            }
                         }
                     }
                 } header: {
-                    Label("Preferences", systemImage: "slider.horizontal.3")
-                        .font(.system(.caption, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(nil)
+                    Text("Preferences")
+                        .font(.system(.caption2, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.28))
+                        .textCase(.uppercase)
                 }
                 .listRowBackground(Color.white.opacity(0.06))
 
@@ -151,19 +257,25 @@ struct ProfileView: View {
                                 Text("Data & Backup")
                                     .font(.system(.body, weight: .medium))
                                 Text("Export, import, and manage your data")
-                                    .font(.system(.caption, weight: .regular))
-                                    .foregroundStyle(.secondary)
+                                    .font(.system(.caption2, weight: .regular))
+                                    .foregroundStyle(Color.white.opacity(0.4))
                             }
                         } icon: {
-                            Image(systemName: "externaldrive.fill")
-                                .foregroundStyle(AppColors.accentGold)
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 7)
+                                    .fill(AppColors.accentGold.opacity(0.85))
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: "externaldrive.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.white)
+                            }
                         }
                     }
                 } header: {
-                    Label("Data", systemImage: "lock.shield")
-                        .font(.system(.caption, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(nil)
+                    Text("Data")
+                        .font(.system(.caption2, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.28))
+                        .textCase(.uppercase)
                 }
                 .listRowBackground(Color.white.opacity(0.06))
 
@@ -172,31 +284,49 @@ struct ProfileView: View {
                     NavigationLink {
                         PrivacyPolicyView()
                     } label: {
-                        Label("Privacy Policy", systemImage: "hand.raised")
+                        Label {
+                            Text("Privacy Policy")
+                                .font(.system(.body, weight: .medium))
+                        } icon: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 7)
+                                    .fill(AppColors.accentBlue.opacity(0.85))
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: "hand.raised.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.white)
+                            }
+                        }
                     }
 
                     HStack {
                         Text("Version")
+                            .font(.system(.body, weight: .medium))
                         Spacer()
                         Text(appVersion)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.white.opacity(0.4))
                     }
 
                     HStack {
                         Text("Build")
+                            .font(.system(.body, weight: .medium))
                         Spacer()
                         Text(buildNumber)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.white.opacity(0.4))
                     }
                 } header: {
-                    Label("About", systemImage: "info.circle")
-                        .font(.system(.caption, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(nil)
+                    Text("About")
+                        .font(.system(.caption2, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.28))
+                        .textCase(.uppercase)
                 } footer: {
                     VStack(spacing: 8) {
                         Text("TheLogger")
                             .font(.system(.caption, weight: .semibold))
+                        if let since = memberSince {
+                            Text("Member since \(since)")
+                                .font(.caption2)
+                        }
                         Text("Built with love for lifters who value simplicity and privacy.")
                             .font(.caption2)
                             .multilineTextAlignment(.center)
@@ -228,6 +358,10 @@ struct ProfileView: View {
             .background(AppColors.background)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
+            .onAppear {
+                gamification.refresh(workouts: workouts, prs: allPRs, weeklyGoal: weeklyWorkoutGoal)
+                Analytics.send(Analytics.Signal.profileViewed)
+            }
             .sheet(isPresented: $showUpgrade) {
                 UpgradeView()
                     .environment(proManager)
@@ -286,6 +420,31 @@ private struct DebugSettingsView: View {
     }
 }
 #endif
+
+// MARK: - Profile Stat Item
+
+private struct ProfileStatItem: View {
+    let value: String
+    let label: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(color)
+            Text(value)
+                .font(.system(.title3, weight: .bold))
+                .foregroundStyle(.primary)
+                .monospacedDigit()
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
 
 #Preview {
     ProfileView()

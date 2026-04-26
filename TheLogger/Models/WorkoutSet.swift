@@ -66,6 +66,10 @@ final class WorkoutSet: Identifiable {
     var setType: String = "Working"  // Store as String for SwiftData compatibility
     var sortOrder: Int = 0   // Ensures consistent display order (SwiftData doesn't guarantee relationship order)
 
+    /// Tempo tracking (camera-logged sets only, nil for manual sets)
+    var tempoDown: Double?   // Average eccentric duration (seconds)
+    var tempoUp: Double?     // Average concentric duration (seconds)
+
     /// Inverse relationship to parent exercise (required for CloudKit)
     var exercise: Exercise?
     

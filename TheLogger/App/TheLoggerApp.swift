@@ -55,13 +55,23 @@ struct TheLoggerApp: App {
         #endif
 
         #if targetEnvironment(simulator)
-        // Skip onboarding automatically in the simulator so stats/history are immediately visible.
-        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        // Skip onboarding in the simulator so stats/history are immediately visible.
+        // Pass --show-onboarding at launch to RESET the flag and preview the onboarding flow;
+        // the body still gates on hasCompletedOnboarding, so completing onboarding
+        // transitions the user to MainTabView normally.
+        if CommandLine.arguments.contains("--show-onboarding") {
+            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        } else {
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        }
         #endif
 
         let (container, failed) = Self.makeModelContainer()
         self.sharedModelContainer = container
         self.containerCreationFailed = failed
+
+        // Record install date once (used for new-user notification suppression)
+        NotificationScheduler.shared.recordInstallDateIfNeeded()
     }
 
     // MARK: - Model Container Setup
@@ -205,16 +215,6 @@ struct TheLoggerApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                #if targetEnvironment(simulator)
-                // Always skip onboarding in the simulator so stats/history are immediately visible.
-                MainTabView(
-                    deepLinkWorkoutId: $deepLinkWorkoutId,
-                    deepLinkExerciseId: $deepLinkExerciseId
-                )
-                .onAppear {
-                    syncPendingSetsFromWidget()
-                }
-                #else
                 if hasCompletedOnboarding {
                     MainTabView(
                         deepLinkWorkoutId: $deepLinkWorkoutId,
@@ -226,7 +226,6 @@ struct TheLoggerApp: App {
                 } else {
                     OnboardingView()
                 }
-                #endif
             }
             .alert("Storage Error", isPresented: .constant(containerCreationFailed)) {
                 Button("OK") { }
@@ -236,6 +235,9 @@ struct TheLoggerApp: App {
             .environment(proManager)
             .task {
                 await proManager.checkSubscriptionStatus()
+                seedStarterTemplatesIfNeeded()
+                // Request notification permission on first launch
+                NotificationScheduler.shared.requestPermission()
             }
             .onOpenURL { url in
                 handleBackupFileOpen(url)
@@ -256,6 +258,8 @@ struct TheLoggerApp: App {
             if newPhase == .active {
                 // Sync any sets logged from the widget
                 syncPendingSetsFromWidget()
+                // Schedule today's notification (runs once per day)
+                NotificationScheduler.shared.scheduleIfNeeded(modelContext: sharedModelContainer.mainContext)
             }
         }
         .handlesExternalEvents(matching: ["thelogger"])
@@ -282,6 +286,43 @@ struct TheLoggerApp: App {
     // MARK: - Widget Sync
 
     /// Sync sets that were logged from the Live Activity widget
+    // MARK: - Starter Templates
+
+    @AppStorage("hasSeededTemplates") private var hasSeededTemplates = false
+
+    private func seedStarterTemplatesIfNeeded() {
+        guard !hasSeededTemplates else { return }
+
+        let context = sharedModelContainer.mainContext
+        // Only seed if user has no templates at all
+        let descriptor = FetchDescriptor<Workout>(predicate: #Predicate { $0.isTemplate == true })
+        guard let existing = try? context.fetch(descriptor), existing.isEmpty else {
+            hasSeededTemplates = true
+            return
+        }
+
+        let templates: [(name: String, exercises: [String])] = [
+            ("Push Day", ["Bench Press", "Overhead Press", "Incline Dumbbell Press", "Tricep Pushdown"]),
+            ("Pull Day", ["Deadlift", "Barbell Row", "Lat Pulldown", "Barbell Curl"]),
+            ("Leg Day", ["Squat", "Romanian Deadlift", "Lunges", "Leg Press"]),
+        ]
+
+        for t in templates {
+            let workout = Workout(name: t.name, date: Date(), isTemplate: true)
+            for name in t.exercises {
+                workout.addExercise(name: name)
+            }
+            context.insert(workout)
+        }
+
+        do {
+            try context.save()
+            hasSeededTemplates = true
+        } catch {
+            debugLog("Error seeding templates: \(error)")
+        }
+    }
+
     private func syncPendingSetsFromWidget() {
         // Debug: Print full intent debug log
         if let debugDefaults = UserDefaults(suiteName: "group.com.thelogger.app"),

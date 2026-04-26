@@ -36,6 +36,15 @@ struct MainTabView: View {
                 selectedTab = 0
             }
         }
+        .onChange(of: selectedTab) { _, newValue in
+            let tabName = switch newValue {
+            case 0: "home"
+            case 1: "stats"
+            case 2: "profile"
+            default: "unknown"
+            }
+            Analytics.send(Analytics.Signal.tabSelected, parameters: ["tab": tabName])
+        }
     }
 }
 

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390">
+  <title>TheLogger — Camera</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 390px; height: 844px; overflow: hidden;
+      background: linear-gradient(175deg, #16120E 0%, #0D0A07 50%, #080604 100%);
+      color: #F2EDE8;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      position: relative;
+    }
+    /* Film grain */
+    body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0.055;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    /* Cinematic vignette */
+    .vignette {
+      position: absolute; inset: 0; pointer-events: none; z-index: 3;
+      background: radial-gradient(ellipse 82% 82% at 50% 50%, transparent 44%, rgba(0,0,0,0.72) 100%);
+    }
+    /* Floor environment */
+    .env {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 220px; pointer-events: none; z-index: 1;
+      background: linear-gradient(0deg, rgba(28,18,10,0.55) 0%, transparent 100%);
+    }
+    .dynamic-island {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 28px; background: #000; border-radius: 20px; z-index: 20;
+    }
+    /* Top HUD */
+    .hud-top {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      padding: 58px 18px 0; display: flex; align-items: center; justify-content: space-between;
+    }
+    .ex-pill {
+      background: rgba(12,10,7,0.72); backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.14); border-radius: 24px;
+      padding: 8px 16px; display: flex; align-items: center; gap: 9px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .ex-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #F5573E;
+      box-shadow: 0 0 8px rgba(245,87,62,0.8);
+    }
+    .ex-name { font-size: 14px; font-weight: 800; }
+    .gear-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(12,10,7,0.65); border: 1px solid rgba(255,255,255,0.13);
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+    }
+
+    /* Skeleton layer */
+    .skel-layer {
+      position: absolute; inset: 0; z-index: 5;
+      display: flex; align-items: center; justify-content: center; padding-bottom: 80px;
+    }
+
+    /* Rep counter — center */
+    .rep-center {
+      position: absolute; top: 45%; left: 50%; transform: translate(-50%,-50%); z-index: 15; text-align: center;
+    }
+    .ring-wrap { position: relative; width: 126px; height: 126px; margin: 0 auto 8px; }
+    .ring-svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+    .ring-track { stroke: rgba(255,255,255,0.07); fill: none; }
+    .ring-prog {
+      stroke: url(#camGrad); fill: none; stroke-linecap: round;
+      stroke-dasharray: 294; stroke-dashoffset: 74;
+      filter: drop-shadow(0 0 9px rgba(245,87,62,0.8));
+    }
+    .rep-num {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 56px; font-weight: 900; letter-spacing: -3px;
+    }
+    .rep-lbl { font-size: 13px; color: rgba(242,237,232,0.5); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    /* Bottom HUD */
+    .hud-bottom {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding-bottom: 38px;
+    }
+    .feedback {
+      text-align: center; margin-bottom: 16px;
+      font-size: 17px; font-weight: 800; color: rgba(242,237,232,0.85);
+      letter-spacing: -0.3px;
+    }
+    .feedback span { color: #F5573E; }
+    .confidence { display: flex; align-items: center; gap: 10px; padding: 0 28px; margin-bottom: 20px; }
+    .conf-lbl { font-size: 11px; color: rgba(242,237,232,0.35); font-weight: 700; white-space: nowrap; letter-spacing: 0.05em; text-transform: uppercase; }
+    .conf-bg { flex: 1; height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+    .conf-fill { height: 100%; width: 87%; background: linear-gradient(90deg, #30B955, #5DD878); border-radius: 2px; box-shadow: 0 0 6px rgba(48,185,85,0.5); }
+    .conf-pct { font-size: 11px; color: rgba(242,237,232,0.4); font-weight: 700; }
+    .stop-row { display: flex; justify-content: center; }
+    .stop-btn {
+      border: 1px solid rgba(255,255,255,0.18); background: rgba(12,10,7,0.6);
+      border-radius: 32px; padding: 13px 44px;
+      color: rgba(242,237,232,0.6); font-size: 15px; font-weight: 800; font-family: inherit;
+      backdrop-filter: blur(14px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="camGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#F5A03E"/>
+        <stop offset="100%" stop-color="#F5573E"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="dynamic-island"></div>
+  <div class="env"></div>
+  <div class="vignette"></div>
+
+  <div class="hud-top">
+    <div class="ex-pill"><div class="ex-dot"></div><span class="ex-name">Squat</span></div>
+    <div class="gear-btn">⚙</div>
+  </div>
+
+  <div class="skel-layer">
+    <!-- Squat position skeleton -->
+    <svg width="200" height="430" viewBox="0 0 200 430" fill="none" xmlns="http://www.w3.org/2000/svg"
+         style="opacity:0.7;filter:drop-shadow(0 0 12px rgba(245,87,62,0.55))">
+      <!-- Head -->
+      <circle cx="100" cy="38" r="20" stroke="#F5573E" stroke-width="2.5"/>
+      <!-- Neck + upper torso -->
+      <line x1="100" y1="58" x2="100" y2="88" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Shoulder bar -->
+      <line x1="48" y1="88" x2="152" y2="88" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Left arm (bent, hands on thighs in squat) -->
+      <line x1="48" y1="88" x2="32" y2="148" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="32" y1="148" x2="26" y2="210" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Right arm -->
+      <line x1="152" y1="88" x2="168" y2="148" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="168" y1="148" x2="174" y2="210" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Spine to hip -->
+      <line x1="100" y1="88" x2="100" y2="195" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Hip bar -->
+      <line x1="64" y1="195" x2="136" y2="195" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Left leg (deep squat) -->
+      <line x1="64" y1="195" x2="36" y2="300" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="36" y1="300" x2="44" y2="390" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Right leg (deep squat) -->
+      <line x1="136" y1="195" x2="164" y2="300" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="164" y1="300" x2="156" y2="390" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Feet -->
+      <line x1="44" y1="390" x2="26" y2="402" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="156" y1="390" x2="174" y2="402" stroke="#F5573E" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Joint dots -->
+      <circle cx="48" cy="88" r="5" fill="#F5573E" opacity="0.9"/>
+      <circle cx="152" cy="88" r="5" fill="#F5573E" opacity="0.9"/>
+      <circle cx="32" cy="148" r="4" fill="#F5573E" opacity="0.8"/>
+      <circle cx="168" cy="148" r="4" fill="#F5573E" opacity="0.8"/>
+      <circle cx="64" cy="195" r="5" fill="#F5573E" opacity="0.9"/>
+      <circle cx="136" cy="195" r="5" fill="#F5573E" opacity="0.9"/>
+      <circle cx="36" cy="300" r="5" fill="#F5573E" opacity="0.9"/>
+      <circle cx="164" cy="300" r="5" fill="#F5573E" opacity="0.9"/>
+    </svg>
+  </div>
+
+  <div class="rep-center">
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 126 126">
+        <circle class="ring-track" cx="63" cy="63" r="47" stroke-width="7"/>
+        <circle class="ring-prog" cx="63" cy="63" r="47" stroke-width="7"/>
+      </svg>
+      <div class="rep-num">8</div>
+    </div>
+    <div class="rep-lbl">reps</div>
+  </div>
+
+  <div class="hud-bottom">
+    <div class="feedback">Going down… <span>hold</span></div>
+    <div class="confidence">
+      <span class="conf-lbl">Confidence</span>
+      <div class="conf-bg"><div class="conf-fill"></div></div>
+      <span class="conf-pct">87%</span>
+    </div>
+    <div class="stop-row"><button class="stop-btn">Stop</button></div>
+  </div>
+</body>
+</html>

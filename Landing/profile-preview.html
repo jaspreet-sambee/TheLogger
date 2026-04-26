@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Profile &amp; Settings</title>
+<style>
+/* ─── Reset & Page ─── */
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#0d0d14;
+  font-family:-apple-system,'SF Pro Display','SF Pro Text',system-ui,sans-serif;
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:40px 20px 80px;gap:20px;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Page heading */
+.page-heading{
+  color:rgba(255,255,255,.45);font-size:12px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;
+}
+
+/* ─── Phones row ─── */
+.phones-row{
+  display:flex;gap:48px;flex-wrap:wrap;justify-content:center;align-items:flex-start;
+}
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.phone-label{
+  font-size:11px;font-weight:600;color:rgba(255,255,255,.3);
+  letter-spacing:.06em;text-transform:uppercase;
+}
+
+/* ─── iPhone shell ─── */
+.iphone{
+  width:375px;height:812px;background:#0a0a0f;
+  border-radius:52px;border:1px solid rgba(255,255,255,.08);
+  overflow:hidden;position:relative;flex-shrink:0;
+  box-shadow:0 0 0 1px rgba(255,255,255,.03),0 40px 100px rgba(0,0,0,.85);
+}
+.di{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:20;}
+
+/* Status bar */
+.sb{position:relative;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:14px 28px 0;height:44px;}
+.sb-time{font-size:15px;font-weight:600;color:rgba(255,255,255,.9);}
+.sb-icons{display:flex;gap:6px;align-items:center;}
+.sb-icons svg{fill:rgba(255,255,255,.8);}
+
+/* Nav bars */
+.nav-large{padding:6px 20px 10px;}
+.nav-large-title{font-size:30px;font-weight:700;color:rgba(255,255,255,.95);letter-spacing:-.5px;}
+.nav-inline{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 20px 10px;border-bottom:1px solid rgba(255,255,255,.06);
+}
+.nav-back{font-size:15px;font-weight:600;color:#e8384a;cursor:pointer;display:flex;align-items:center;gap:2px;}
+.nav-back svg{fill:#e8384a;}
+.nav-inline-title{font-size:16px;font-weight:600;color:rgba(255,255,255,.92);position:absolute;left:50%;transform:translateX(-50%);}
+
+/* Screen */
+.screen{position:relative;z-index:1;overflow-y:auto;padding:0 16px;scrollbar-width:none;-ms-overflow-style:none;}
+.screen::-webkit-scrollbar{display:none;}
+.screen-profile{height:calc(812px - 44px - 42px - 83px);}
+.screen-settings{height:calc(812px - 44px - 52px - 83px);}
+
+/* ─── iOS grouped list ─── */
+.section{margin-bottom:6px;}
+.section-header{
+  font-size:11px;font-weight:600;color:rgba(255,255,255,.32);
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:12px 4px 6px;display:flex;align-items:center;gap:5px;
+}
+.section-header svg{fill:rgba(255,255,255,.32);width:13px;height:13px;}
+.section-footer{
+  font-size:11px;color:rgba(255,255,255,.18);
+  padding:6px 4px 0;line-height:1.55;
+}
+.card{background:rgba(255,255,255,.06);border-radius:12px;overflow:hidden;}
+.row{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;min-height:44px;
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.row:last-child{border-bottom:none;}
+.row-label{flex:1;min-width:0;}
+.row-title{font-size:15px;font-weight:500;color:rgba(255,255,255,.9);}
+.row-subtitle{font-size:11px;color:rgba(255,255,255,.38);margin-top:1px;line-height:1.4;}
+.row-value{font-size:14px;color:rgba(255,255,255,.35);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.chevron{color:rgba(255,255,255,.18);font-size:14px;font-weight:600;margin-left:2px;}
+
+/* ─── Profile header ─── */
+.avatar-ring{
+  width:72px;height:72px;border-radius:50%;flex-shrink:0;
+  padding:3px;
+  background:conic-gradient(from 0deg,#e8384a,#ff5a30,#e8384a);
+}
+.avatar-inner{
+  width:100%;height:100%;border-radius:50%;
+  background:linear-gradient(135deg,#e8384a,#e8384a99);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.avatar-inner::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.18),transparent 60%);
+}
+.avatar-letter{
+  font-size:28px;font-weight:700;color:#fff;position:relative;z-index:1;
+  text-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+/* Level dot on avatar */
+.avatar-level-dot{
+  position:absolute;bottom:-2px;right:-2px;
+  width:24px;height:24px;border-radius:50%;
+  background:#0a0a0f;display:flex;align-items:center;justify-content:center;
+}
+.avatar-level-dot-inner{
+  width:20px;height:20px;border-radius:50%;
+  background:linear-gradient(135deg,#e8384a,#e8384a99);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;
+}
+.profile-name{font-size:18px;font-weight:700;color:rgba(255,255,255,.95);margin-bottom:5px;}
+.level-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(232,56,74,.12);
+  border:1px solid rgba(232,56,74,.25);
+  border-radius:20px;padding:3px 10px 3px 7px;
+}
+.level-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:linear-gradient(135deg,#e8384a,#ff5a30);
+}
+.level-text{font-size:11px;font-weight:600;color:#e8384a;letter-spacing:.02em;}
+.edit-btn{
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,.07);
+  display:flex;align-items:center;justify-content:center;
+}
+.edit-btn svg{fill:#e8384a;width:15px;height:15px;}
+
+/* ─── Pro banner ─── */
+.pro-card{
+  background:linear-gradient(135deg,rgba(255,184,77,.12),rgba(255,184,77,.05));
+  border:1px solid rgba(255,184,77,.22);
+  border-radius:12px;
+}
+.pro-icon svg{fill:#ffb84d;width:22px;height:22px;}
+.pro-title{font-size:15px;font-weight:600;color:rgba(255,255,255,.92);margin-bottom:1px;}
+.pro-subtitle{font-size:11px;color:rgba(255,255,255,.38);line-height:1.4;}
+
+/* ─── Icon boxes ─── */
+.icon-box{
+  width:30px;height:30px;border-radius:7px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.icon-box svg{fill:#fff;width:15px;height:15px;}
+.ib-red{background:rgba(232,56,74,.85);}
+.ib-gold{background:rgba(255,184,77,.85);}
+.ib-blue{background:rgba(128,166,255,.85);}
+.ib-teal{background:rgba(77,199,183,.85);}
+.ib-gray{background:rgba(120,120,128,.75);}
+.ib-green{background:rgba(48,209,88,.85);}
+.ib-purple{background:rgba(175,130,255,.85);}
+
+/* ─── Toggle (iOS style) ─── */
+.toggle-track{
+  width:46px;height:28px;border-radius:14px;flex-shrink:0;
+  position:relative;cursor:pointer;transition:background .2s;
+}
+.toggle-on{background:#34c759;}
+.toggle-off{background:rgba(120,120,128,.32);}
+.toggle-thumb{
+  position:absolute;top:2px;width:24px;height:24px;border-radius:12px;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s;
+}
+.toggle-on .toggle-thumb{left:20px;}
+.toggle-off .toggle-thumb{left:2px;}
+
+/* ─── Segmented picker ─── */
+.picker-row{display:flex;align-items:center;gap:10px;width:100%;}
+.picker-label{font-size:15px;font-weight:500;color:rgba(255,255,255,.9);flex:1;}
+.picker{
+  display:flex;background:rgba(120,120,128,.24);border-radius:8px;padding:2px;
+}
+.picker-opt{
+  font-size:13px;font-weight:500;padding:5px 14px;border-radius:6px;
+  color:rgba(255,255,255,.5);cursor:pointer;transition:all .15s;
+}
+.picker-opt.active{background:rgba(255,255,255,.15);color:rgba(255,255,255,.95);}
+
+/* ─── Stepper ─── */
+.stepper-row{display:flex;align-items:center;gap:10px;width:100%;}
+.stepper-label{flex:1;font-size:15px;font-weight:500;color:rgba(255,255,255,.9);}
+.stepper-value{font-size:14px;color:rgba(255,255,255,.4);font-variant-numeric:tabular-nums;margin-right:8px;}
+.stepper-ctrl{
+  display:flex;border:1px solid rgba(255,255,255,.12);border-radius:8px;overflow:hidden;
+}
+.stepper-btn{
+  width:32px;height:28px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:500;color:rgba(255,255,255,.5);
+  background:rgba(255,255,255,.05);cursor:pointer;
+}
+.stepper-btn:first-child{border-right:1px solid rgba(255,255,255,.10);}
+
+/* ─── Tab bar ─── */
+.tab-bar{
+  position:absolute;bottom:0;left:0;right:0;height:83px;
+  background:rgba(10,10,15,.94);backdrop-filter:blur(30px);
+  -webkit-backdrop-filter:blur(30px);
+  border-top:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:flex-start;justify-content:space-around;padding:8px 0 0;z-index:20;
+}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.tab-item svg{width:24px;height:24px;}
+.tab-item .inactive{fill:rgba(255,255,255,.25);}
+.tab-item .active{fill:#e8384a;}
+.tab-lbl{font-size:10px;font-weight:500;color:rgba(255,255,255,.25);}
+.tab-lbl.active{color:#e8384a;font-weight:600;}
+
+/* ─── Annotations ─── */
+.annotations{max-width:780px;width:100%;margin-top:24px;}
+.ann-title{
+  font-size:12px;font-weight:600;color:rgba(255,255,255,.45);
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;
+}
+.ann-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;}
+.ann{display:flex;align-items:flex-start;gap:10px;}
+.ann-num{
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:#fff;
+}
+.ann-red{background:#e8384a;}
+.ann-gold{background:#ffb84d;}
+.ann-blue{background:#80a6ff;}
+.ann-teal{background:#4dc7b7;}
+.ann-gray{background:#636366;}
+.ann-text{font-size:12px;color:rgba(255,255,255,.45);line-height:1.55;}
+.ann-text strong{color:rgba(255,255,255,.75);}
+
+/* Notifications sub-toggles */
+.sub-toggle-row{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:4px 0;
+}
+.sub-toggle-label{flex:1;font-size:14px;font-weight:400;color:rgba(255,255,255,.75);}
+.mini-toggle{width:40px;height:24px;border-radius:12px;position:relative;flex-shrink:0;}
+.mini-toggle .toggle-thumb{width:20px;height:20px;border-radius:10px;top:2px;}
+.mini-toggle.toggle-on .toggle-thumb{left:18px;}
+.mini-toggle.toggle-off .toggle-thumb{left:2px;}
+
+/* ─── Epley formula ─── */
+.formula{
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.35);
+  font-family:'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.02em;
+}
+</style>
+</head>
+<body>
+
+<div class="page-heading">TheLogger — Profile &amp; Settings</div>
+
+<div class="phones-row">
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- PHONE 1: PROFILE                                        -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Profile Tab</div>
+  <div class="iphone">
+    <div class="di"></div>
+
+    <!-- Status bar -->
+    <div class="sb">
+      <span class="sb-time">9:41</span>
+      <div class="sb-icons">
+        <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1"/><rect x="9" y="1" width="3" height="11" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 9.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-3.5a5.5 5.5 0 013.89 1.61l-1.42 1.42A3.5 3.5 0 008 8a3.5 3.5 0 00-2.47 1.03L4.11 7.61A5.5 5.5 0 018 6zm0-4a9.5 9.5 0 016.72 2.78l-1.42 1.42A7.5 7.5 0 008 4a7.5 7.5 0 00-5.3 2.2L1.28 4.78A9.5 9.5 0 018 2z"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="21" height="10" rx="3" stroke="rgba(255,255,255,.7)" stroke-width="1.2" fill="none"/><rect x="1.5" y="2.5" width="15" height="7" rx="1.5" fill="rgba(255,255,255,.85)"/><path d="M22.5 4v4a2 2 0 000-4z" fill="rgba(255,255,255,.5)"/></svg>
+      </div>
+    </div>
+
+    <!-- Large title -->
+    <div class="nav-large">
+      <div class="nav-large-title">Profile</div>
+    </div>
+
+    <!-- Screen content -->
+    <div class="screen screen-profile">
+
+      <!-- ① Profile Header -->
+      <div class="section">
+        <div class="card">
+          <div class="row" style="padding:16px 14px;align-items:center;">
+            <div class="avatar-ring">
+              <div class="avatar-inner" style="position:relative;">
+                <span class="avatar-letter">J</span>
+                <div class="avatar-level-dot">
+                  <div class="avatar-level-dot-inner">4</div>
+                </div>
+              </div>
+            </div>
+            <div class="row-label">
+              <div class="profile-name">Jaspreet</div>
+              <div class="level-badge">
+                <div class="level-dot"></div>
+                <span class="level-text">Level 4 · Strong</span>
+              </div>
+            </div>
+            <div class="edit-btn">
+              <svg viewBox="0 0 20 20"><path d="M14.85 2.85a1.2 1.2 0 011.7 1.7l-9.9 9.9-2.4.7.7-2.4 9.9-9.9z"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② Pro Upgrade Banner -->
+      <div class="section">
+        <div class="pro-card">
+          <div class="row" style="padding:14px;">
+            <div class="pro-icon">
+              <svg viewBox="0 0 24 24"><path d="M5 16l-2-8 5.5 4L12 4l3.5 8L21 8l-2 8H5zm0 2h14v2H5v-2z"/></svg>
+            </div>
+            <div class="row-label">
+              <div class="pro-title">Upgrade to Pro</div>
+              <div class="pro-subtitle">Unlimited camera, share cards, achievements &amp; export</div>
+            </div>
+            <span class="chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ Preferences -->
+      <div class="section">
+        <div class="section-header">Preferences</div>
+        <div class="card">
+          <div class="row">
+            <div class="icon-box ib-red">
+              <svg viewBox="0 0 20 20"><path d="M10 1.5a1.5 1.5 0 011.5 1.5v.34a6.5 6.5 0 012.26 1.32l.3-.17a1.5 1.5 0 011.5 2.6l-.3.17a6.5 6.5 0 010 2.48l.3.17a1.5 1.5 0 01-1.5 2.6l-.3-.17a6.5 6.5 0 01-2.26 1.32V14a1.5 1.5 0 01-3 0v-.34a6.5 6.5 0 01-2.26-1.32l-.3.17a1.5 1.5 0 01-1.5-2.6l.3-.17a6.5 6.5 0 010-2.48l-.3-.17a1.5 1.5 0 011.5-2.6l.3.17A6.5 6.5 0 018.5 3.34V3A1.5 1.5 0 0110 1.5zM10 7a3 3 0 100 6 3 3 0 000-6z"/></svg>
+            </div>
+            <div class="row-label"><div class="row-title">Settings</div></div>
+            <span class="chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ Data & Backup -->
+      <div class="section">
+        <div class="section-header">Data</div>
+        <div class="card">
+          <div class="row">
+            <div class="icon-box ib-gold">
+              <svg viewBox="0 0 20 20"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1zm1 2v10h10V5H5zm2 2h6v2H7V7zm0 3h4v2H7v-2z"/></svg>
+            </div>
+            <div class="row-label">
+              <div class="row-title">Data &amp; Backup</div>
+              <div class="row-subtitle">Export, import, and manage your data</div>
+            </div>
+            <span class="chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ About -->
+      <div class="section">
+        <div class="section-header">About</div>
+        <div class="card">
+          <div class="row">
+            <div class="icon-box ib-blue">
+              <svg viewBox="0 0 20 20"><path d="M10 2a5 5 0 014 8v3a1 1 0 01-1 1H7a1 1 0 01-1-1v-3A5 5 0 0110 2zm-1 14h2a1 1 0 01-2 0z"/></svg>
+            </div>
+            <div class="row-label"><div class="row-title">Privacy Policy</div></div>
+            <span class="chevron">›</span>
+          </div>
+          <div class="row">
+            <div class="row-title" style="flex:1;">Version</div>
+            <div class="row-value">2.0.0</div>
+          </div>
+          <div class="row">
+            <div class="row-title" style="flex:1;">Build</div>
+            <div class="row-value">42</div>
+          </div>
+        </div>
+        <div class="section-footer" style="text-align:center;padding-top:14px;">
+          <span style="font-weight:600;color:rgba(255,255,255,.22);">TheLogger</span><br>
+          Built with love for lifters who value simplicity and privacy.
+        </div>
+      </div>
+
+    </div><!-- /screen -->
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24"><path class="inactive" d="M3 12l9-9 9 9v9a1 1 0 01-1 1h-5v-6h-4v6H6a1 1 0 01-1-1v-9z"/></svg>
+        <div class="tab-lbl">Home</div>
+      </div>
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24"><path class="inactive" d="M4 20V8h4v12H4zm6 0V4h4v16h-4zm6 0v-8h4v8h-4z"/></svg>
+        <div class="tab-lbl">Stats</div>
+      </div>
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24"><path class="active" d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/></svg>
+        <div class="tab-lbl active">Profile</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- PHONE 2: SETTINGS                                       -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Settings (pushed from Profile)</div>
+  <div class="iphone">
+    <div class="di"></div>
+
+    <!-- Status bar -->
+    <div class="sb">
+      <span class="sb-time">9:41</span>
+      <div class="sb-icons">
+        <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1"/><rect x="9" y="1" width="3" height="11" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 9.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-3.5a5.5 5.5 0 013.89 1.61l-1.42 1.42A3.5 3.5 0 008 8a3.5 3.5 0 00-2.47 1.03L4.11 7.61A5.5 5.5 0 018 6zm0-4a9.5 9.5 0 016.72 2.78l-1.42 1.42A7.5 7.5 0 008 4a7.5 7.5 0 00-5.3 2.2L1.28 4.78A9.5 9.5 0 018 2z"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="21" height="10" rx="3" stroke="rgba(255,255,255,.7)" stroke-width="1.2" fill="none"/><rect x="1.5" y="2.5" width="15" height="7" rx="1.5" fill="rgba(255,255,255,.85)"/><path d="M22.5 4v4a2 2 0 000-4z" fill="rgba(255,255,255,.5)"/></svg>
+      </div>
+    </div>
+
+    <!-- Inline nav bar -->
+    <div class="nav-inline" style="position:relative;">
+      <div class="nav-back">
+        <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8.5 1L1.5 8l7 7" stroke="#e8384a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        Profile
+      </div>
+      <span class="nav-inline-title">Settings</span>
+    </div>
+
+    <!-- Screen content -->
+    <div class="screen screen-settings">
+
+      <!-- ① Units -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><path d="M10 2a3 3 0 013 3v1h2a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h2V5a3 3 0 013-3zm0 2a1 1 0 00-1 1v1h2V5a1 1 0 00-1-1z"/></svg>
+          Units
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="picker-row">
+              <span class="picker-label">Weight Unit</span>
+              <div class="picker">
+                <span class="picker-opt active">Imperial</span>
+                <span class="picker-opt">Metric</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-title" style="flex:1;">Display</div>
+            <div class="row-value">Pounds (lbs)</div>
+          </div>
+        </div>
+        <div class="section-footer">All weights are stored internally and can be switched anytime without data loss.</div>
+      </div>
+
+      <!-- ② Rest Timer -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><circle cx="10" cy="11" r="7" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="1.5"/><path d="M10 7v4.5l3 1.5" stroke="rgba(255,255,255,.32)" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M8 2h4" stroke="rgba(255,255,255,.32)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Rest Timer
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-label">
+              <div class="row-title">Enable Rest Timer</div>
+              <div class="row-subtitle">Shows rest timer after logging sets</div>
+            </div>
+            <div class="toggle-track toggle-on"><div class="toggle-thumb"></div></div>
+          </div>
+          <div class="row">
+            <div class="stepper-row">
+              <span class="stepper-label">Default Rest</span>
+              <span class="stepper-value">1:30</span>
+              <div class="stepper-ctrl">
+                <div class="stepper-btn">−</div>
+                <div class="stepper-btn">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-label">
+              <div class="row-title">Auto-start Timer</div>
+              <div class="row-subtitle">Starts immediately after logging set</div>
+            </div>
+            <div class="toggle-track toggle-off"><div class="toggle-thumb"></div></div>
+          </div>
+        </div>
+        <div class="section-footer">Global default for rest timer. You can override for specific exercises.</div>
+      </div>
+
+      <!-- ③ Rep Tempo -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><path d="M10 2v4l3-2v12l-3-2v4H8v-4l-3 2V4l3 2V2h2z" fill="rgba(255,255,255,.32)"/></svg>
+          Rep Tempo
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="stepper-row">
+              <span class="stepper-label">Eccentric (↓)</span>
+              <span class="stepper-value">2.0s</span>
+              <div class="stepper-ctrl">
+                <div class="stepper-btn">−</div>
+                <div class="stepper-btn">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="stepper-row">
+              <span class="stepper-label">Concentric (↑)</span>
+              <span class="stepper-value">1.0s</span>
+              <div class="stepper-ctrl">
+                <div class="stepper-btn">−</div>
+                <div class="stepper-btn">+</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="section-footer">Target tempo for camera rep counting. Color-coded: green (on pace), yellow (slightly off), red (way off).</div>
+      </div>
+
+      <!-- ④ Camera -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><path d="M3 5h2l1.5-2h7L15 5h2a1 1 0 011 1v9a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1z" fill="rgba(255,255,255,.32)"/><circle cx="10" cy="10" r="3" fill="#0d0d14"/></svg>
+          Camera Rep Counter
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-label">
+              <div class="row-title">Hands-Free Mode</div>
+              <div class="row-subtitle">Auto-logs set after 4s inactivity, chime when rest ends</div>
+            </div>
+            <div class="toggle-track toggle-off"><div class="toggle-thumb"></div></div>
+          </div>
+        </div>
+        <div class="section-footer">Prop your phone up, enable Hands-Free, and lift.</div>
+      </div>
+
+      <!-- ⑤ Goals -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="1.5"/><circle cx="10" cy="10" r="5" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="1.5"/><circle cx="10" cy="10" r="2" fill="rgba(255,255,255,.32)"/></svg>
+          Goals
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="stepper-row">
+              <span class="stepper-label">Weekly Goal</span>
+              <span class="stepper-value">4 workouts</span>
+              <div class="stepper-ctrl">
+                <div class="stepper-btn">−</div>
+                <div class="stepper-btn">+</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="section-footer">Target number of workouts per week. Shown on the home screen.</div>
+      </div>
+
+      <!-- ⑥ Workout -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><path d="M3 9h2V7h2V5h2v10H7v-2H5v-2H3V9zm15 2h-2v2h-2v2h-2V5h2v2h2v2h2v2z" fill="rgba(255,255,255,.32)"/></svg>
+          Workout
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-label">
+              <div class="row-title">Auto-populate Sets</div>
+              <div class="row-subtitle">Pre-fills from your last workout for this exercise</div>
+            </div>
+            <div class="toggle-track toggle-on"><div class="toggle-thumb"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑦ Notifications -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><path d="M10 2a6 6 0 016 6v3l2 2v1H2v-1l2-2V8a6 6 0 016-6zm-1.5 15h3a1.5 1.5 0 01-3 0z" fill="rgba(255,255,255,.32)"/></svg>
+          Notifications
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-label">
+              <div class="row-title">Enable Notifications</div>
+              <div class="row-subtitle">Daily nudges — max 1 per day</div>
+            </div>
+            <div class="toggle-track toggle-on"><div class="toggle-thumb"></div></div>
+          </div>
+          <div class="row" style="padding:6px 14px;">
+            <div class="sub-toggle-row"><span class="sub-toggle-label">Streak at Risk</span>
+              <div class="mini-toggle toggle-on"><div class="toggle-thumb"></div></div></div>
+          </div>
+          <div class="row" style="padding:6px 14px;">
+            <div class="sub-toggle-row"><span class="sub-toggle-label">PR Proximity</span>
+              <div class="mini-toggle toggle-on"><div class="toggle-thumb"></div></div></div>
+          </div>
+          <div class="row" style="padding:6px 14px;">
+            <div class="sub-toggle-row"><span class="sub-toggle-label">Comeback Reminder</span>
+              <div class="mini-toggle toggle-on"><div class="toggle-thumb"></div></div></div>
+          </div>
+          <div class="row" style="padding:6px 14px;">
+            <div class="sub-toggle-row"><span class="sub-toggle-label">Muscle Neglect</span>
+              <div class="mini-toggle toggle-on"><div class="toggle-thumb"></div></div></div>
+          </div>
+          <div class="row" style="padding:6px 14px;">
+            <div class="sub-toggle-row"><span class="sub-toggle-label">Rest Day Challenge</span>
+              <div class="mini-toggle toggle-on"><div class="toggle-thumb"></div></div></div>
+          </div>
+          <div class="row" style="padding:6px 14px;">
+            <div class="sub-toggle-row"><span class="sub-toggle-label">Weekly Recap</span>
+              <div class="mini-toggle toggle-on"><div class="toggle-thumb"></div></div></div>
+          </div>
+        </div>
+        <div class="section-footer">All notifications are contextual and local — no account needed.</div>
+      </div>
+
+      <!-- ⑧ Gamification -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><path d="M10 2l2.5 5H17l-4 3.5 1.5 5.5L10 13l-4.5 3 1.5-5.5L3 7h4.5L10 2z" fill="rgba(255,255,255,.32)"/></svg>
+          Gamification
+        </div>
+        <div class="card">
+          <div class="row">
+            <svg width="18" height="18" viewBox="0 0 20 20" style="flex-shrink:0;"><path d="M10 2l2 4h4l-3 3 1 5-4-2.5L6 14l1-5-3-3h4l2-4z" fill="#ffb84d"/></svg>
+            <div class="row-label"><div class="row-title">View Achievements</div></div>
+            <span class="chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑨ Personal Records -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><circle cx="10" cy="5" r="4" fill="rgba(255,255,255,.32)"/><path d="M7 9h6l1 8H6l1-8z" fill="rgba(255,255,255,.32)"/></svg>
+          Personal Records
+        </div>
+        <div class="card">
+          <div class="row" style="padding:14px;gap:12px;">
+            <svg width="20" height="20" viewBox="0 0 20 20" style="flex-shrink:0;"><circle cx="10" cy="5" r="4" fill="#ffb84d"/><path d="M7 9h6l1 8H6l1-8z" fill="#ffb84d"/></svg>
+            <div class="row-label">
+              <div class="row-title">Epley Formula</div>
+              <div class="formula">weight × (1 + reps ÷ 30)</div>
+            </div>
+          </div>
+        </div>
+        <div class="section-footer">PRs ranked by estimated 1RM using the Epley formula — works across all rep ranges.</div>
+      </div>
+
+      <!-- ⑩ Profile name field -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><path d="M10 10a4 4 0 100-8 4 4 0 000 8zm0 2c-4.42 0-8 2.24-8 4v2h16v-2c0-1.76-3.58-4-8-4z" fill="rgba(255,255,255,.32)"/></svg>
+          Profile
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-title" style="flex-shrink:0;">Name</div>
+            <div style="flex:1;text-align:right;"><span class="row-value">Jaspreet</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑪ Data & Privacy -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><path d="M10 1l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V4l7-3z" fill="rgba(255,255,255,.32)"/></svg>
+          Data &amp; Privacy
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-label"><div class="row-title">Privacy Policy</div></div>
+            <span class="chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑫ About -->
+      <div class="section">
+        <div class="section-header">
+          <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="1.5"/><path d="M10 6v1m0 2v5" stroke="rgba(255,255,255,.32)" stroke-width="1.8" stroke-linecap="round"/></svg>
+          About
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-title" style="flex:1;">Version</div>
+            <div class="row-value">2.0.0</div>
+          </div>
+          <div class="row">
+            <div class="row-title" style="flex:1;">Build</div>
+            <div class="row-value">42</div>
+          </div>
+        </div>
+        <div class="section-footer" style="text-align:center;padding:14px 4px 20px;">
+          <span style="font-weight:600;color:rgba(255,255,255,.22);">TheLogger</span><br>
+          Built with ❤️ for lifters who value simplicity and privacy.
+        </div>
+      </div>
+
+    </div><!-- /screen -->
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24"><path class="inactive" d="M3 12l9-9 9 9v9a1 1 0 01-1 1h-5v-6h-4v6H6a1 1 0 01-1-1v-9z"/></svg>
+        <div class="tab-lbl">Home</div>
+      </div>
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24"><path class="inactive" d="M4 20V8h4v12H4zm6 0V4h4v16h-4zm6 0v-8h4v8h-4z"/></svg>
+        <div class="tab-lbl">Stats</div>
+      </div>
+      <div class="tab-item">
+        <svg viewBox="0 0 24 24"><path class="active" d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/></svg>
+        <div class="tab-lbl active">Profile</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /phones-row -->
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ANNOTATIONS                                              -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="annotations">
+  <div class="ann-title">Profile Screen</div>
+  <div class="ann-grid">
+    <div class="ann">
+      <div class="ann-num ann-red">1</div>
+      <div class="ann-text"><strong>Profile header</strong> — Avatar with red conic-gradient ring. Initial letter over a gradient fill. Level dot badge (bottom-right) shows current level number. Name + LevelBadge pill ("Level 4 · Strong").</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-gold">2</div>
+      <div class="ann-text"><strong>Pro upgrade banner</strong> — Amber gradient card with crown icon. Tapping opens the paywall sheet. Once subscribed, swapped for a "Pro Member · Manage" row linking to App Store subscriptions.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-red">3</div>
+      <div class="ann-text"><strong>Settings</strong> — Red gear icon. NavigationLink pushes the full SettingsView (shown on the right phone).</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-gold">4</div>
+      <div class="ann-text"><strong>Data &amp; Backup</strong> — Gold drive icon. JSON export/import with round-trip integrity. Subtitle hints at what's inside without tapping.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-blue">5</div>
+      <div class="ann-text"><strong>About section</strong> — Privacy policy link, version and build numbers from Info.plist, tagline footer.</div>
+    </div>
+  </div>
+
+  <div class="ann-title" style="margin-top:28px;">Settings Screen</div>
+  <div class="ann-grid">
+    <div class="ann">
+      <div class="ann-num ann-red">1</div>
+      <div class="ann-text"><strong>Units</strong> — Segmented picker: Imperial / Metric. Display row shows full label ("Pounds (lbs)" or "Kilograms (kg)"). Internal storage is always lbs.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-teal">2</div>
+      <div class="ann-text"><strong>Rest Timer</strong> — Master toggle, 30–300s stepper (15s step), and auto-start toggle (conditional). Per-exercise overrides noted in footer.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-blue">3</div>
+      <div class="ann-text"><strong>Rep Tempo</strong> — Eccentric (↓) and Concentric (↑) targets in 0.5s steps. Camera rep counter color-codes actual tempo against these.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-gray">4</div>
+      <div class="ann-text"><strong>Camera / Hands-Free</strong> — Toggle for auto-log after 4s inactivity + rest chime. Designed for phone-propped lifting.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-gold">5</div>
+      <div class="ann-text"><strong>Goals</strong> — Weekly workout goal stepper (1–7). Drives the home screen ring progress indicator.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-red">6</div>
+      <div class="ann-text"><strong>Workout</strong> — Auto-populate toggle pre-fills sets from last workout per exercise.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-blue">7</div>
+      <div class="ann-text"><strong>Notifications</strong> — Master toggle + 6 individual notification types. All local, max 1/day, no account needed.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num ann-gold">8</div>
+      <div class="ann-text"><strong>Gamification &amp; PRs</strong> — Achievement viewer link + Epley formula display with monospace snippet.</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390">
+  <title>TheLogger — Stats</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent: #F5573E; --gold: #E8A833; --blue: #6B9FFF;
+      --teal: #3DBDAE; --green: #30B955;
+      --text: #F2EDE8; --muted: #8C8680; --dim: #504A45;
+    }
+    body {
+      width: 390px; height: 844px; overflow: hidden;
+      background: #0F0D0B;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      position: relative;
+    }
+    body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    /* Blue/teal ambient glow top right */
+    .env-tr {
+      position: absolute; top: -60px; right: -60px; width: 240px; height: 240px;
+      background: radial-gradient(ellipse, rgba(107,159,255,0.08) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    .dynamic-island {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 28px; background: #000; border-radius: 20px; z-index: 10;
+    }
+    .status-bar {
+      height: 54px; display: flex; align-items: flex-end;
+      justify-content: space-between; padding: 0 24px 10px; position: relative; z-index: 2;
+    }
+    .status-time { font-size: 15px; font-weight: 600; }
+    .status-icons { display: flex; gap: 6px; }
+    .status-icons svg { fill: var(--text); }
+    .nav-title { font-size: 28px; font-weight: 900; letter-spacing: -1px; padding: 2px 20px 12px; position: relative; z-index: 2; }
+    .content { padding: 0 14px; position: relative; z-index: 2; overflow: hidden; height: 668px; }
+    .card {
+      background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px; padding: 16px; margin-bottom: 10px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 20px rgba(0,0,0,0.32);
+    }
+    .card-lbl {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+    }
+    /* Weekly stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); }
+    .stat-col {
+      text-align: center; padding: 0 4px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .stat-col:last-child { border-right: none; }
+    .stat-val {
+      font-size: 22px; font-weight: 900; letter-spacing: -0.8px; line-height: 1;
+    }
+    .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+    .delta {
+      display: inline-flex; align-items: center; gap: 2px;
+      font-size: 10px; font-weight: 700; margin-top: 6px;
+      background: rgba(48,185,85,0.12); color: var(--green);
+      padding: 2px 6px; border-radius: 20px;
+    }
+
+    /* Streak */
+    .streak-row { display: flex; gap: 28px; margin-bottom: 14px; align-items: flex-end; }
+    .streak-block { }
+    .streak-num {
+      font-size: 34px; font-weight: 900; letter-spacing: -1.5px; line-height: 1;
+    }
+    .streak-sub { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 600; }
+    .heatmap { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
+    .hm-lbl { font-size: 9px; font-weight: 700; text-align: center; color: var(--dim); }
+    .hm-dot { width: 100%; aspect-ratio: 1; border-radius: 5px; }
+    .hm-0 { background: rgba(255,255,255,0.04); }
+    .hm-1 { background: rgba(245,87,62,0.3); }
+    .hm-2 { background: var(--accent); box-shadow: 0 0 5px rgba(245,87,62,0.35); }
+    .hm-today { background: var(--accent); outline: 2px solid rgba(245,87,62,0.5); outline-offset: 1px; box-shadow: 0 0 8px rgba(245,87,62,0.5); }
+
+    /* Muscle breakdown */
+    .muscle-rows { display: flex; flex-direction: column; gap: 9px; }
+    .muscle-row { display: flex; align-items: center; gap: 9px; }
+    .muscle-name { font-size: 12px; font-weight: 700; width: 68px; }
+    .bar-bg { flex: 1; height: 7px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+    .bar { height: 100%; border-radius: 4px; }
+    .muscle-ct { font-size: 12px; font-weight: 800; color: var(--muted); width: 20px; text-align: right; }
+
+    .tab-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 83px;
+      background: rgba(15,13,11,0.97); border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: flex-start; justify-content: space-around;
+      padding-top: 12px; z-index: 10; backdrop-filter: blur(24px);
+    }
+    .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .tab-icon { font-size: 22px; }
+    .tab-label { font-size: 10px; font-weight: 600; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="dynamic-island"></div>
+  <div class="env-tr"></div>
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" opacity="0.4"/><rect x="4.5" y="2" width="3" height="10" rx="1" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="1" opacity="0.8"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="2.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="rgba(255,255,255,0.4)"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="var(--text)"/></svg>
+    </div>
+  </div>
+  <div class="nav-title">Stats</div>
+  <div class="content">
+    <!-- Weekly stats -->
+    <div class="card">
+      <div class="card-lbl">This Week</div>
+      <div class="stats-grid">
+        <div class="stat-col">
+          <div class="stat-val" style="color:var(--accent)">2.4k</div>
+          <div class="stat-lbl">lbs lifted</div>
+          <div class="delta">+12%</div>
+        </div>
+        <div class="stat-col">
+          <div class="stat-val" style="color:var(--gold)">22</div>
+          <div class="stat-lbl">sets</div>
+          <div class="delta">+3</div>
+        </div>
+        <div class="stat-col">
+          <div class="stat-val" style="color:var(--blue)">298</div>
+          <div class="stat-lbl">reps</div>
+          <div class="delta">+18</div>
+        </div>
+        <div class="stat-col">
+          <div class="stat-val" style="color:var(--teal)">4</div>
+          <div class="stat-lbl">workouts</div>
+          <div class="delta">+1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Streak + heatmap -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div class="card-lbl" style="margin-bottom:0">Streak</div>
+        <span style="font-size:11px;color:var(--muted);font-weight:600">28 days shown</span>
+      </div>
+      <div class="streak-row">
+        <div class="streak-block">
+          <div class="streak-num" style="color:var(--accent)">🔥 7</div>
+          <div class="streak-sub">Current streak</div>
+        </div>
+        <div class="streak-block">
+          <div class="streak-num" style="color:var(--gold)">32</div>
+          <div class="streak-sub">Best ever</div>
+        </div>
+      </div>
+      <div class="heatmap">
+        <div class="hm-lbl">S</div><div class="hm-lbl">M</div><div class="hm-lbl">T</div><div class="hm-lbl">W</div><div class="hm-lbl">T</div><div class="hm-lbl">F</div><div class="hm-lbl">S</div>
+        <div class="hm-dot hm-0"></div><div class="hm-dot hm-0"></div><div class="hm-dot hm-1"></div><div class="hm-dot hm-0"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-0"></div>
+        <div class="hm-dot hm-2"></div><div class="hm-dot hm-0"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-0"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-1"></div>
+        <div class="hm-dot hm-0"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-0"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div>
+        <div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-2"></div><div class="hm-dot hm-today"></div>
+      </div>
+    </div>
+
+    <!-- Muscle breakdown -->
+    <div class="card">
+      <div class="card-lbl">Muscle Groups — This Week</div>
+      <div class="muscle-rows">
+        <div class="muscle-row">
+          <span class="muscle-name">Chest</span>
+          <div class="bar-bg"><div class="bar" style="width:100%;background:linear-gradient(90deg,var(--accent),#F5806A)"></div></div>
+          <span class="muscle-ct">8</span>
+        </div>
+        <div class="muscle-row">
+          <span class="muscle-name">Back</span>
+          <div class="bar-bg"><div class="bar" style="width:87.5%;background:linear-gradient(90deg,var(--blue),#90B6FF)"></div></div>
+          <span class="muscle-ct">7</span>
+        </div>
+        <div class="muscle-row">
+          <span class="muscle-name">Legs</span>
+          <div class="bar-bg"><div class="bar" style="width:75%;background:linear-gradient(90deg,var(--teal),#5DCEBC)"></div></div>
+          <span class="muscle-ct">6</span>
+        </div>
+        <div class="muscle-row">
+          <span class="muscle-name">Shoulders</span>
+          <div class="bar-bg"><div class="bar" style="width:50%;background:linear-gradient(90deg,var(--gold),#F0C050)"></div></div>
+          <span class="muscle-ct">4</span>
+        </div>
+        <div class="muscle-row">
+          <span class="muscle-name">Arms</span>
+          <div class="bar-bg"><div class="bar" style="width:37.5%;background:rgba(245,87,62,0.5)"></div></div>
+          <span class="muscle-ct">3</span>
+        </div>
+        <div class="muscle-row">
+          <span class="muscle-name">Core</span>
+          <div class="bar-bg"><div class="bar" style="width:25%;background:rgba(255,255,255,0.18)"></div></div>
+          <span class="muscle-ct">2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab-item"><span class="tab-icon">🏠</span><span class="tab-label">Home</span></div>
+    <div class="tab-item"><span class="tab-icon">📊</span><span class="tab-label" style="color:var(--accent)">Stats</span></div>
+    <div class="tab-item"><span class="tab-icon">👤</span><span class="tab-label">Profile</span></div>
+  </div>
+</body>
+</html>

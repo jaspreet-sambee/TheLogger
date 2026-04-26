@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390">
+  <title>TheLogger — Achievements</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent: #F5573E; --gold: #E8A833; --silver: #A8A4BC; --teal: #3DBDAE;
+      --text: #F2EDE8; --muted: #8C8680; --dim: #504A45;
+      --bronze: #C87832;
+    }
+    body {
+      width: 390px; height: 844px; overflow: hidden;
+      background: #0F0D0B;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      position: relative;
+    }
+    body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    /* Gold ambient glow */
+    .env-gold {
+      position: absolute; top: 40px; right: -40px; width: 220px; height: 220px;
+      background: radial-gradient(ellipse, rgba(232,168,51,0.07) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    .dynamic-island {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 28px; background: #000; border-radius: 20px; z-index: 10;
+    }
+    .status-bar {
+      height: 54px; display: flex; align-items: flex-end;
+      justify-content: space-between; padding: 0 24px 10px; position: relative; z-index: 2;
+    }
+    .status-time { font-size: 15px; font-weight: 600; }
+    .status-icons svg { fill: var(--text); }
+    .nav { padding: 2px 20px 6px; position: relative; z-index: 2; }
+    .nav-title { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+
+    /* Progress section */
+    .progress-section { padding: 0 18px 10px; position: relative; z-index: 2; }
+    .progress-top { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .progress-lbl { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .progress-ct { font-size: 13px; font-weight: 800; }
+    .progress-ct span { color: var(--muted); font-weight: 500; }
+    .prog-bg { height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+    .prog-fill {
+      height: 100%; width: 36.4%;
+      background: linear-gradient(90deg, var(--gold) 0%, var(--accent) 100%);
+      border-radius: 3px;
+      box-shadow: 0 0 6px rgba(245,87,62,0.4);
+    }
+
+    /* Category tabs */
+    .tabs { display: flex; gap: 6px; padding: 0 14px 10px; position: relative; z-index: 2; overflow: hidden; }
+    .tab {
+      padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      white-space: nowrap; color: var(--muted);
+    }
+    .tab--active { background: rgba(245,87,62,0.12); border-color: rgba(245,87,62,0.3); color: var(--accent); }
+
+    /* Achievement grid */
+    .ach-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 9px;
+      padding: 0 14px; position: relative; z-index: 2; overflow: hidden; height: 460px;
+    }
+    .ach-card {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px; padding: 14px 13px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.28);
+      display: flex; flex-direction: column; position: relative; overflow: hidden;
+    }
+    /* Metallic sheen on unlocked cards */
+    .ach-card--unlocked::after {
+      content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+      transform: skewX(-20deg);
+    }
+    .ach-card--locked { opacity: 0.38; }
+    .ach-card--bronze { border-color: rgba(200,120,50,0.28); box-shadow: inset 0 1px 0 rgba(200,120,50,0.12), 0 4px 16px rgba(0,0,0,0.28), 0 0 20px rgba(200,120,50,0.06); }
+    .ach-card--silver { border-color: rgba(168,164,188,0.28); box-shadow: inset 0 1px 0 rgba(168,164,188,0.12), 0 4px 16px rgba(0,0,0,0.28); }
+    .ach-card--gold { border-color: rgba(232,168,51,0.3); box-shadow: inset 0 1px 0 rgba(232,168,51,0.12), 0 4px 16px rgba(0,0,0,0.28), 0 0 24px rgba(232,168,51,0.08); }
+
+    .ach-icon {
+      width: 44px; height: 44px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px;
+    }
+    .ach-tier {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .tier-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .ach-name { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+    .ach-desc { font-size: 11px; color: var(--muted); line-height: 1.4; flex: 1; }
+    .prog-bar-bg { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+    .prog-bar { height: 100%; border-radius: 2px; }
+
+    .tab-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 83px;
+      background: rgba(15,13,11,0.97); border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: flex-start; justify-content: space-around;
+      padding-top: 12px; z-index: 10; backdrop-filter: blur(24px);
+    }
+    .tb-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .tb-icon { font-size: 22px; }
+    .tb-label { font-size: 10px; font-weight: 600; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="dynamic-island"></div>
+  <div class="env-gold"></div>
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons"><svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="2.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="rgba(255,255,255,0.4)"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="var(--text)"/></svg></div>
+  </div>
+  <div class="nav"><div class="nav-title">Achievements</div></div>
+  <div class="progress-section">
+    <div class="progress-top">
+      <span class="progress-lbl">Progress</span>
+      <span class="progress-ct">12 <span>/ 33 unlocked</span></span>
+    </div>
+    <div class="prog-bg"><div class="prog-fill"></div></div>
+  </div>
+  <div class="tabs">
+    <div class="tab tab--active">All</div>
+    <div class="tab">Consistency</div>
+    <div class="tab">Strength</div>
+    <div class="tab">Volume</div>
+  </div>
+  <div class="ach-grid">
+    <!-- First Step — bronze unlocked -->
+    <div class="ach-card ach-card--unlocked ach-card--bronze">
+      <div class="ach-icon" style="background:rgba(200,120,50,0.14)">🥇</div>
+      <div class="ach-tier" style="color:var(--bronze)"><div class="tier-dot" style="background:var(--bronze)"></div>Bronze</div>
+      <div class="ach-name">First Step</div>
+      <div class="ach-desc">Complete your first workout</div>
+      <div class="prog-bar-bg"><div class="prog-bar" style="width:100%;background:var(--bronze)"></div></div>
+    </div>
+    <!-- Hat Trick — bronze unlocked -->
+    <div class="ach-card ach-card--unlocked ach-card--bronze">
+      <div class="ach-icon" style="background:rgba(245,87,62,0.12)">🔥</div>
+      <div class="ach-tier" style="color:var(--bronze)"><div class="tier-dot" style="background:var(--bronze)"></div>Bronze</div>
+      <div class="ach-name">Hat Trick</div>
+      <div class="ach-desc">Log workouts 3 days in a row</div>
+      <div class="prog-bar-bg"><div class="prog-bar" style="width:100%;background:var(--accent)"></div></div>
+    </div>
+    <!-- New Record — gold unlocked -->
+    <div class="ach-card ach-card--unlocked ach-card--gold">
+      <div class="ach-icon" style="background:rgba(232,168,51,0.13)">🏆</div>
+      <div class="ach-tier" style="color:var(--gold)"><div class="tier-dot" style="background:var(--gold)"></div>Gold</div>
+      <div class="ach-name">New Record</div>
+      <div class="ach-desc">Set your first personal record</div>
+      <div class="prog-bar-bg"><div class="prog-bar" style="width:100%;background:var(--gold)"></div></div>
+    </div>
+    <!-- Week Warrior — silver unlocked -->
+    <div class="ach-card ach-card--unlocked ach-card--silver">
+      <div class="ach-icon" style="background:rgba(168,164,188,0.1)">💪</div>
+      <div class="ach-tier" style="color:var(--silver)"><div class="tier-dot" style="background:var(--silver)"></div>Silver</div>
+      <div class="ach-name">Week Warrior</div>
+      <div class="ach-desc">Train 7 consecutive days</div>
+      <div class="prog-bar-bg"><div class="prog-bar" style="width:100%;background:var(--silver)"></div></div>
+    </div>
+    <!-- Century Sets — teal unlocked -->
+    <div class="ach-card ach-card--unlocked">
+      <div class="ach-icon" style="background:rgba(61,189,174,0.12)">🎯</div>
+      <div class="ach-tier" style="color:var(--teal)"><div class="tier-dot" style="background:var(--teal)"></div>Bronze</div>
+      <div class="ach-name">Century Sets</div>
+      <div class="ach-desc">Log 100 total sets</div>
+      <div class="prog-bar-bg"><div class="prog-bar" style="width:100%;background:var(--teal)"></div></div>
+    </div>
+    <!-- Getting Started — locked in progress -->
+    <div class="ach-card ach-card--locked">
+      <div class="ach-icon" style="background:rgba(255,255,255,0.04)">🔒</div>
+      <div class="ach-tier" style="color:rgba(200,120,50,0.5)"><div class="tier-dot" style="background:rgba(200,120,50,0.5)"></div>Bronze</div>
+      <div class="ach-name">Getting Started</div>
+      <div class="ach-desc">Complete 10 workouts</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:700">6 / 10</div>
+      <div class="prog-bar-bg"><div class="prog-bar" style="width:60%;background:rgba(245,87,62,0.4)"></div></div>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tb-item"><span class="tb-icon">🏠</span><span class="tb-label">Home</span></div>
+    <div class="tb-item"><span class="tb-icon">📊</span><span class="tb-label" style="color:var(--accent)">Stats</span></div>
+    <div class="tb-item"><span class="tb-icon">👤</span><span class="tb-label">Profile</span></div>
+  </div>
+</body>
+</html>

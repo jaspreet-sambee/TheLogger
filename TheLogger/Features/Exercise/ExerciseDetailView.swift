@@ -93,6 +93,7 @@ struct ExerciseDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             loadData()
+            Analytics.send(Analytics.Signal.exerciseDetailViewed, parameters: ["exerciseName": exerciseName])
         }
     }
 
@@ -248,7 +249,7 @@ struct ExerciseDetailView: View {
             if let pr = currentPR {
                 StatCard(
                     icon: "medal.fill",
-                    iconColor: .yellow,
+                    iconColor: AppColors.accentGold,
                     title: "Last 90 Days",
                     value: pr.displayString,
                     subtitle: pr.isBodyweight ? "Max reps" : "1RM: \(UnitFormatter.formatWeightCompact(pr.estimated1RM, showUnit: true))"
@@ -421,7 +422,7 @@ struct PRBreakthroughCard: View {
                 // Trophy icon
                 Image(systemName: "medal.fill")
                     .font(.system(.body))
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(AppColors.accentGold)
                     .frame(width: 24)
 
                 // Content

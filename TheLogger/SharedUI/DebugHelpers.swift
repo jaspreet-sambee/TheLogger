@@ -14,13 +14,13 @@ struct DebugHelpers {
     // MARK: - Entry Point
 
     /// Version key — bump to force a re-seed on next launch (clears old workouts).
-    private static let seedVersion = 2
+    private static let seedVersion = 6
 
     /// Populate the database with realistic sample data.
     /// Re-seeds automatically when `seedVersion` is bumped; safe to call on every launch.
-    static func populateSampleData(modelContext: ModelContext) {
+    static func populateSampleData(modelContext: ModelContext, force: Bool = false) {
         let seededVersion = UserDefaults.standard.integer(forKey: "debugSeedVersion")
-        guard seededVersion < seedVersion else {
+        guard force || seededVersion < seedVersion else {
             print("[DEBUG] Seed data is current (v\(seedVersion)), skipping")
             return
         }
@@ -37,8 +37,41 @@ struct DebugHelpers {
         createExerciseMemories(modelContext: modelContext)
 
         try? modelContext.save()
+
+        // Generate PRs from seeded workout history (oldest first so the latest session wins)
+        let prDescriptor = FetchDescriptor<Workout>(
+            predicate: #Predicate<Workout> { !$0.isTemplate },
+            sortBy: [SortDescriptor(\.date)]
+        )
+        if let workouts = try? modelContext.fetch(prDescriptor) {
+            for workout in workouts {
+                PersonalRecordManager.processWorkoutForPRs(workout: workout, modelContext: modelContext)
+            }
+        }
+        try? modelContext.save()
+
+        // Unlock achievements based on seeded data
+        let allWorkouts = (try? modelContext.fetch(FetchDescriptor<Workout>(
+            predicate: #Predicate<Workout> { !$0.isTemplate },
+            sortBy: [SortDescriptor(\.date)]
+        ))) ?? []
+        let allPRs = (try? modelContext.fetch(FetchDescriptor<PersonalRecord>())) ?? []
+        let existingAchievements = (try? modelContext.fetch(FetchDescriptor<Achievement>())) ?? []
+        let unlockedIds = Set(existingAchievements.map(\.id))
+
+        let engine = GamificationEngine()
+        engine.refresh(workouts: allWorkouts, prs: allPRs, weeklyGoal: 4)
+        let context = AchievementManager.buildContext(workouts: allWorkouts, prs: allPRs, streakData: engine.streakData)
+        print("[DEBUG] Achievement context: \(context.workouts.count) workouts, \(context.prs.count) PRs, \(context.totalSets) sets, \(Int(context.totalVolume)) vol, \(context.uniqueExercises.count) exercises, streak best=\(context.streakData.bestEver) current=\(context.streakData.current), already unlocked=\(unlockedIds.count)")
+        let newlyUnlocked = AchievementManager.checkAll(context: context, alreadyUnlocked: unlockedIds)
+        for def in newlyUnlocked {
+            let achievement = Achievement(id: def.id, unlockedAt: Date())
+            modelContext.insert(achievement)
+        }
+        try? modelContext.save()
+
         UserDefaults.standard.set(seedVersion, forKey: "debugSeedVersion")
-        print("[DEBUG] ✅ Sample data seeded (v\(seedVersion)): workouts, 3 templates, 15 exercise memories")
+        print("[DEBUG] ✅ Sample data seeded (v\(seedVersion)): \(allWorkouts.count) workouts, 3 templates, 15 exercise memories, \(allPRs.count) PRs, \(newlyUnlocked.count) achievements unlocked")
     }
 
     // MARK: - Templates
@@ -71,13 +104,14 @@ struct DebugHelpers {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        // Find this week's Monday so current-week workouts always land in the right bucket.
-        var components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today)
-        components.weekday = 2  // Monday
-        let thisMonday = calendar.date(from: components) ?? today
+        // Find the most recent Monday (today or earlier) — locale-independent.
+        var thisMonday = today
+        while calendar.component(.weekday, from: thisMonday) != 2 {  // 2 = Monday
+            thisMonday = calendar.date(byAdding: .day, value: -1, to: thisMonday)!
+        }
 
         // Build sessions: week=8 is current week, week=1 is 7 weeks ago.
-        // Push=Mon, Pull=Tue, Legs=Wed. Skip sessions whose date is in the future.
+        // Push=Mon, Pull=Tue, Legs=Wed, optional extras Thu/Fri/Sat for variety & streak.
         struct Session { let date: Date; let type: String; let week: Int }
         var sessions: [Session] = []
 
@@ -86,17 +120,38 @@ struct DebugHelpers {
             guard let mon = calendar.date(byAdding: .weekOfYear, value: -weekOffset, to: thisMonday) else { continue }
             let tue = calendar.date(byAdding: .day, value: 1, to: mon)!
             let wed = calendar.date(byAdding: .day, value: 2, to: mon)!
+            let thu = calendar.date(byAdding: .day, value: 3, to: mon)!
+            let fri = calendar.date(byAdding: .day, value: 4, to: mon)!
+            let sat = calendar.date(byAdding: .day, value: 5, to: mon)!
 
-            let daySlots: [(type: String, base: Date, hour: Int)] = [
+            // Core 3 days every week
+            var daySlots: [(type: String, base: Date, hour: Int)] = [
                 ("push", mon, 9),
                 ("pull", tue, 7),
                 ("legs", wed, 9),
             ]
+
+            // Recent weeks get extra sessions for better streaks & variety
+            if weekNumber >= 5 {
+                daySlots.append(("push", thu, 17))   // evening push
+                daySlots.append(("pull", fri, 6))     // early bird pull
+            }
+            if weekNumber >= 6 {
+                daySlots.append(("legs", sat, 10))    // weekend warrior
+            }
+
             for slot in daySlots {
                 guard slot.base <= today else { continue }
                 let startDate = calendar.date(bySettingHour: slot.hour, minute: 0, second: 0, of: slot.base) ?? slot.base
                 sessions.append(Session(date: startDate, type: slot.type, week: weekNumber))
             }
+        }
+
+        // Always add a workout for TODAY so current-week stats are never empty
+        let todayStart = calendar.date(bySettingHour: 8, minute: 0, second: 0, of: today) ?? today
+        let todayAlreadyExists = sessions.contains { calendar.isDate($0.date, inSameDayAs: today) }
+        if !todayAlreadyExists {
+            sessions.append(Session(date: todayStart, type: "push", week: 8))
         }
 
         for session in sessions {

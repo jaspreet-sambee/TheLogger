@@ -8,6 +8,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>TheLogger uses the camera to automatically count your exercise reps using pose detection. No video is recorded or stored.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>TheLogger saves your workout cards to your photo library.</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

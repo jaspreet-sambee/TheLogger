@@ -40,6 +40,9 @@ struct InlineSetRowView: View {
     @State private var cachedPreviousDuration: Int?
     @State private var hasFetchedPrevious = false
 
+    private enum EditField: Hashable { case reps, weight, duration }
+    @FocusState private var activeEditField: EditField?
+
     private var isTimeBased: Bool {
         ExerciseLibrary.shared.find(name: exerciseName)?.isTimeBased ?? false
     }
@@ -90,270 +93,27 @@ struct InlineSetRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            // Set type picker menu
-            Menu {
-                ForEach(SetType.allCases, id: \.self) { type in
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                            set.type = type
-                        }
-                        onUpdate(set.reps, set.weight)
-                        runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: type)
-                    } label: {
-                        Label(type.rawValue, systemImage: type.icon)
-                    }
-                }
-                if let onDelete {
-                    Divider()
-                    Button(role: .destructive, action: onDelete) {
-                        Label("Delete Set", systemImage: "trash")
-                    }
-                }
-            } label: {
-                VStack(spacing: 1) {
-                    ZStack {
-                        Circle()
-                            .fill(set.type.color.opacity(0.15))
-                            .frame(width: 32, height: 32)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.type)
+        VStack(spacing: 0) {
+            // MARK: Display row — always visible
+            displayRow
 
-                        if set.type == .working {
-                            Text("\(setNumber)")
-                                .font(.system(.caption, weight: .semibold))
-                                .foregroundStyle(isLogged ? AppColors.accentGold : .secondary)
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isLogged)
-                        } else {
-                            Image(systemName: set.type.icon)
-                                .font(.system(.caption2, weight: .semibold))
-                                .foregroundStyle(set.type.color)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.type)
-                        }
-                    }
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 7, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .buttonStyle(.plain)
-
-            if isTimeBased {
-                // Duration - inline editable for time-based exercises
-                HStack(spacing: 6) {
-                    Image(systemName: "clock")
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    if isEditingDuration {
-                        SelectAllTextField(
-                            text: $durationText,
-                            focusWhenAppear: true,
-                            placeholder: "Sec",
-                            keyboardType: .numberPad,
-                            onFocusTriggered: { },
-                            onCommit: { saveDuration() }
-                        )
-                        .frame(width: 60, height: 24)
-                    } else {
-                        Text(UnitFormatter.formatDuration(set.durationSeconds ?? 0))
-                            .font(.system(.body, weight: .semibold))
-                            .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
-                            .contentShape(Rectangle())
-                            .onTapGesture { startEditingDuration() }
-                    }
-                }
-            } else {
-                // Reps - inline editable
-                HStack(spacing: 6) {
-                    Image(systemName: "repeat")
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    if isEditingReps {
-                        HStack(spacing: 6) {
-                            // Step button -1
-                            Image(systemName: "minus.circle.fill")
-                                .font(.system(.subheadline, weight: .medium))
-                                .foregroundStyle(.red.opacity(0.8))
-                                .frame(width: 28, height: 28)
-                                .contentShape(Rectangle())
-                                .onTapGesture { adjustReps(-1) }
-
-                            if isTypingReps {
-                                SelectAllTextField(
-                                    text: $repsText,
-                                    focusWhenAppear: focusRepsWhenAppear,
-                                    placeholder: "Reps",
-                                    keyboardType: .numberPad,
-                                    onFocusTriggered: { focusRepsWhenAppear = false },
-                                    onCommit: { saveReps() }
-                                )
-                                .frame(width: 50, height: 24)
-                            } else {
-                                // Tappable value — tap to open keyboard for custom input
-                                Text(repsText)
-                                    .font(.system(.body, weight: .bold))
-                                    .foregroundStyle(.primary)
-                                    .frame(minWidth: 30)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(AppColors.accent.opacity(0.15))
-                                    )
-                                    .contentTransition(.numericText(value: Double(set.reps)))
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.reps)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        isTypingReps = true
-                                        focusRepsWhenAppear = true
-                                    }
-                            }
-
-                            // Step button +1
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(.subheadline, weight: .medium))
-                                .foregroundStyle(AppColors.accent.opacity(0.8))
-                                .frame(width: 28, height: 28)
-                                .contentShape(Rectangle())
-                                .onTapGesture { adjustReps(1) }
-
-                            // Done button
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(.subheadline, weight: .medium))
-                                .foregroundStyle(AppColors.accentGold)
-                                .frame(width: 28, height: 28)
-                                .contentShape(Rectangle())
-                                .onTapGesture { saveReps() }
-                        }
-                        .transition(.asymmetric(
-                            insertion: .scale(scale: 0.9, anchor: .leading).combined(with: .opacity),
-                            removal: .scale(scale: 0.9, anchor: .leading).combined(with: .opacity)
-                        ))
-                    } else {
-                        Text("\(set.reps)")
-                            .font(.system(.body, weight: .semibold))
-                            .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
-                            .contentTransition(.numericText(value: Double(set.reps)))
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.reps)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                startEditingReps()
-                            }
-                            .transition(.opacity)
-                    }
-                }
-            }
-
-            Spacer()
-
-            // Weight - inline editable (hidden for time-based)
-            if !isTimeBased {
-            HStack(spacing: 4) {
-                if isEditingWeight {
-                    HStack(spacing: 4) {
-                        // Quick adjust button (decrease)
-                        Image(systemName: "minus.circle.fill")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(.red.opacity(0.8))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                adjustWeight(-5)
-                            }
-
-                        if isTypingWeight {
-                            // TextField for manual input
-                            SelectAllTextField(
-                                text: $weightText,
-                                focusWhenAppear: focusWeightWhenAppear,
-                                placeholder: "Weight",
-                                keyboardType: .decimalPad,
-                                onFocusTriggered: { focusWeightWhenAppear = false },
-                                onCommit: { saveWeight() }
-                            )
-                            .frame(width: 70, height: 24)
-                        } else {
-                            // Tappable value - tap to type custom value
-                            Text(String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight)))
-                                .font(.system(.body, weight: .bold))
-                                .foregroundStyle(.primary)
-                                .frame(minWidth: 50)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(AppColors.accent.opacity(0.15))
-                                )
-                                .contentTransition(.numericText(value: set.weight))
-                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.weight)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    // Switch to typing mode
-                                    weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight))
-                                    isTypingWeight = true
-                                    focusWeightWhenAppear = true
-                                }
-                        }
-
-                        Text(UnitFormatter.weightUnit)
-                            .font(.system(.caption2, weight: .medium))
-                            .foregroundStyle(.secondary)
-
-                        // Quick adjust button (increase)
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(AppColors.accent.opacity(0.8))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                adjustWeight(5)
-                            }
-
-                        // Done button to exit editing mode
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(.body, weight: .medium))
-                            .foregroundStyle(AppColors.accentGold)
-                            .frame(width: 32, height: 32)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                    isEditingWeight = false
-                                    isTypingWeight = false
-                                }
-                                DispatchQueue.main.async {
-                                    runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: set.type)
-                                }
-                            }
-                    }
+            // MARK: Editing controls — shown when tapped
+            if isEditing {
+                editingControls
                     .transition(.asymmetric(
-                        insertion: .scale(scale: 0.9, anchor: .trailing).combined(with: .opacity),
-                        removal: .scale(scale: 0.9, anchor: .trailing).combined(with: .opacity)
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .opacity
                     ))
-                } else {
-                    HStack(spacing: 4) {
-                        Text("\(String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight)))")
-                            .font(.system(.body, weight: .semibold))
-                            .foregroundStyle(set.type.countsForPR ? .primary : .secondary)
-                            .contentTransition(.numericText(value: set.weight))
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: set.weight)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                startEditingWeight()
-                            }
-                        Text(UnitFormatter.weightUnit)
-                            .font(.system(.caption, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    .transition(.opacity)
-                }
-            }
             }
         }
-        .padding(.top, isInsideGroup ? 6 : 8)
-        .padding(.bottom, isInsideGroup ? 6 : 16)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, isEditing ? 12 : (isInsideGroup ? 10 : 12))
+        .onChange(of: activeEditField) { oldField, newField in
+            // When focus moves between fields, save the old field's value
+            if oldField == .reps && newField != .reps { commitRepsValue() }
+            if oldField == .weight && newField != .weight { commitWeightValue() }
+        }
+        .id("setRow-\(set.id.uuidString)")
         .background(
             RoundedRectangle(cornerRadius: isInsideGroup ? 0 : 12)
                 .fill(rowBackgroundFill)
@@ -369,32 +129,6 @@ struct InlineSetRowView: View {
                             : set.type.color.opacity(0.15),
                         lineWidth: 1
                     )
-            }
-        }
-        .overlay(alignment: .bottomLeading) {
-            // Previous set indicator
-            if isTimeBased, let prev = cachedPreviousDuration, !isEditingDuration {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(.caption2, weight: .medium))
-                    Text("Last: \(UnitFormatter.formatDuration(prev))")
-                        .font(.system(.caption2, weight: .regular))
-                }
-                .foregroundStyle(.tertiary)
-                .padding(.leading, 48)
-                .padding(.bottom, 4)
-                .transition(.opacity.combined(with: .offset(y: 2)))
-            } else if let previous = cachedPreviousSet, !isEditingReps && !isEditingWeight {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(.caption2, weight: .medium))
-                    Text("Last: \(previous.reps) \u{00d7} \(UnitFormatter.formatWeightCompact(previous.weight))")
-                        .font(.system(.caption2, weight: .regular))
-                }
-                .foregroundStyle(.tertiary)
-                .padding(.leading, 48)
-                .padding(.bottom, 4)
-                .transition(.opacity.combined(with: .offset(y: 2)))
             }
         }
         .onChange(of: set.reps) { oldValue, newValue in
@@ -425,6 +159,320 @@ struct InlineSetRowView: View {
             if isEditingWeight { saveWeight() }
             if isEditingDuration { saveDuration() }
         }
+    }
+
+    // MARK: - Display Row (mockup: [circle] [weight × reps] [type pill] [✓])
+
+    private var displayRow: some View {
+        HStack(spacing: 10) {
+            // Set type circle (Menu for type change + delete)
+            setTypeCircle
+
+            // Combined weight × reps label
+            performanceLabel
+
+            Spacer(minLength: 0)
+
+            // Type pill
+            typePill
+
+            // Checkmark (only when not editing)
+            if !isEditing {
+                Image(systemName: set.reps > 0 ? "checkmark" : "circle")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(set.reps > 0 ? AppColors.accentGold : Color.white.opacity(0.15))
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isEditing { enterEditingMode() }
+        }
+    }
+
+    private var setTypeCircle: some View {
+        Menu {
+            ForEach(SetType.allCases, id: \.self) { type in
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { set.type = type }
+                    onUpdate(set.reps, set.weight)
+                    runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: type)
+                } label: {
+                    Label(type.rawValue, systemImage: type.icon)
+                }
+            }
+            if let onDelete {
+                Divider()
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete Set", systemImage: "trash")
+                }
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(set.type.color.opacity(0.15))
+                    .frame(width: 28, height: 28)
+                if set.type == .working {
+                    Text("\(setNumber)")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(set.reps > 0 ? AppColors.accentGold : Color.white.opacity(0.45))
+                } else {
+                    Image(systemName: set.type.icon)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(set.type.color)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var performanceLabel: some View {
+        if isTimeBased {
+            HStack(spacing: 4) {
+                Text(UnitFormatter.formatDuration(set.durationSeconds ?? 0))
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.88))
+                Text("sec")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.28))
+            }
+        } else {
+            HStack(spacing: 4) {
+                if set.weight > 0 {
+                    let displayWeight = UnitFormatter.convertToDisplay(set.weight)
+                    let weightStr = displayWeight.truncatingRemainder(dividingBy: 1) == 0
+                        ? "\(Int(displayWeight))" : String(format: "%.1f", displayWeight)
+                    Text(weightStr)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.88))
+                    Text(UnitFormatter.weightUnit)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.28))
+                } else {
+                    Text("BW")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.88))
+                }
+                Text("×")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.25))
+                Text("\(set.reps)")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.88))
+            }
+        }
+    }
+
+    private var typePill: some View {
+        Text(set.type == .dropSet ? "Drop" : set.type.rawValue)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(set.type.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(set.type.color.opacity(0.12))
+                    .overlay(Capsule().stroke(set.type.color.opacity(0.25), lineWidth: 1))
+            )
+    }
+
+    // MARK: - Editing Controls (two rows: reps, weight, then action buttons)
+
+    private var editingControls: some View {
+        VStack(spacing: 10) {
+            if isTimeBased {
+                HStack(spacing: 8) {
+                    Text("Duration")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.40))
+                        .frame(width: 52, alignment: .leading)
+                    editCircleButton("−", color: .red) {
+                        let current = Int(durationText) ?? (set.durationSeconds ?? 30)
+                        set.durationSeconds = max(5, current - 5)
+                        durationText = "\(set.durationSeconds ?? 5)"
+                        onUpdate(0, 0)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                    editValuePill($durationText, field: .duration, isActive: true)
+                    editCircleButton("+", color: AppColors.accent) {
+                        let current = Int(durationText) ?? (set.durationSeconds ?? 30)
+                        set.durationSeconds = current + 5
+                        durationText = "\(set.durationSeconds ?? 35)"
+                        onUpdate(0, 0)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                }
+            } else {
+                HStack(spacing: 8) {
+                    Text("Reps")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.40))
+                        .frame(width: 52, alignment: .leading)
+                    editCircleButton("−", color: .red) { adjustReps(-1) }
+                    editValuePill($repsText, field: .reps, isActive: true)
+                    editCircleButton("+", color: AppColors.accent) { adjustReps(1) }
+                }
+                HStack(spacing: 8) {
+                    Text("Weight")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.40))
+                        .frame(width: 52, alignment: .leading)
+                    editCircleButton("−", color: .red) { adjustWeight(-5) }
+                    editValuePill($weightText, field: .weight, isActive: true)
+                    editCircleButton("+", color: AppColors.accent) { adjustWeight(5) }
+                }
+            }
+            editActionButtons
+        }
+        .padding(.top, 12)
+    }
+
+    private var editActionButtons: some View {
+        HStack(spacing: 10) {
+            Button {
+                finishEditing()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Done")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .foregroundStyle(AppColors.accentGold)
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(AppColors.accentGold.opacity(0.12))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppColors.accentGold.opacity(0.25), lineWidth: 1))
+                )
+            }
+            .buttonStyle(.plain)
+
+            if let onDelete {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Delete")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundStyle(Color.red.opacity(0.7))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.red.opacity(0.08))
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red.opacity(0.18), lineWidth: 1))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Edit Helpers
+
+    private func editCircleButton(_ label: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            Text(label)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(color.opacity(0.8))
+                .frame(width: 34, height: 34)
+                .background(
+                    Circle()
+                        .fill(color.opacity(0.12))
+                        .overlay(Circle().stroke(color.opacity(0.25), lineWidth: 1))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func editValuePill(_ text: Binding<String>, field: EditField, isActive: Bool, keyboard: UIKeyboardType = .decimalPad, onTap: (() -> Void)? = nil) -> some View {
+        let isFocused = activeEditField == field
+        return TextField("0", text: text)
+            .keyboardType(.decimalPad)  // Same keyboard for both to avoid dismiss on switch
+            .font(.system(size: 22, weight: .heavy))
+            .monospacedDigit()
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isFocused ? AppColors.accent.opacity(0.20) : AppColors.accent.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(isFocused ? AppColors.accent.opacity(0.45) : Color.white.opacity(0.08), lineWidth: 1)
+                    )
+            )
+            .focused($activeEditField, equals: field)
+    }
+
+    private func enterEditingMode() {
+        originalReps = set.reps
+        originalWeight = set.weight
+        repsText = "\(set.reps)"
+        weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight))
+        if isTimeBased { durationText = "\(set.durationSeconds ?? 0)" }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            isEditingReps = true
+            isEditingWeight = true
+            if isTimeBased { isEditingDuration = true }
+        }
+    }
+
+    private func activateWeightEditing() {
+        commitRepsValue()
+        activeEditField = .weight
+    }
+
+    private func commitRepsValue() {
+        if let v = Int(repsText.trimmingCharacters(in: .whitespaces)), v >= 0, v <= 1000 {
+            set.reps = v
+        }
+        repsText = "\(set.reps)"
+    }
+
+    private func commitWeightValue() {
+        let clean = weightText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        if let v = Double(clean), v >= 0, v <= 10000 {
+            set.weight = UnitFormatter.convertToStorage(v)
+        }
+        weightText = String(format: "%.1f", UnitFormatter.convertToDisplay(set.weight))
+    }
+
+    private func finishEditing() {
+        // Save both values
+        commitRepsValue()
+        commitWeightValue()
+
+        // Save duration
+        if isTimeBased, let v = Int(durationText.trimmingCharacters(in: .whitespaces)), v > 0 {
+            set.durationSeconds = v
+        }
+
+        activeEditField = nil
+        onUpdate(set.reps, set.weight)
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            isEditingReps = false
+            isEditingWeight = false
+            isEditingDuration = false
+            isTypingReps = false
+            isTypingWeight = false
+        }
+
+        DispatchQueue.main.async {
+            runPRCheckAndNotify(weight: set.weight, reps: set.reps, setType: set.type)
+        }
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
     }
 
     private func startEditingReps() {

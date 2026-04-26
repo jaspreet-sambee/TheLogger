@@ -35,3 +35,11 @@ Passport*.jpg
 # Screen recordings & compressed video
 ScreenRecording_*
 ScreenRecording_compressed.mp4
+
+# Stray personal photos at project root
+/IMG_*.jpeg
+/IMG_*.jpg
+/IMG_*.png
+/IMG_*.PNG
+/Image*.PNG
+/Image*.png

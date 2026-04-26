@@ -42,6 +42,19 @@ struct WorkoutListView: View {
     @AppStorage("weeklyWorkoutGoal") private var weeklyWorkoutGoal: Int = 4
     @AppStorage("startWorkoutOnLaunch") private var startWorkoutOnLaunch = false
 
+    // Quick Start template selection
+    @State private var selectedTemplateIndex: Int = -1
+    @AppStorage("hasDismissedCameraTip") private var hasDismissedCameraTip = false
+
+    // Rest day challenges
+    @State private var restDayChallenge: DailyChallenge? = nil
+    @State private var showRestDayPrompt = false
+    @State private var restDayDismissed = false
+    @State private var showChallengePicker = false
+    @State private var showQuizSheet = false
+    @State private var showQuickHitSheet = false
+    @State private var showSpinWheelSheet = false
+
     // Gamification
     @State private var gamificationEngine = GamificationEngine()
     @Query private var allPRs: [PersonalRecord]
@@ -87,6 +100,14 @@ struct WorkoutListView: View {
     // Get completed workouts (history)
     private var workoutHistory: [Workout] {
         workouts.filter { $0.isCompleted && !$0.isTemplate }
+    }
+
+    private var hasActiveWorkout: Bool {
+        activeWorkout != nil
+    }
+
+    private var hasWorkedOutToday: Bool {
+        workoutHistory.contains { Calendar.current.isDateInToday($0.date) }
     }
 
     // Motivational stats
@@ -152,14 +173,7 @@ struct WorkoutListView: View {
             List {
                 // Welcome Header Section
                 Section {
-                    HStack(alignment: .top, spacing: 12) {
-                        // Level-based avatar with gradient
-                        LevelAvatar(
-                            name: userName,
-                            totalWorkouts: totalWorkouts,
-                            size: 48
-                        )
-
+                    HStack(alignment: .center, spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
                             if userName.isEmpty {
                                 Text("Welcome!")
@@ -182,9 +196,11 @@ struct WorkoutListView: View {
 
                         Spacer()
 
-                        if totalWorkouts > 0 {
-                            WeeklyGoalRing(current: thisWeekWorkouts, goal: weeklyWorkoutGoal, color: AppColors.accentGold)
-                        }
+                        LevelAvatar(
+                            name: userName,
+                            totalWorkouts: totalWorkouts,
+                            size: 48
+                        )
                     }
                     .padding(.vertical, 8)
                     .staggeredAppear(index: 0, maxStagger: 4)
@@ -200,9 +216,9 @@ struct WorkoutListView: View {
                     Section {
                         HomeSummaryCard(
                             streak: workoutStreak,
-                            stats: gamificationEngine.weeklyStats,
                             thisWeekWorkouts: thisWeekWorkouts,
-                            weeklyGoal: weeklyWorkoutGoal
+                            weeklyGoal: weeklyWorkoutGoal,
+                            weekDays: thisWeekWorkoutDays
                         )
                         .staggeredAppear(index: 1, maxStagger: 4)
                     } header: {
@@ -213,240 +229,357 @@ struct WorkoutListView: View {
                     .listRowBackground(Color.clear)
                 }
 
-                // Active Workout Section (show when workout is active)
+                // Active Workout Hero (show when workout is active)
                 if let active = activeWorkout {
                     Section {
-                        ZStack {
-                            NavigationLink(value: active.id.uuidString) {
-                                Color.clear
-                                    .contentShape(Rectangle())
-                            }
-
-                            ActiveWorkoutRowView(workout: active)
-                                .shimmerEffect()
-                                .depthShadow(color: AppColors.accent, radius: 12)
-                        }
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                    } header: {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(AppColors.accent)
-                                .frame(width: 8, height: 8)
-                            Text("Active Workout")
-                                .font(.system(.subheadline, weight: .bold))
-                        }
-                        .foregroundStyle(.primary)
-                        .textCase(nil)
-                    }
-                }
-
-                // Template Carousel
-                Section {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 16) {
-                                ForEach(templates) { template in
-                                    TemplateHeroCard(template: template) {
-                                        if activeWorkout != nil {
-                                            templateToConfirm = template
-                                            showingEndWorkoutConfirmation = true
-                                        } else {
-                                            startWorkoutFromTemplate(template: template)
-                                        }
-                                    } onEdit: {
-                                        navigationPath.append(template.id.uuidString)
-                                    }
-                                    .containerRelativeFrame(.horizontal) { size, _ in
-                                        size - 48
-                                    }
-                                    .visualEffect { content, proxy in
-                                        let frame = proxy.frame(in: .scrollView(axis: .horizontal))
-                                        let scrollWidth = proxy.bounds(of: .scrollView(axis: .horizontal))?.width ?? 1
-                                        let midX = frame.midX
-                                        let distance = midX - scrollWidth / 2
-                                        let normalized = distance / (scrollWidth / 2)
-                                        let clamped = max(-1, min(1, normalized))
-
-                                        return content
-                                            .scaleEffect(1.0 - abs(clamped) * 0.08)
-                                            .rotation3DEffect(
-                                                .degrees(clamped * 18),
-                                                axis: (x: 0, y: 1, z: 0),
-                                                perspective: 0.4
-                                            )
-                                            .offset(y: abs(clamped) * 14)
-                                    }
+                        VStack(spacing: 16) {
+                            VStack(spacing: 6) {
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(AppColors.accent)
+                                        .frame(width: 8, height: 8)
+                                    Text(active.name)
+                                        .font(.system(.title3, weight: .bold))
+                                        .foregroundStyle(.primary)
+                                    Spacer()
                                 }
 
-                                // "Create Template" as the last card in the carousel
-                                NewTemplateCard {
-                                    editingTemplate = nil
-                                    showingTemplateEditor = true
-                                    Analytics.send(Analytics.Signal.templateCreated)
+                                // Live elapsed timer
+                                TimelineView(.periodic(from: active.startTime ?? Date(), by: 1.0)) { _ in
+                                    let elapsed = Date().timeIntervalSince(active.startTime ?? Date())
+                                    Text(formatElapsed(elapsed))
+                                        .font(.system(size: 64, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(LinearGradient(colors: AppColors.accentGradient, startPoint: .leading, endPoint: .trailing))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                .containerRelativeFrame(.horizontal) { size, _ in
-                                    templates.isEmpty ? size : size - 48
-                                }
-                                .visualEffect { content, proxy in
-                                    let frame = proxy.frame(in: .scrollView(axis: .horizontal))
-                                    let scrollWidth = proxy.bounds(of: .scrollView(axis: .horizontal))?.width ?? 1
-                                    let midX = frame.midX
-                                    let distance = midX - scrollWidth / 2
-                                    let normalized = distance / (scrollWidth / 2)
-                                    let clamped = max(-1, min(1, normalized))
-
-                                    return content
-                                        .scaleEffect(1.0 - abs(clamped) * 0.08)
-                                        .rotation3DEffect(
-                                            .degrees(clamped * 18),
-                                            axis: (x: 0, y: 1, z: 0),
-                                            perspective: 0.4
-                                        )
-                                        .offset(y: abs(clamped) * 14)
-                                }
-                            }
-                            .scrollTargetLayout()
-                            .padding(.vertical, 4)
-                        }
-                        .scrollTargetBehavior(.viewAligned)
-                        .contentMargins(.horizontal, 20)
-                        .frame(height: 220)
-                    } header: {
-                        HStack {
-                            Image(systemName: "rectangle.stack.fill")
-                                .font(.system(.caption, weight: .bold))
-                                .foregroundStyle(AppColors.accent)
-                            Text("Templates")
-                                .font(.system(.subheadline, weight: .bold))
-                            Spacer()
-                        }
-                        .foregroundStyle(.primary)
-                        .textCase(nil)
-                    }
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-
-                    // CTA button
-                    Section {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            if activeWorkout != nil {
-                                templateToConfirm = nil
-                                showingEndWorkoutConfirmation = true
-                            } else {
-                                startWorkoutFromTemplate(template: nil)
-                            }
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "figure.run")
-                                Text("Start New Workout")
-                            }
-                            .font(.system(.body, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .background(
-                                LinearGradient(
-                                    colors: AppColors.accentGradient,
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .shimmerEffect()
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .buttonStyle(.plain)
-                        .shadow(color: AppColors.accent.opacity(0.3), radius: 12, y: 6)
-                        .accessibilityIdentifier("startWorkoutButton")
-                    } header: { EmptyView() }
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-
-                // Recent Workouts Section (inline horizontal scroll)
-                if !recentWorkouts.isEmpty {
-                    Section {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(Array(recentWorkouts.enumerated()), id: \.element.id) { index, workout in
-                                        RecentWorkoutCard(workout: workout) {
-                                            navigationPath.append(workout.id.uuidString)
-                                        }
-                                        .visualEffect { content, proxy in
-                                            let frame = proxy.frame(in: .scrollView(axis: .horizontal))
-                                            let scrollWidth = proxy.bounds(of: .scrollView(axis: .horizontal))?.width ?? 1
-                                            let midX = frame.midX
-                                            let distance = midX - scrollWidth / 2
-                                            let normalized = distance / (scrollWidth / 2)
-                                            let clamped = max(-1, min(1, normalized))
-
-                                            return content
-                                                .scaleEffect(1.0 - abs(clamped) * 0.06)
-                                                .offset(y: abs(clamped) * 6)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 4)
                             }
 
                             Button {
-                                showingWorkoutHistory = true
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                Analytics.send(Analytics.Signal.workoutResumed)
+                                navigationPath.append(active.id.uuidString)
                             } label: {
-                                HStack {
-                                    Text("View All History")
-                                        .font(.system(.subheadline, weight: .medium))
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(.caption, weight: .semibold))
+                                HStack(spacing: 10) {
+                                    Image(systemName: "play.fill")
+                                    Text("Resume Workout")
                                 }
-                                .foregroundStyle(AppColors.accent)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(AppColors.accent.opacity(0.1))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(AppColors.accent.opacity(0.2), lineWidth: 1)
-                                        )
-                                )
                             }
+                            .gradientCTA()
                             .buttonStyle(.plain)
                         }
-                    } header: {
-                        HStack {
-                            Image(systemName: "clock.arrow.circlepath")
-                                .font(.system(.caption, weight: .bold))
-                                .foregroundStyle(AppColors.accent)
-                            Text("Recent Workouts")
-                                .font(.system(.subheadline, weight: .bold))
-                            Spacer()
-                            Text("\(workoutHistory.count) total")
-                                .font(.system(.caption2, weight: .medium))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .foregroundStyle(.primary)
-                        .textCase(nil)
-                    }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(AppColors.accent.opacity(0.30), lineWidth: 1)
+                                )
+                        )
+                    } header: { EmptyView() }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
 
-                // PR Timeline Widget
+                // Rest Day Challenge (hidden if dismissed, has active workout, or already worked out today)
+                if true { // TEMP: always show for testing — was: !restDayDismissed && !hasActiveWorkout
+                    restDayChallengeCard
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                }
+
+                // Quick Start Section — pill tabs + CTA (hidden when workout is in progress)
+                if !hasActiveWorkout {
+                Section {
+                    VStack(spacing: 14) {
+                        Text("QUICK START")
+                            .font(.system(.caption2, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.28))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        // Horizontal template pill tabs
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(templates.indices, id: \.self) { i in
+                                    let isSelected = selectedTemplateIndex == i
+                                    Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                            selectedTemplateIndex = isSelected ? -1 : i
+                                        }
+                                    } label: {
+                                        Text(templates[i].name)
+                                            .font(.system(.subheadline, weight: .semibold))
+                                            .foregroundStyle(isSelected ? .white : .secondary)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 9)
+                                            .background(
+                                                Capsule()
+                                                    .fill(isSelected ? AppColors.accent : Color.white.opacity(0.08))
+                                                    .overlay(
+                                                        Capsule()
+                                                            .stroke(isSelected ? Color.clear : Color.white.opacity(0.12), lineWidth: 1)
+                                                    )
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: selectedTemplateIndex)
+                                }
+
+                                // "+ New" pill
+                                Button {
+                                    editingTemplate = nil
+                                    showingTemplateEditor = true
+                                    Analytics.send(Analytics.Signal.templateCreated)
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "plus")
+                                            .font(.system(.caption, weight: .bold))
+                                        Text("New")
+                                            .font(.system(.subheadline, weight: .semibold))
+                                    }
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 9)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.white.opacity(0.06))
+                                            .overlay(
+                                                Capsule()
+                                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                            )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                        }
+
+                        // Full-width CTA
+                        let selectedTemplate: Workout? = selectedTemplateIndex >= 0 && templates.indices.contains(selectedTemplateIndex) ? templates[selectedTemplateIndex] : nil
+
+                        // Template exercise preview
+                        if let template = selectedTemplate {
+                            let exercises = template.exercisesByOrder
+                            VStack(alignment: .leading, spacing: 5) {
+                                ForEach(exercises) { exercise in
+                                    let setCount = exercise.sets?.count ?? 0
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(AppColors.accent.opacity(0.5))
+                                            .frame(width: 5, height: 5)
+                                        Text(exercise.name)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundStyle(Color.white.opacity(0.65))
+                                            .lineLimit(1)
+                                        Spacer(minLength: 4)
+                                        if setCount > 0 {
+                                            Text("\(setCount) sets")
+                                                .font(.system(size: 10, weight: .semibold))
+                                                .foregroundStyle(AppColors.accent.opacity(0.65))
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(Capsule().fill(AppColors.accent.opacity(0.10)))
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 2)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+
+                        Button {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            if let active = activeWorkout, active.isActive {
+                                templateToConfirm = selectedTemplate
+                                showingEndWorkoutConfirmation = true
+                            } else if let t = selectedTemplate {
+                                startWorkoutFromTemplate(template: t)
+                            } else {
+                                startWorkoutFromTemplate(template: nil)
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "play.fill")
+                                Text(selectedTemplate != nil ? "Start \(selectedTemplate!.name)" : "Start Workout")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .gradientCTA()
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("startWorkoutButton")
+
+                        // Secondary link to start without a template
+                        if selectedTemplate != nil {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    selectedTemplateIndex = -1
+                                }
+                            } label: {
+                                Text("or start without template")
+                                    .font(.system(.caption, weight: .medium))
+                                    .foregroundStyle(Color.white.opacity(0.30))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.plain)
+                            .transition(.opacity)
+                        }
+                    }
+                    .padding(16)
+                    .background(
+                        ZStack(alignment: .topTrailing) {
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.white.opacity(0.04))
+                            Circle()
+                                .fill(AppColors.accent.opacity(0.10))
+                                .frame(width: 100, height: 100)
+                                .blur(radius: 35)
+                                .offset(x: 10, y: -20)
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.white.opacity(0.09), lineWidth: 1)
+                        }
+                    )
+                    .shadow(color: Color.black.opacity(0.35), radius: 20, x: 0, y: 8)
+                } header: {
+                    EmptyView()
+                }
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                } // end if !hasActiveWorkout
+
+                // Camera Tip Card (first 3 workouts)
+                if totalWorkouts < 3 && !hasDismissedCameraTip {
+                    Section {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.accent.opacity(0.12))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "camera.viewfinder")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(AppColors.accent)
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Try Camera Rep Counter")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(.primary)
+                                Text("Point your phone at yourself and the app counts your reps automatically.")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.white.opacity(0.40))
+                                    .lineLimit(2)
+                            }
+                            Spacer(minLength: 0)
+                            Button {
+                                withAnimation { hasDismissedCameraTip = true }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(Color.white.opacity(0.25))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(AppColors.accent.opacity(0.05))
+                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppColors.accent.opacity(0.15), lineWidth: 1))
+                        )
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    }
+                }
+
+                // PR Highlights
                 if !workoutHistory.isEmpty {
                     Section {
                         PRHomeWidgetView()
                     } header: {
                         EmptyView()
                     }
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listSectionSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                } else {
+                    Section {
+                        HStack(spacing: 10) {
+                            Text("🏆")
+                                .font(.system(size: 18))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("PR Highlights")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.white.opacity(0.40))
+                                Text("Set personal records to see them here")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.white.opacity(0.20))
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .listRowBackground(Color.white.opacity(0.03))
+                        .listRowSeparator(.hidden)
+                    }
+                }
+
+                // Recent Workouts Section
+                if !recentWorkouts.isEmpty {
+                    Section {
+                        VStack(spacing: 0) {
+                            ForEach(Array(recentWorkouts.enumerated()), id: \.element.id) { index, workout in
+                                RecentWorkoutRow(
+                                    workout: workout,
+                                    prCount: allPRs.filter { $0.workoutId == workout.id }.count,
+                                    onTap: { navigationPath.append(workout.id.uuidString) }
+                                )
+                                if index < recentWorkouts.count - 1 {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.05))
+                                        .frame(height: 1)
+                                        .padding(.leading, 28)
+                                }
+                            }
+                        }
+                    } header: {
+                        HStack {
+                            Text("RECENT")
+                                .font(.system(.caption2, weight: .semibold))
+                                .foregroundStyle(Color.white.opacity(0.28))
+                            Spacer()
+                            Button("View all →") { showingWorkoutHistory = true }
+                                .font(.system(.caption, weight: .semibold))
+                                .foregroundStyle(AppColors.accent)
+                        }
+                        .textCase(nil)
+                        .padding(.bottom, 4)
+                    }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                } else {
+                    Section {
+                        HStack(spacing: 10) {
+                            Text("📋")
+                                .font(.system(size: 18))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Recent Workouts")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.white.opacity(0.40))
+                                Text("Your workout history will appear here")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.white.opacity(0.20))
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .listRowBackground(Color.white.opacity(0.03))
+                        .listRowSeparator(.hidden)
+                    }
                 }
 
             }
@@ -474,6 +607,46 @@ struct WorkoutListView: View {
                     TemplateEditView(template: nil)
                 }
             }
+            .sheet(isPresented: $showQuizSheet) {
+                if var challenge = restDayChallenge {
+                    QuizChallengeView(challenge: Binding(
+                        get: { challenge },
+                        set: { challenge = $0; restDayChallenge = $0 }
+                    ))
+                    .presentationBackground(AppColors.background)
+                }
+            }
+            .sheet(isPresented: $showQuickHitSheet) {
+                if var challenge = restDayChallenge {
+                    QuickHitChallengeView(challenge: Binding(
+                        get: { challenge },
+                        set: { challenge = $0; restDayChallenge = $0 }
+                    ))
+                    .presentationBackground(AppColors.background)
+                }
+            }
+            .sheet(isPresented: $showSpinWheelSheet) {
+                let canQuiz = ChallengeGenerator.canGenerateQuiz(workouts: workouts, prs: allPRs)
+                SpinWheelView(
+                    canQuiz: canQuiz,
+                    workouts: workouts,
+                    prs: allPRs,
+                    onResult: { challenge in
+                        restDayChallenge = challenge
+                        challenge.save()
+                        showSpinWheelSheet = false
+                        // Open the appropriate sheet after a brief delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            if challenge.category == .quiz {
+                                showQuizSheet = true
+                            } else {
+                                showQuickHitSheet = true
+                            }
+                        }
+                    }
+                )
+                .presentationBackground(AppColors.background)
+            }
             .overlay {
                 if let definition = pendingCelebration {
                     AchievementCelebrationView(definition: definition) {
@@ -490,6 +663,7 @@ struct WorkoutListView: View {
                 Button("Delete", role: .destructive) {
                     if let template = pendingDeleteTemplate {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        Analytics.send(Analytics.Signal.templateDeleted)
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                             modelContext.delete(template)
                         }
@@ -524,6 +698,9 @@ struct WorkoutListView: View {
                 }
             } message: {
                 Text("We recommend exporting a backup of your workout data. Go to Profile > Data & Backup to export.")
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .workoutEnded)) { _ in
+                selectedTemplateIndex = -1
             }
             .task {
                 #if DEBUG
@@ -589,6 +766,15 @@ struct WorkoutListView: View {
 
                 // Refresh gamification stats
                 refreshGamification()
+
+                // TEMP: Clear saved challenge for testing — remove before launch
+                DailyChallenge.clearToday()
+
+                // Load any saved rest day challenge
+                if let saved = DailyChallenge.loadToday() {
+                    restDayChallenge = saved
+                    showChallengePicker = true
+                }
             }
             .onChange(of: workouts.count) { _, _ in
                 refreshGamification()
@@ -645,6 +831,18 @@ struct WorkoutListView: View {
         }
     }
 
+    private func formatElapsed(_ elapsed: TimeInterval) -> String {
+        let total = Int(max(0, elapsed))
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        } else {
+            return String(format: "%02d:%02d", m, s)
+        }
+    }
+
     private func handleDeepLink(_ url: URL) {
         guard let destination = WidgetDeepLink.parse(url) else { return }
 
@@ -655,6 +853,187 @@ struct WorkoutListView: View {
         case .exercise(let workoutId, let exerciseId):
             deepLinkWorkoutId = workoutId
             deepLinkExerciseId = exerciseId
+        }
+    }
+
+    // MARK: - Rest Day Challenge Card
+
+    @ViewBuilder
+    private var restDayChallengeCard: some View {
+        let streak = gamificationEngine.streakData.current
+
+        if showChallengePicker {
+            // Show completed state
+            if let challenge = restDayChallenge, challenge.isCompleted {
+                let doneColor = Color(red: 0.20, green: 0.70, blue: 0.40)  // muted green
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("✓ COMPLETED")
+                            .font(.system(size: 9, weight: .bold))
+                            .kerning(0.8)
+                            .foregroundStyle(doneColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(doneColor.opacity(0.12)))
+                        Spacer()
+                        Text("🔥 \(streak + 1) day streak!")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.35))
+                    }
+                    HStack(spacing: 10) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(doneColor.opacity(0.7))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Streak saved!")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color.white.opacity(0.80))
+                            Text("+30 XP earned")
+                                .font(.system(size: 12))
+                                .foregroundStyle(AppColors.accentGold.opacity(0.7))
+                        }
+                    }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(doneColor.opacity(0.04))
+                        .overlay(RoundedRectangle(cornerRadius: 18).stroke(doneColor.opacity(0.15), lineWidth: 1))
+                )
+            } else {
+                // Show challenge options
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("REST DAY")
+                            .font(.system(size: 9, weight: .bold))
+                            .kerning(0.8)
+                            .foregroundStyle(AppColors.accentGold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(AppColors.accentGold.opacity(0.15)))
+                        Spacer()
+                        Text("🔥 \(streak) day streak")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.35))
+                    }
+                    Text("Keep Your Streak Alive")
+                        .font(.system(size: 16, weight: .heavy))
+                    Text("Pick a quick challenge — takes less than 3 minutes.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.white.opacity(0.35))
+
+                    let canQuiz = ChallengeGenerator.canGenerateQuiz(workouts: workouts, prs: allPRs)
+                    ChallengePicker(
+                        canQuiz: canQuiz,
+                        workoutCount: workoutHistory.count,
+                        onPickQuiz: {
+                            if let quiz = ChallengeGenerator.generateQuiz(workouts: workouts, prs: allPRs) {
+                                restDayChallenge = quiz
+                                quiz.save()
+                                Analytics.send(Analytics.Signal.restDayChallengeStarted, parameters: ["type": "quiz"])
+                                showQuizSheet = true
+                            }
+                        },
+                        onPickQuickHit: {
+                            let hit = ChallengeGenerator.generateQuickHit()
+                            restDayChallenge = hit
+                            hit.save()
+                            Analytics.send(Analytics.Signal.restDayChallengeStarted, parameters: ["type": "quickHit"])
+                            showQuickHitSheet = true
+                        },
+                        onPickSpin: {
+                            Analytics.send(Analytics.Signal.restDayChallengeStarted, parameters: ["type": "spin"])
+                            showSpinWheelSheet = true
+                        }
+                    )
+
+                    HStack(spacing: 6) {
+                        Text("🔥")
+                            .font(.system(size: 11))
+                        Text("Keeps streak")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.28))
+                        Text("+30 XP")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(AppColors.accentGold)
+                    }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(AppColors.accentGold.opacity(0.05))
+                        .overlay(RoundedRectangle(cornerRadius: 18).stroke(AppColors.accentGold.opacity(0.22), lineWidth: 1))
+                )
+            }
+        } else {
+            // Rest day prompt: "Taking a rest day?"
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("🔥 \(streak) day streak")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.35))
+                    Spacer()
+                }
+                Text("Taking a rest day?")
+                    .font(.system(size: 18, weight: .heavy))
+                Text("Do a quick challenge to keep your streak alive.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.white.opacity(0.35))
+
+                HStack(spacing: 10) {
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showChallengePicker = true
+                        }
+                    } label: {
+                        Text("🏠 Yes, rest day")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(AppColors.accentGold)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(AppColors.accentGold.opacity(0.12))
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppColors.accentGold.opacity(0.25), lineWidth: 1))
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            restDayDismissed = true
+                        }
+                    } label: {
+                        Text("💪 No, gym today")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.40))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.white.opacity(0.06))
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.10), lineWidth: 1))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                HStack(spacing: 4) {
+                    Image(systemName: "flame")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.white.opacity(0.18))
+                    Text("Miss today and your streak resets")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.white.opacity(0.18))
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color.white.opacity(0.03))
+                    .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.10), lineWidth: 1))
+            )
         }
     }
 
@@ -876,105 +1255,187 @@ struct WorkoutListView: View {
     }
 }
 
-// MARK: - Home Summary Card
+/// MARK: - Home Summary Card
 
 private struct HomeSummaryCard: View {
     let streak: Int
-    let stats: WeeklyStats
     let thisWeekWorkouts: Int
     let weeklyGoal: Int
+    let weekDays: Set<Int>
+
+    // Days Mon–Sun (weekday 2–1 in Calendar; Mon=2, Sun=1)
+    private let orderedWeekdays: [Int] = [2, 3, 4, 5, 6, 7, 1] // Mon→Sun
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Row 1: Streak badge + key numbers
-            HStack(spacing: 0) {
-                if streak > 0 {
-                    HStack(spacing: 4) {
-                        Text("\u{1F525}")
-                            .font(.system(.caption))
-                        Text("\(streak)-day streak")
-                            .font(.system(.caption, weight: .semibold))
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule()
-                            .fill(AppColors.accentGold.opacity(0.15))
-                    )
-                    .foregroundStyle(AppColors.accentGold)
-
-                    Spacer()
+        HStack(spacing: 8) {
+            // Streak pill
+            if streak > 0 {
+                HStack(spacing: 4) {
+                    Text("🔥")
+                        .font(.system(.caption))
+                    Text("\(streak)")
+                        .font(.system(.caption, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.88))
+                    Text("streak")
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.55))
                 }
-
-                Text("\(stats.workoutCount) workout\(stats.workoutCount == 1 ? "" : "s")")
-                    .foregroundStyle(.secondary)
-                Text("  ·  ")
-                    .foregroundStyle(.tertiary)
-                Text("\(stats.totalSets) sets")
-                    .foregroundStyle(.secondary)
-                Text("  ·  ")
-                    .foregroundStyle(.tertiary)
-                if let delta = stats.volumeDelta {
-                    Text("\(delta >= 0 ? "\u{2191}" : "\u{2193}")\(String(format: "%.0f", abs(delta)))% vol")
-                        .foregroundStyle(delta >= 0 ? AppColors.accentGold : .red)
-                } else {
-                    Text("\(formatVolume(stats.totalVolume)) \(UnitFormatter.weightUnit)")
-                        .foregroundStyle(.secondary)
-                }
-
-                if streak == 0 {
-                    Spacer()
-                }
-            }
-            .font(.system(.subheadline, weight: .medium))
-
-            // Row 2: Weekly goal progress bar
-            VStack(spacing: 4) {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(AppColors.accent.opacity(0.12))
-                            .frame(height: 6)
-                        Capsule()
-                            .fill(AppColors.accent)
-                            .frame(width: geo.size.width * min(1.0, CGFloat(thisWeekWorkouts) / max(1, CGFloat(weeklyGoal))), height: 6)
-                    }
-                }
-                .frame(height: 6)
-
-                HStack {
-                    Text("Weekly goal")
-                        .font(.system(.caption2))
-                        .foregroundStyle(.tertiary)
-                    Spacer()
-                    Text("\(thisWeekWorkouts)/\(weeklyGoal)")
-                        .font(.system(.caption2, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    LinearGradient(
-                        colors: [AppColors.accent.opacity(0.3), AppColors.accentGold.opacity(0.15), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule()
+                        .fill(AppColors.accentGold.opacity(0.13))
                 )
+
+                Circle()
+                    .fill(Color.white.opacity(0.20))
+                    .frame(width: 3, height: 3)
+            }
+
+            // Week dots + count
+            HStack(spacing: 5) {
+                HStack(spacing: 4) {
+                    ForEach(orderedWeekdays, id: \.self) { day in
+                        Circle()
+                            .fill(weekDays.contains(day) ? AppColors.accent.opacity(0.85) : Color.white.opacity(0.15))
+                            .frame(width: 7, height: 7)
+                    }
+                }
+
+                Text("\(thisWeekWorkouts)")
+                    .font(.system(.caption, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.88))
+                Text("/\(weeklyGoal) this week")
+                    .font(.system(.caption, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.55))
+            }
+
+            Spacer()
         }
         .accessibilityIdentifier("homeSummaryCard")
     }
+}
 
-    private func formatVolume(_ volume: Double) -> String {
-        let display = UnitFormatter.convertToDisplay(volume)
-        if display >= 1000 {
-            return String(format: "%.1fk", display / 1000)
+// MARK: - Recent Workout Row
+
+private struct RecentWorkoutRow: View {
+    let workout: Workout
+    let prCount: Int
+    let onTap: () -> Void
+
+    private var exerciseCount: Int {
+        workout.exercises?.count ?? 0
+    }
+
+    private var totalVolume: Double {
+        guard let exercises = workout.exercises else { return 0 }
+        return exercises.reduce(0.0) { total, exercise in
+            total + (exercise.sets ?? []).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
         }
-        return String(format: "%.0f", display)
+    }
+
+    private var durationString: String? {
+        guard let start = workout.startTime, let end = workout.endTime else { return nil }
+        let secs = Int(end.timeIntervalSince(start))
+        let h = secs / 3600
+        let m = (secs % 3600) / 60
+        if h > 0 { return "\(h)h \(m)m" }
+        return m > 0 ? "\(m)m" : nil
+    }
+
+    private var relativeDateString: String {
+        let cal = Calendar.current
+        let now = Date()
+        if cal.isDateInToday(workout.date) { return "Today" }
+        if cal.isDateInYesterday(workout.date) { return "Yesterday" }
+        let days = cal.dateComponents([.day], from: workout.date, to: now).day ?? 0
+        if days < 7 {
+            let fmt = DateFormatter()
+            fmt.dateFormat = "EEE"
+            return fmt.string(from: workout.date)
+        }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        return fmt.string(from: workout.date)
+    }
+
+    private var volumeString: String {
+        let display = UnitFormatter.convertToDisplay(totalVolume)
+        if display >= 1000 {
+            return String(format: "%.1fk %@", display / 1000, UnitFormatter.weightUnit)
+        }
+        return String(format: "%.0f %@", display, UnitFormatter.weightUnit)
+    }
+
+    var body: some View {
+        Button {
+            onTap()
+        } label: {
+            HStack(spacing: 12) {
+                // Left accent bar
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(
+                        LinearGradient(
+                            colors: [AppColors.accent, AppColors.accent.opacity(0.2)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 3, height: 36)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(workout.name)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.88))
+                            .lineLimit(1)
+
+                        if prCount > 0 {
+                            HStack(spacing: 3) {
+                                Text("🏆")
+                                    .font(.system(size: 10))
+                                Text("\(prCount) PR\(prCount == 1 ? "" : "s")")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(AppColors.accentGold)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(AppColors.accentGold.opacity(0.12))
+                                    .overlay(Capsule().stroke(AppColors.accentGold.opacity(0.22), lineWidth: 1))
+                            )
+                        }
+
+                        Spacer()
+                    }
+
+                    HStack(spacing: 4) {
+                        Text("\(exerciseCount) exercise\(exerciseCount == 1 ? "" : "s")")
+                        if totalVolume > 0 {
+                            Text("·")
+                            Text(volumeString)
+                        }
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.white.opacity(0.35))
+                }
+
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(relativeDateString)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.40))
+
+                    if let dur = durationString {
+                        Text(dur)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.22))
+                    }
+                }
+            }
+            .padding(.vertical, 11)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -1026,26 +1487,45 @@ private struct TemplateHeroCard: View {
 
                 Spacer(minLength: 8)
 
-                // Exercise list
-                VStack(alignment: .leading, spacing: 5) {
-                    let displayCount = min(exercises.count, 4)
-                    let overflow = exercises.count - displayCount
-                    ForEach(exercises.prefix(displayCount)) { exercise in
+                // Exercise list with set counts
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(exercises) { exercise in
+                        let setCount = exercise.sets?.count ?? 0
+                        let muscle = ExerciseLibrary.shared.find(name: exercise.name)?.muscleGroup
                         HStack(spacing: 8) {
+                            // Accent dot
                             Circle()
-                                .fill(AppColors.accent.opacity(0.6))
+                                .fill(AppColors.accent.opacity(0.5))
                                 .frame(width: 5, height: 5)
+
+                            // Exercise name
                             Text(exercise.name)
-                                .font(.system(.subheadline))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.white.opacity(0.70))
                                 .lineLimit(1)
+
+                            Spacer(minLength: 4)
+
+                            // Set count pill
+                            if setCount > 0 {
+                                Text("\(setCount) sets")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(AppColors.accent.opacity(0.7))
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        Capsule()
+                                            .fill(AppColors.accent.opacity(0.10))
+                                    )
+                            }
+
+                            // Muscle tag
+                            if let muscle {
+                                Text(muscle.rawValue)
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(Color.white.opacity(0.30))
+                            }
                         }
-                    }
-                    if overflow > 0 {
-                        Text("+\(overflow) more")
-                            .font(.system(.caption))
-                            .foregroundStyle(.tertiary)
-                            .padding(.leading, 13)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -1067,7 +1547,6 @@ private struct TemplateHeroCard: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 190)
             .background {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(AppColors.accent.opacity(0.06))

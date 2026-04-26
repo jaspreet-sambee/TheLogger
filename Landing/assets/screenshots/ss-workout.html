@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390">
+  <title>TheLogger — Active Workout</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent: #F5573E; --gold: #E8A833; --teal: #3DBDAE; --green: #30B955;
+      --blue: #6B9FFF;
+      --text: #F2EDE8; --muted: #8C8680; --dim: #504A45;
+    }
+    body {
+      width: 390px; height: 844px; overflow: hidden;
+      background: #0F0D0B;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      position: relative;
+    }
+    body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .dynamic-island {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 28px; background: #000; border-radius: 20px; z-index: 20;
+    }
+    .status-bar {
+      height: 54px; display: flex; align-items: flex-end;
+      justify-content: space-between; padding: 0 24px 10px; position: relative; z-index: 2;
+    }
+    .status-time { font-size: 15px; font-weight: 600; }
+    .status-icons { display: flex; gap: 6px; align-items: center; }
+    .status-icons svg { fill: var(--text); }
+
+    .nav-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px 14px; position: relative; z-index: 2;
+    }
+    .nav-back { font-size: 16px; color: var(--accent); font-weight: 600; }
+    .nav-center { text-align: center; }
+    .nav-title { font-size: 17px; font-weight: 800; }
+    .nav-timer {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 700; margin-top: 2px;
+    }
+    .timer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px rgba(48,185,85,0.7); }
+    .nav-end {
+      background: linear-gradient(135deg, #F57055 0%, #E83520 100%);
+      color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
+      font-size: 14px; font-weight: 700; font-family: inherit;
+      box-shadow: 0 4px 14px rgba(232,53,32,0.38);
+    }
+
+    .content { padding: 0 14px; position: relative; z-index: 2; }
+
+    /* Exercise cards */
+    .card {
+      border-radius: 16px; margin-bottom: 10px; overflow: hidden;
+      position: relative;
+    }
+    .card-inner {
+      background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 4px 18px rgba(0,0,0,0.3);
+    }
+    /* Left border accent */
+    .card-inner::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--muted); border-radius: 0;
+    }
+    .card-inner--done::before { background: var(--teal); }
+    .card-inner--active::before {
+      background: linear-gradient(180deg, #F5A03E 0%, #F5573E 100%);
+      box-shadow: 0 0 10px rgba(245,87,62,0.5);
+    }
+    .card-inner--active {
+      border-color: rgba(245,87,62,0.25); background: rgba(245,87,62,0.05);
+    }
+
+    .ex-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px 8px 16px;
+    }
+    .ex-left { display: flex; align-items: center; gap: 10px; }
+    .ex-name { font-size: 15px; font-weight: 800; }
+    .ex-muscle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .ex-completion {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .comp-text { font-size: 12px; font-weight: 700; color: var(--muted); }
+    .comp-check { font-size: 15px; color: var(--teal); }
+
+    .set-list { padding: 0 14px 4px 16px; }
+    .set-row {
+      display: grid; grid-template-columns: 22px 52px 1fr 1fr 32px;
+      gap: 6px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); align-items: center;
+    }
+    .set-row:last-child { border-bottom: none; }
+    .set-num { font-size: 12px; color: var(--dim); font-weight: 600; text-align: center; }
+    .set-type {
+      font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px;
+      background: rgba(255,255,255,0.06); color: var(--muted); width: fit-content;
+    }
+    .set-val { font-size: 14px; font-weight: 700; }
+    .set-check { font-size: 17px; text-align: center; }
+    .set-pr {
+      background: rgba(232,168,51,0.15); border-radius: 5px;
+      padding: 2px 6px; font-size: 10px; font-weight: 700; color: var(--gold);
+      border: 1px solid rgba(232,168,51,0.25);
+    }
+
+    .add-set-row {
+      display: flex; gap: 8px; padding: 10px 14px 10px 16px;
+      background: rgba(255,255,255,0.025); border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .stepper-field {
+      flex: 1; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 11px; padding: 9px 11px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .field-label { font-size: 10px; color: var(--dim); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .field-val { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; margin-top: 1px; }
+    .stepper-btns { display: flex; gap: 3px; }
+    .sbtn {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: var(--text);
+    }
+    .log-btn {
+      background: linear-gradient(135deg, #F57055 0%, #E83520 100%);
+      border: none; border-radius: 11px; padding: 9px 16px;
+      color: #fff; font-size: 14px; font-weight: 800; font-family: inherit;
+      box-shadow: 0 4px 14px rgba(232,53,32,0.35);
+    }
+
+    .add-ex {
+      width: 100%; margin: 2px 0 8px;
+      border: 1px dashed rgba(245,87,62,0.3); background: rgba(245,87,62,0.04);
+      border-radius: 12px; padding: 12px; color: var(--accent);
+      font-size: 14px; font-weight: 700; font-family: inherit; text-align: center;
+    }
+
+    /* Rest banner */
+    .rest-banner {
+      position: absolute; bottom: 83px; left: 0; right: 0;
+      background: rgba(245,87,62,0.09); border-top: 1px solid rgba(245,87,62,0.2);
+      padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
+      z-index: 5;
+      backdrop-filter: blur(8px);
+    }
+    .rest-left { display: flex; align-items: center; gap: 10px; }
+    .rest-ring-wrap { position: relative; width: 32px; height: 32px; }
+    .rest-ring-svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+    .rest-ring-track { stroke: rgba(255,255,255,0.08); fill: none; }
+    .rest-ring-prog { stroke: var(--accent); fill: none; stroke-linecap: round; stroke-dasharray: 82; stroke-dashoffset: 30; }
+    .rest-ring-time { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; }
+    .rest-label { font-size: 13px; font-weight: 700; color: var(--accent); }
+    .rest-context { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .rest-big-time { font-size: 22px; font-weight: 900; color: var(--accent); letter-spacing: -1px; }
+    .rest-skip { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    .tab-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 83px;
+      background: rgba(15,13,11,0.97); border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: flex-start; justify-content: space-around;
+      padding-top: 12px; z-index: 10; backdrop-filter: blur(24px);
+    }
+    .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .tab-icon { font-size: 22px; }
+    .tab-label { font-size: 10px; font-weight: 600; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="dynamic-island"></div>
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" opacity="0.4"/><rect x="4.5" y="2" width="3" height="10" rx="1" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="1" opacity="0.8"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="2.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="rgba(255,255,255,0.4)"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="#F2EDE8"/></svg>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <span class="nav-back">‹ Home</span>
+    <div class="nav-center">
+      <div class="nav-title">Push Day</div>
+      <div class="nav-timer"><div class="timer-dot"></div><span style="color:var(--green)">0:47:23</span></div>
+    </div>
+    <button class="nav-end">End</button>
+  </div>
+  <div class="content">
+    <!-- Bench Press — done -->
+    <div class="card">
+      <div class="card-inner card-inner--done">
+        <div class="ex-header">
+          <div class="ex-left">
+            <div>
+              <div class="ex-name">Bench Press</div>
+              <div class="ex-muscle">Chest · Shoulders · Triceps</div>
+            </div>
+          </div>
+          <div class="ex-completion">
+            <span class="comp-text">3 sets</span>
+            <span class="comp-check">✓</span>
+          </div>
+        </div>
+        <div class="set-list">
+          <div class="set-row">
+            <span class="set-num">1</span><span class="set-type">Work</span>
+            <span class="set-val">185 lbs</span><span class="set-val" style="color:var(--muted)">8 reps</span>
+            <span class="set-check" style="color:var(--teal)">✓</span>
+          </div>
+          <div class="set-row">
+            <span class="set-num">2</span><span class="set-type">Work</span>
+            <span class="set-val">185 lbs</span><span class="set-val" style="color:var(--muted)">8 reps</span>
+            <span class="set-check" style="color:var(--teal)">✓</span>
+          </div>
+          <div class="set-row">
+            <span class="set-num">3</span><span class="set-type">Work</span>
+            <span class="set-val" style="color:var(--gold)">190 lbs</span><span class="set-val" style="color:var(--muted)">5 reps</span>
+            <span><span class="set-pr">🏆 PR</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Overhead Press — active -->
+    <div class="card">
+      <div class="card-inner card-inner--active">
+        <div class="ex-header">
+          <div>
+            <div class="ex-name">Overhead Press</div>
+            <div class="ex-muscle">Shoulders · Triceps</div>
+          </div>
+          <span class="comp-text" style="color:var(--muted)">Set 3</span>
+        </div>
+        <div class="set-list">
+          <div class="set-row">
+            <span class="set-num">1</span><span class="set-type">Work</span>
+            <span class="set-val">115 lbs</span><span class="set-val" style="color:var(--muted)">8 reps</span>
+            <span class="set-check" style="color:var(--teal)">✓</span>
+          </div>
+          <div class="set-row">
+            <span class="set-num">2</span><span class="set-type">Work</span>
+            <span class="set-val">115 lbs</span><span class="set-val" style="color:var(--muted)">8 reps</span>
+            <span class="set-check" style="color:var(--teal)">✓</span>
+          </div>
+        </div>
+        <div class="add-set-row">
+          <div class="stepper-field">
+            <div><div class="field-label">Weight</div><div class="field-val">120</div></div>
+            <div class="stepper-btns"><div class="sbtn">−</div><div class="sbtn">+</div></div>
+          </div>
+          <div class="stepper-field">
+            <div><div class="field-label">Reps</div><div class="field-val">6</div></div>
+            <div class="stepper-btns"><div class="sbtn">−</div><div class="sbtn">+</div></div>
+          </div>
+          <button class="log-btn">Log ✓</button>
+        </div>
+      </div>
+    </div>
+    <button class="add-ex">+ Add Exercise</button>
+  </div>
+  <div class="rest-banner">
+    <div class="rest-left">
+      <div class="rest-ring-wrap">
+        <svg class="rest-ring-svg" viewBox="0 0 32 32">
+          <circle class="rest-ring-track" cx="16" cy="16" r="13" stroke-width="3"/>
+          <circle class="rest-ring-prog" cx="16" cy="16" r="13" stroke-width="3"/>
+        </svg>
+        <div class="rest-ring-time">1:47</div>
+      </div>
+      <div>
+        <div class="rest-label">Rest Timer</div>
+        <div class="rest-context">After Bench Press · Set 3</div>
+      </div>
+    </div>
+    <div class="rest-skip">Skip →</div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab-item"><span class="tab-icon">🏠</span><span class="tab-label" style="color:var(--accent)">Home</span></div>
+    <div class="tab-item"><span class="tab-icon">📊</span><span class="tab-label">Stats</span></div>
+    <div class="tab-item"><span class="tab-icon">👤</span><span class="tab-label">Profile</span></div>
+  </div>
+</body>
+</html>

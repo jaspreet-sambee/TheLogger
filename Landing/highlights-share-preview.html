@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Highlights &amp; Share Card Editor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#08080c;
+  font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:40px 20px 80px;gap:20px;-webkit-font-smoothing:antialiased;
+}
+.page-heading{color:rgba(255,255,255,.4);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
+.phones-row{display:flex;gap:48px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.phone-label{font-size:11px;font-weight:600;color:rgba(255,255,255,.3);letter-spacing:.06em;text-transform:uppercase;}
+
+/* iPhone */
+.iphone{
+  width:375px;height:812px;border-radius:52px;
+  overflow:hidden;position:relative;flex-shrink:0;
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 0 0 1px rgba(255,255,255,.03),0 40px 100px rgba(0,0,0,.85);
+}
+.di{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:20;}
+.sb{position:relative;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:14px 28px 0;height:44px;}
+.sb-time{font-size:15px;font-weight:600;color:rgba(255,255,255,.9);}
+.sb-icons{display:flex;gap:6px;align-items:center;}
+.sb-icons svg{fill:rgba(255,255,255,.8);}
+
+/* ═══════════════════════════════════════════════════════ */
+/* HIGHLIGHTS SCREEN                                       */
+/* ═══════════════════════════════════════════════════════ */
+.highlights-bg{
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(90,30,120,.45) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 85%, rgba(180,50,50,.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(20,20,40,.9) 0%, transparent 100%),
+    #0a0a12;
+}
+.hl-content{position:relative;z-index:1;height:calc(812px - 44px);display:flex;flex-direction:column;}
+
+/* Header */
+.hl-header{display:flex;align-items:center;padding:12px 20px;gap:10px;}
+.hl-skip{
+  font-size:13px;font-weight:500;color:rgba(255,255,255,.45);
+  padding:6px 14px;border-radius:20px;
+  background:rgba(255,255,255,.08);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.06);
+}
+.hl-title-area{flex:1;text-align:center;}
+.hl-title{font-size:18px;font-weight:700;color:#fff;}
+.hl-subtitle{font-size:11px;font-weight:500;color:rgba(255,255,255,.35);margin-top:2px;}
+.hl-skip-spacer{width:52px;}/* balance */
+
+/* Frame card */
+.hl-frame-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 28px;}
+.hl-frame-card{
+  width:100%;max-width:320px;border-radius:20px;overflow:hidden;position:relative;
+  box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);
+}
+.hl-frame-img{
+  width:100%;aspect-ratio:2/3;
+  background:linear-gradient(145deg,#2a1a3a,#1a1a2e,#1e1428);
+  display:flex;align-items:center;justify-content:center;
+}
+.hl-frame-img-placeholder{
+  font-size:48px;font-weight:800;color:rgba(255,255,255,.06);letter-spacing:2px;
+}
+/* Frosted bottom overlay on image */
+.hl-frame-meta{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:16px;
+  background:linear-gradient(to top,rgba(0,0,0,.75) 0%,rgba(0,0,0,.3) 60%,transparent 100%);
+  display:flex;align-items:flex-end;justify-content:space-between;
+}
+.hl-set-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;}
+.hl-set-stats{font-size:22px;font-weight:800;color:#fff;margin-top:3px;letter-spacing:-.3px;}
+.hl-pr-badge{
+  display:flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:20px;
+  background:rgba(255,255,255,.12);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,184,77,.25);
+  font-size:12px;font-weight:700;color:#ffb84d;
+}
+
+/* Exercise name below card */
+.hl-exercise-name{
+  font-size:13px;font-weight:600;color:rgba(255,255,255,.35);
+  margin-top:14px;letter-spacing:.5px;
+}
+
+/* Bottom action area */
+.hl-bottom{padding:0 20px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.hl-share-btn{
+  width:100%;height:52px;border-radius:14px;
+  background:linear-gradient(135deg,#e8384a,#ff5a30);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:700;color:#fff;
+  box-shadow:0 8px 24px rgba(232,56,74,.35);
+  position:relative;overflow:hidden;
+}
+.hl-share-btn::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:50%;
+  background:linear-gradient(to bottom,rgba(255,255,255,.15),transparent);
+}
+.hl-page-ind{font-size:12px;font-weight:500;color:rgba(255,255,255,.25);}
+
+/* Dot indicators */
+.hl-dots{display:flex;gap:6px;margin-top:4px;}
+.hl-dot{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);transition:all .2s;}
+.hl-dot.active{width:18px;background:rgba(255,255,255,.7);}
+
+/* ═══════════════════════════════════════════════════════ */
+/* SHARE CARD EDITOR                                       */
+/* ═══════════════════════════════════════════════════════ */
+.editor-bg{
+  background:
+    radial-gradient(ellipse at 30% 0%, rgba(232,56,74,.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 100%, rgba(128,166,255,.08) 0%, transparent 50%),
+    #0f0f14;
+}
+.ed-content{position:relative;z-index:1;height:calc(812px - 44px);display:flex;flex-direction:column;overflow-y:auto;}
+
+/* Toolbar */
+.ed-toolbar{
+  display:flex;align-items:center;justify-content:center;
+  padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.06);
+  position:relative;
+}
+.ed-toolbar-title{font-size:16px;font-weight:600;color:rgba(255,255,255,.9);}
+.ed-toolbar-sub{font-size:10px;font-weight:500;color:rgba(255,255,255,.35);margin-top:1px;}
+.ed-toolbar-sub .red{color:#e8384a;}
+
+/* Card preview */
+.ed-preview-area{padding:16px 56px 12px;display:flex;justify-content:center;}
+.ed-card-preview{
+  width:100%;aspect-ratio:9/16;border-radius:16px;overflow:hidden;position:relative;
+  background:#000;
+  box-shadow:0 16px 48px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06);
+}
+.ed-card-photo{
+  width:100%;height:100%;
+  background:linear-gradient(160deg,#2a1a1e,#1a1a2e,#1e2a1a);
+  display:flex;align-items:center;justify-content:center;
+}
+.ed-card-photo-text{font-size:28px;font-weight:800;color:rgba(255,255,255,.04);}
+/* Stats overlay on card */
+.ed-card-stats{
+  position:absolute;bottom:0;left:0;right:0;padding:20px;
+  background:linear-gradient(to top,rgba(0,0,0,.8),transparent);
+}
+.ed-card-exercise{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.2px;}
+.ed-card-wreps{font-size:15px;font-weight:700;color:rgba(235,175,80,.9);margin-top:3px;}
+.ed-card-1rm{font-size:12px;font-weight:500;color:rgba(255,255,255,.45);margin-top:2px;}
+.ed-card-brand{
+  position:absolute;top:12px;right:14px;
+  font-size:9px;font-weight:600;color:rgba(255,255,255,.2);letter-spacing:.5px;
+}
+
+/* Photo swap row */
+.ed-swap-row{
+  display:flex;margin:0 16px;padding:0;
+  background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.04);
+}
+.ed-swap-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:10px 0;font-size:10px;font-weight:500;color:rgba(255,255,255,.5);
+  border-right:1px solid rgba(255,255,255,.06);
+}
+.ed-swap-btn:last-child{border-right:none;}
+.ed-swap-btn svg{fill:rgba(255,255,255,.5);width:16px;height:16px;}
+.ed-swap-reset{
+  font-size:10px;font-weight:500;color:rgba(255,255,255,.3);
+  text-align:right;padding:6px 20px 0;
+}
+
+/* Section label */
+.ed-section-label{
+  font-size:10px;font-weight:600;color:rgba(255,255,255,.25);
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:12px 20px 6px;
+}
+
+/* Filter strip */
+.ed-filter-strip{
+  display:flex;gap:10px;padding:0 16px;overflow-x:auto;
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.ed-filter-strip::-webkit-scrollbar{display:none;}
+.ed-filter{
+  display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;
+}
+.ed-filter-thumb{
+  width:54px;height:96px;border-radius:10px;overflow:hidden;
+  border:2px solid transparent;transition:all .15s;
+}
+.ed-filter-thumb.active{border-color:#e8384a;box-shadow:0 0 12px rgba(232,56,74,.3);}
+.ed-filter-swatch{width:100%;height:100%;}
+.ed-filter-label{font-size:9px;font-weight:600;color:rgba(255,255,255,.35);letter-spacing:.03em;}
+.ed-filter-label.active{color:#e8384a;}
+
+/* Background strip */
+.ed-bg-strip{display:flex;gap:10px;padding:0 16px;}
+.ed-bg-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
+.ed-bg-swatch{
+  width:48px;height:48px;border-radius:10px;
+  border:2px solid transparent;transition:all .15s;
+}
+.ed-bg-swatch.active{border-color:#e8384a;box-shadow:0 0 10px rgba(232,56,74,.25);}
+.ed-bg-label{font-size:9px;font-weight:500;color:rgba(255,255,255,.3);}
+.ed-bg-label.active{color:#e8384a;}
+
+/* Stat chips */
+.ed-chip-row{display:flex;gap:8px;padding:0 16px;flex-wrap:wrap;}
+.ed-chip{
+  padding:7px 14px;border-radius:20px;
+  font-size:13px;font-weight:600;
+  border:1px solid rgba(232,56,74,.35);
+  color:#e8384a;background:rgba(232,56,74,.08);
+  display:flex;align-items:center;gap:5px;
+}
+.ed-chip.on{background:#e8384a;color:#fff;border-color:#e8384a;}
+.ed-chip-check{font-size:10px;font-weight:800;}
+
+/* Action buttons */
+.ed-actions{display:flex;gap:10px;padding:16px 16px 28px;}
+.ed-btn{
+  flex:1;height:48px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  font-size:15px;font-weight:600;
+}
+.ed-btn-skip{background:rgba(255,255,255,.06);color:rgba(255,255,255,.45);}
+.ed-btn-save{background:rgba(232,56,74,.12);color:#e8384a;border:1px solid rgba(232,56,74,.15);}
+.ed-btn-share{
+  background:linear-gradient(135deg,#e8384a,#ff5a30);color:#fff;
+  box-shadow:0 6px 18px rgba(232,56,74,.3);
+  position:relative;overflow:hidden;
+}
+.ed-btn-share::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:50%;
+  background:linear-gradient(to bottom,rgba(255,255,255,.12),transparent);
+}
+
+/* ═══════════════════════════════════════════════════════ */
+/* ANNOTATIONS                                             */
+/* ═══════════════════════════════════════════════════════ */
+.annotations{max-width:780px;width:100%;margin-top:32px;}
+.ann-title{font-size:12px;font-weight:600;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;}
+.ann-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;}
+.ann{display:flex;align-items:flex-start;gap:10px;margin-bottom:2px;}
+.ann-num{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+.n-red{background:#e8384a;}.n-purple{background:#7c3aed;}.n-gold{background:#ffb84d;}.n-blue{background:#80a6ff;}
+.ann-text{font-size:12px;color:rgba(255,255,255,.4);line-height:1.55;}
+.ann-text strong{color:rgba(255,255,255,.7);}
+</style>
+</head>
+<body>
+
+<div class="page-heading">TheLogger — Highlights &amp; Share Card Editor</div>
+
+<div class="phones-row">
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PHONE 1: HIGHLIGHTS / FRAME GALLERY                 -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Highlights Gallery (end of exercise)</div>
+  <div class="iphone highlights-bg">
+    <div class="di"></div>
+    <div class="sb">
+      <span class="sb-time">9:41</span>
+      <div class="sb-icons">
+        <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1"/><rect x="9" y="1" width="3" height="11" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 9.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-3.5a5.5 5.5 0 013.89 1.61l-1.42 1.42A3.5 3.5 0 008 8a3.5 3.5 0 00-2.47 1.03L4.11 7.61A5.5 5.5 0 018 6zm0-4a9.5 9.5 0 016.72 2.78l-1.42 1.42A7.5 7.5 0 008 4a7.5 7.5 0 00-5.3 2.2L1.28 4.78A9.5 9.5 0 018 2z"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="21" height="10" rx="3" stroke="rgba(255,255,255,.7)" stroke-width="1.2" fill="none"/><rect x="1.5" y="2.5" width="15" height="7" rx="1.5" fill="rgba(255,255,255,.85)"/><path d="M22.5 4v4a2 2 0 000-4z" fill="rgba(255,255,255,.5)"/></svg>
+      </div>
+    </div>
+
+    <div class="hl-content">
+      <!-- Header -->
+      <div class="hl-header">
+        <div class="hl-skip">Skip</div>
+        <div class="hl-title-area">
+          <div class="hl-title">Your Highlights</div>
+          <div class="hl-subtitle">3 shots captured</div>
+        </div>
+        <div class="hl-skip-spacer"></div>
+      </div>
+
+      <!-- Frame card -->
+      <div class="hl-frame-area">
+        <div class="hl-frame-card">
+          <div class="hl-frame-img">
+            <div class="hl-frame-img-placeholder">PEAK FRAME</div>
+          </div>
+          <div class="hl-frame-meta">
+            <div>
+              <div class="hl-set-label">SET 3</div>
+              <div class="hl-set-stats">6 × 225 lbs</div>
+            </div>
+            <div class="hl-pr-badge">🏆 PR</div>
+          </div>
+        </div>
+        <div class="hl-exercise-name">Bench Press</div>
+      </div>
+
+      <!-- Bottom -->
+      <div class="hl-bottom">
+        <div class="hl-share-btn">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="white"><path d="M10 2l4 4h-3v6H9V6H6l4-4zM4 12v4h12v-4h2v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5h2z"/></svg>
+          Share This Shot
+        </div>
+        <div class="hl-dots">
+          <div class="hl-dot"></div>
+          <div class="hl-dot"></div>
+          <div class="hl-dot active"></div>
+        </div>
+        <div class="hl-page-ind">3 of 3</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PHONE 2: SHARE CARD EDITOR                          -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Share Card Editor</div>
+  <div class="iphone editor-bg">
+    <div class="di"></div>
+    <div class="sb">
+      <span class="sb-time">9:41</span>
+      <div class="sb-icons">
+        <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1"/><rect x="9" y="1" width="3" height="11" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 9.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-3.5a5.5 5.5 0 013.89 1.61l-1.42 1.42A3.5 3.5 0 008 8a3.5 3.5 0 00-2.47 1.03L4.11 7.61A5.5 5.5 0 018 6zm0-4a9.5 9.5 0 016.72 2.78l-1.42 1.42A7.5 7.5 0 008 4a7.5 7.5 0 00-5.3 2.2L1.28 4.78A9.5 9.5 0 018 2z"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="21" height="10" rx="3" stroke="rgba(255,255,255,.7)" stroke-width="1.2" fill="none"/><rect x="1.5" y="2.5" width="15" height="7" rx="1.5" fill="rgba(255,255,255,.85)"/><path d="M22.5 4v4a2 2 0 000-4z" fill="rgba(255,255,255,.5)"/></svg>
+      </div>
+    </div>
+
+    <div class="ed-content">
+      <!-- Toolbar -->
+      <div class="ed-toolbar">
+        <div style="text-align:center;">
+          <div class="ed-toolbar-title">Share Your Set</div>
+          <div class="ed-toolbar-sub"><span class="red">2</span> cards left this month</div>
+        </div>
+      </div>
+
+      <!-- Card preview -->
+      <div class="ed-preview-area">
+        <div class="ed-card-preview">
+          <div class="ed-card-photo">
+            <div class="ed-card-photo-text">YOUR PHOTO</div>
+          </div>
+          <div class="ed-card-brand">THELOGGER</div>
+          <div class="ed-card-stats">
+            <div class="ed-card-exercise">Bench Press</div>
+            <div class="ed-card-wreps">225 lbs × 6 reps</div>
+            <div class="ed-card-1rm">Est. 1RM: 270 lbs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Photo swap -->
+      <div class="ed-swap-row">
+        <div class="ed-swap-btn">
+          <svg viewBox="0 0 20 20"><path d="M3 5h2l1.5-2h7L15 5h2a1 1 0 011 1v9a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1z"/><circle cx="10" cy="10" r="3" fill="#0f0f14"/></svg>
+          Camera
+        </div>
+        <div class="ed-swap-btn">
+          <svg viewBox="0 0 20 20"><path d="M3 5h2l1.5-2h7L15 5h2a1 1 0 011 1v9a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1z"/><circle cx="10" cy="10" r="3" fill="#0f0f14"/></svg>
+          Selfie
+        </div>
+        <div class="ed-swap-btn">
+          <svg viewBox="0 0 20 20"><rect x="2" y="4" width="16" height="12" rx="2"/><circle cx="7" cy="9" r="2" fill="#0f0f14"/><path d="M4 16l4-5 3 3 2-2 4 4" fill="none" stroke="#0f0f14" stroke-width="1.2"/></svg>
+          Library
+        </div>
+      </div>
+      <div class="ed-swap-reset">Reset</div>
+
+      <!-- Filters -->
+      <div class="ed-section-label">Film Style</div>
+      <div class="ed-filter-strip">
+        <div class="ed-filter">
+          <div class="ed-filter-thumb active"><div class="ed-filter-swatch" style="background:linear-gradient(160deg,#2a3a3e,#1a1a1e,#2e2818);"></div></div>
+          <div class="ed-filter-label active">CINEMATIC</div>
+        </div>
+        <div class="ed-filter">
+          <div class="ed-filter-thumb"><div class="ed-filter-swatch" style="background:linear-gradient(160deg,#3a2e20,#2e2418,#2a2018);"></div></div>
+          <div class="ed-filter-label">PORTRA</div>
+        </div>
+        <div class="ed-filter">
+          <div class="ed-filter-thumb"><div class="ed-filter-swatch" style="background:linear-gradient(160deg,#2a2a2a,#1a1a1a,#282828);"></div></div>
+          <div class="ed-filter-label">BLEACH</div>
+        </div>
+        <div class="ed-filter">
+          <div class="ed-filter-thumb"><div class="ed-filter-swatch" style="background:linear-gradient(160deg,#1e2830,#181e28,#202830);"></div></div>
+          <div class="ed-filter-label">CHROME</div>
+        </div>
+        <div class="ed-filter">
+          <div class="ed-filter-thumb"><div class="ed-filter-swatch" style="background:linear-gradient(160deg,#1a1a2e,#12121e,#1e1828);"></div></div>
+          <div class="ed-filter-label">MOODY</div>
+        </div>
+        <div class="ed-filter">
+          <div class="ed-filter-thumb"><div class="ed-filter-swatch" style="background:linear-gradient(160deg,#3a2a10,#2e2010,#2a1808);"></div></div>
+          <div class="ed-filter-label">GOLDEN</div>
+        </div>
+        <div class="ed-filter">
+          <div class="ed-filter-thumb"><div class="ed-filter-swatch" style="background:linear-gradient(160deg,#1a1a1a,#101010,#181818);"></div></div>
+          <div class="ed-filter-label">GRIT</div>
+        </div>
+        <div class="ed-filter">
+          <div class="ed-filter-thumb"><div class="ed-filter-swatch" style="background:linear-gradient(160deg,#2a1830,#201020,#2e1828);"></div></div>
+          <div class="ed-filter-label">VELVIA</div>
+        </div>
+      </div>
+
+      <!-- Backgrounds -->
+      <div class="ed-section-label">Background</div>
+      <div class="ed-bg-strip">
+        <div class="ed-bg-item">
+          <div class="ed-bg-swatch active" style="background:#0a0a0a;"></div>
+          <div class="ed-bg-label active">Dark</div>
+        </div>
+        <div class="ed-bg-item">
+          <div class="ed-bg-swatch" style="background:#e8e6e2;"></div>
+          <div class="ed-bg-label">Light</div>
+        </div>
+        <div class="ed-bg-item">
+          <div class="ed-bg-swatch" style="background:linear-gradient(135deg,#2a2a3a,#1a1a2a);"></div>
+          <div class="ed-bg-label">Blur</div>
+        </div>
+        <div class="ed-bg-item">
+          <div class="ed-bg-swatch" style="background:radial-gradient(circle at 50% 0%,rgba(235,175,80,.5),#0a0a0a 70%);"></div>
+          <div class="ed-bg-label">Glow</div>
+        </div>
+        <div class="ed-bg-item">
+          <div class="ed-bg-swatch" style="background:linear-gradient(135deg,#3a1040,#0a0a18,#10302a);"></div>
+          <div class="ed-bg-label">Vibrant</div>
+        </div>
+        <div class="ed-bg-item">
+          <div class="ed-bg-swatch" style="background:linear-gradient(135deg,#e8384a33,#0a0a0f,#80a6ff22);"></div>
+          <div class="ed-bg-label">Neon</div>
+        </div>
+      </div>
+
+      <!-- Stat chips -->
+      <div class="ed-section-label">Stats to show</div>
+      <div class="ed-chip-row">
+        <div class="ed-chip on"><span class="ed-chip-check">✓</span> Exercise</div>
+        <div class="ed-chip on"><span class="ed-chip-check">✓</span> Weight × Reps</div>
+        <div class="ed-chip">Est. 1RM</div>
+        <div class="ed-chip">Date</div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="ed-actions">
+        <div class="ed-btn ed-btn-skip">Skip</div>
+        <div class="ed-btn ed-btn-save">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="#e8384a"><path d="M10 14l-4-4h3V2h2v8h3l-4 4zM4 16v2h12v-2H4z"/></svg>
+          Save
+        </div>
+        <div class="ed-btn ed-btn-share">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="white"><path d="M10 2l4 4h-3v6H9V6H6l4-4zM4 12v4h12v-4h2v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5h2z"/></svg>
+          Share
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /phones-row -->
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ANNOTATIONS                                         -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="annotations">
+  <div class="ann-title">Highlights Gallery</div>
+  <div class="ann-grid">
+    <div class="ann">
+      <div class="ann-num n-purple">1</div>
+      <div class="ann-text"><strong>Mesh gradient background</strong> — Deep purple/red/blue gradient that shifts subtly as you swipe between frames. Gives the screen a premium, editorial feel instead of flat black.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-red">2</div>
+      <div class="ann-text"><strong>Frosted Skip pill</strong> — Glass-morphism capsule button instead of plain text. Easier tap target, doesn't compete with the main CTA.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-gold">3</div>
+      <div class="ann-text"><strong>Stats baked into the image card</strong> — Set number, weight × reps, and PR badge are overlaid on the bottom of the frame with a gradient scrim. No floating text below.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-blue">4</div>
+      <div class="ann-text"><strong>Elongated active dot</strong> — Page indicators use a pill shape for the active dot instead of all circles. Clearer which page you're on.</div>
+    </div>
+  </div>
+
+  <div class="ann-title" style="margin-top:28px;">Share Card Editor</div>
+  <div class="ann-grid">
+    <div class="ann">
+      <div class="ann-num n-red">1</div>
+      <div class="ann-text"><strong>Subtle gradient background</strong> — Red glow top-left, blue glow bottom-right on dark. More depth than the current flat system background.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-purple">2</div>
+      <div class="ann-text"><strong>Two new backgrounds: Vibrant &amp; Neon</strong> — "Vibrant" is a tri-color mesh (purple/dark/teal). "Neon" is red+blue edge glow. Added to the existing Dark/Light/Blur/Glow options.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-gold">3</div>
+      <div class="ann-text"><strong>Section labels</strong> — "Film Style", "Background", "Stats to show" labels above each strip. Helps users understand what each row of controls does.</div>
+    </div>
+    <div class="ann">
+      <div class="ann-num n-blue">4</div>
+      <div class="ann-text"><strong>Gradient CTA button</strong> — Share button uses the red→orange gradient with top shine and glow shadow (matching the app's GradientCTAStyle). Skip and Save are muted.</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -31,15 +31,24 @@ struct ExerciseSearchView: View {
         searchText.lowercased().trimmingCharacters(in: .whitespaces)
     }
 
-    // Filtered user exercises
+    // Filtered user exercises — deduplicated by normalized name (keep most recent)
     private var filteredUserExercises: [ExerciseMemory] {
-        guard isSearching else { return exerciseMemories }
-        return exerciseMemories.filter { $0.name.lowercased().contains(searchQuery) }
+        var seen = Set<String>()
+        let deduped = exerciseMemories.filter { m in
+            let key = m.normalizedName
+            guard !seen.contains(key) else { return false }
+            seen.insert(key)
+            return true
+        }
+        guard isSearching else { return deduped }
+        return deduped.filter { $0.name.lowercased().contains(searchQuery) }
     }
 
-    // Filtered library exercises (show all; recent exercises also appear in Recent section)
+    // Filtered library exercises — exclude names already in the Recent section to avoid duplicates
     private var filteredLibraryExercises: [LibraryExercise] {
-        isSearching ? library.search(searchText) : library.exercises
+        let recentNames = Set(filteredUserExercises.map { $0.normalizedName })
+        let results = isSearching ? library.search(searchText) : library.exercises
+        return results.filter { !recentNames.contains($0.normalizedName) }
     }
 
     // Check if exact match exists in library or user exercises
@@ -128,34 +137,40 @@ struct ExerciseSearchView: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "plus.circle.fill")
+                    .font(.system(.body, weight: .medium))
                     .foregroundStyle(AppColors.accent)
                 Text("Add \"\(searchText.trimmingCharacters(in: .whitespaces))\"")
+                    .font(.system(.body, weight: .medium))
                     .foregroundStyle(.primary)
                 Spacer()
                 Text("Custom")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(.caption2, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.25))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.white.opacity(0.06)))
             }
         }
-        .listRowBackground(Color.white.opacity(0.06))
+        .listRowBackground(AppColors.accent.opacity(0.06))
     }
 
     private var userExercisesSection: some View {
         Section {
             ForEach(filteredUserExercises, id: \.name) { memory in
                 Button { selectExercise(memory.name) } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
                             Text(memory.name)
+                                .font(.system(.body, weight: .medium))
                                 .foregroundStyle(.primary)
                             Text("\(memory.lastSets) sets · \(memory.lastReps) reps · \(UnitFormatter.formatWeightCompact(memory.lastWeight))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.system(.caption2, weight: .medium))
+                                .foregroundStyle(Color.white.opacity(0.35))
                         }
                         Spacer()
                         Image(systemName: "clock.arrow.circlepath")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
+                            .font(.system(.caption2, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.2))
                     }
                 }
                 .accessibilityIdentifier("exerciseResult_\(memory.name)")
@@ -163,8 +178,8 @@ struct ExerciseSearchView: View {
             }
         } header: {
             Text("Recent")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.system(.caption2, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.28))
                 .textCase(nil)
         }
     }
@@ -177,8 +192,8 @@ struct ExerciseSearchView: View {
         } header: {
             if !filteredLibraryExercises.isEmpty {
                 Text("Library")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(.caption2, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.28))
                     .textCase(nil)
             }
         }
@@ -195,11 +210,11 @@ struct ExerciseSearchView: View {
                 } header: {
                     HStack(spacing: 6) {
                         Image(systemName: group.icon)
-                            .font(.caption2)
+                            .font(.system(.caption2, weight: .medium))
                         Text(group.rawValue)
-                            .font(.caption)
+                            .font(.system(.caption2, weight: .semibold))
                     }
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.white.opacity(0.28))
                     .textCase(nil)
                 }
             }
@@ -210,8 +225,12 @@ struct ExerciseSearchView: View {
         Button { selectExercise(exercise.name) } label: {
             HStack {
                 Text(exercise.name)
+                    .font(.system(.body, weight: .medium))
                     .foregroundStyle(.primary)
                 Spacer()
+                Text(exercise.muscleGroup.rawValue)
+                    .font(.system(.caption2, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.2))
             }
         }
         .accessibilityIdentifier("exerciseResult_\(exercise.name)")

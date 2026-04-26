@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exercise Share Card Editor · TheLogger Mockups</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #060608;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    padding: 48px 40px 100px;
+    color: #fff;
+  }
+
+  .page-header { margin-bottom: 52px; }
+  .page-header h1 { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.28); margin-bottom: 4px; }
+  .page-header p  { font-size: 12px; color: rgba(255,255,255,.16); }
+
+  .section       { margin-bottom: 80px; }
+  .section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.2); margin-bottom: 24px; }
+
+  .phones-row { display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap; }
+  .phone-wrap  { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .phone-label { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.2); text-align: center; max-width: 390px; }
+
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; margin-bottom: 12px; }
+  .tag--blue  { background: rgba(128,166,255,.1);  color: #80A6FF; border: 1px solid rgba(128,166,255,.22); }
+  .tag--red   { background: rgba(232,56,74,.1);   color: #E8384A; border: 1px solid rgba(232,56,74,.22); }
+  .tag--gold  { background: rgba(255,184,77,.1);  color: #FFB84D; border: 1px solid rgba(255,184,77,.22); }
+  .tag--green { background: rgba(48,209,88,.1);   color: #30D158; border: 1px solid rgba(48,209,88,.22); }
+
+  /* ─── iPhone Shell ─── */
+  .iphone {
+    width: 390px; height: 844px;
+    background: #0A0A0F;
+    border-radius: 52px;
+    border: 1px solid rgba(255,255,255,.07);
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,.82), inset 0 1px 0 rgba(255,255,255,.05);
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .di { width: 126px; height: 36px; background: #000; border-radius: 0 0 22px 22px; margin: 0 auto; flex-shrink: 0; }
+
+  /* ─── Sheet chrome ─── */
+  .sheet-grab { width: 36px; height: 4px; background: rgba(255,255,255,.18); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
+  .sheet-nav {
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px 18px 10px; border-bottom: 1px solid rgba(255,255,255,.07); flex-shrink: 0;
+    position: relative;
+  }
+  .nav-title-stack { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .nav-title { font-size: 16px; font-weight: 700; }
+  .nav-sub   { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.4); }
+  .nav-sub--warn { color: #FF453A; }
+
+  .sheet-scroll { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 0; }
+
+  /* ─── Card Preview ─── */
+  .card-preview-wrap { padding: 14px 60px 0; flex-shrink: 0; }
+  /* 9:16 at 270×480 */
+  .share-card {
+    width: 270px; height: 480px; border-radius: 14px; overflow: hidden;
+    position: relative; box-shadow: 0 16px 40px rgba(0,0,0,.7);
+  }
+  .card-bg    { position: absolute; inset: 0; z-index: 1; }
+  .card-grain { position: absolute; inset: 0; z-index: 2; opacity: 0.06; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .card-vignette { position: absolute; inset: 0; z-index: 3; background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 35%, rgba(0,0,0,.7) 100%); }
+  .card-overlay  { position: absolute; inset: 0; z-index: 4; background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.4) 30%, transparent 58%); }
+  /* Skeleton pose silhouette */
+  .card-skel { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; }
+  .skel-svg { width: 160px; height: 280px; opacity: .55; }
+  /* Stats overlay at bottom */
+  .card-stats {
+    position: absolute; bottom: 18px; left: 12px; right: 12px; z-index: 10;
+    background: rgba(14,12,10,.84); border: 1px solid rgba(255,255,255,.13);
+    border-radius: 11px; padding: 10px 12px 8px;
+  }
+  .cs-exercise { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .65; margin-bottom: 3px; }
+  .cs-main { font-size: 20px; font-weight: 800; letter-spacing: -.01em; line-height: 1; margin-bottom: 5px; }
+  .cs-row { display: flex; align-items: center; justify-content: space-between; }
+  .cs-sub { font-size: 10px; opacity: .5; }
+  .cs-pr { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; color: #FFB84D; background: rgba(255,184,77,.15); border: 1px solid rgba(255,184,77,.3); }
+  /* Accent bar below exercise name */
+  .cs-accent-bar { width: 28px; height: 2px; border-radius: 1px; margin-bottom: 5px; }
+
+  /* ─── Photo Swap Row ─── */
+  .photo-swap-row {
+    display: flex; align-items: center; margin: 10px 20px 0;
+    background: rgba(255,255,255,.06); border-radius: 10px; flex-shrink: 0;
+    overflow: hidden; border: 1px solid rgba(255,255,255,.08);
+  }
+  .ps-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; font-size: 10px; color: rgba(255,255,255,.7); position: relative; }
+  .ps-btn + .ps-btn::before { content: ''; position: absolute; left: 0; top: 20%; height: 60%; width: 1px; background: rgba(255,255,255,.1); }
+  .ps-icon { font-size: 15px; }
+  .ps-reset { margin-left: auto; padding: 0 14px; font-size: 11px; color: rgba(255,255,255,.38); flex-shrink: 0; white-space: nowrap; }
+
+  /* ─── Filter Strip ─── */
+  .filter-strip { display: flex; gap: 8px; padding: 8px 18px; overflow-x: hidden; flex-shrink: 0; }
+  .filter-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+  .filter-thumb {
+    width: 50px; height: 88px; border-radius: 8px; overflow: hidden; position: relative; flex-shrink: 0;
+    transition: transform .15s;
+  }
+  .filter-thumb--selected { outline: 2px solid #fff; transform: scale(1.05); }
+  .filter-thumb-bg { position: absolute; inset: 0; }
+  .filter-thumb-skel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .filter-name { font-size: 7.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: rgba(255,255,255,.45); }
+  .filter-name--selected { color: #fff; font-weight: 700; }
+
+  /* ─── Background Swatch Row ─── */
+  .bg-strip { display: flex; gap: 8px; padding: 6px 18px; flex-shrink: 0; }
+  .bg-swatch { width: 48px; height: 48px; border-radius: 10px; position: relative; flex-shrink: 0; overflow: hidden; }
+  .bg-swatch--selected { outline: 2px solid #fff; transform: scale(1.07); }
+  .bg-swatch-label { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: rgba(255,255,255,.7); }
+
+  /* ─── Stat Toggle Chips ─── */
+  .stat-chips { display: flex; gap: 8px; padding: 6px 18px; flex-shrink: 0; flex-wrap: nowrap; overflow-x: hidden; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .chip--on  { background: #E8384A; color: #fff; }
+  .chip--off { background: rgba(232,56,74,.1); color: #E8384A; border: 1px solid rgba(232,56,74,.3); }
+  .chip-check { font-size: 9px; }
+
+  /* ─── CTA Row ─── */
+  .cta-row { display: flex; gap: 8px; padding: 8px 18px 20px; flex-shrink: 0; }
+  .btn { flex: 1; padding: 13px 8px; border-radius: 12px; font-size: 14px; font-weight: 700; text-align: center; display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .btn--skip  { background: rgba(255,255,255,.08); color: rgba(255,255,255,.55); flex: 0.7; }
+  .btn--save  { background: rgba(232,56,74,.12); color: #E8384A; border: 1px solid rgba(232,56,74,.2); flex: 0.9; font-size: 13px; }
+  .btn--share { background: #E8384A; color: #fff; flex: 1.1; }
+  .btn--share--loading { background: rgba(232,56,74,.7); }
+  .btn-icon { font-size: 13px; }
+
+  /* ─── Toast overlay ─── */
+  .toast-overlay { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 99; display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: rgba(30,30,34,.92); border: 1px solid rgba(255,255,255,.12); border-radius: 22px; white-space: nowrap; font-size: 13px; font-weight: 600; }
+  .toast-check { color: #30D158; font-size: 14px; }
+
+  /* ─── PR Badge on card ─── */
+  .pr-badge-abs { position: absolute; top: 14px; right: 14px; z-index: 20; display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; color: #FFB84D; background: rgba(14,12,10,.88); border: 1px solid rgba(255,184,77,.5); }
+
+  /* ─── Section dividers / Annotations ─── */
+  .annotation { font-size: 11px; color: rgba(255,255,255,.28); max-width: 390px; line-height: 1.5; margin-top: 8px; text-align: center; }
+
+  /* ─── Theme card variations (Row 2) ─── */
+  .themes-grid { display: flex; gap: 32px; flex-wrap: wrap; }
+  .theme-card-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .theme-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.25); }
+  .theme-card {
+    width: 200px; height: 355px; border-radius: 14px; overflow: hidden; position: relative;
+    box-shadow: 0 16px 40px rgba(0,0,0,.65);
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>TheLogger · Exercise Share Card Editor</h1>
+  <p>ShareCardEditorView — sheet that appears after logging a camera rep counter set</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ROW 1: Main editor states                                           -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Share Card Editor — States</div>
+  <div class="phones-row">
+
+    <!-- Phone 1: Default state — CIN theme, normal set -->
+    <div class="phone-wrap">
+      <div class="tag tag--blue">Default State</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-grab"></div>
+
+        <!-- Nav -->
+        <div class="sheet-nav">
+          <div class="nav-title-stack">
+            <div class="nav-title">Share Your Set</div>
+            <div class="nav-sub">2 cards left this month</div>
+          </div>
+        </div>
+
+        <div class="sheet-scroll">
+          <!-- Card Preview -->
+          <div class="card-preview-wrap">
+            <div class="share-card">
+              <!-- CIN theme: warm orange/brown bg -->
+              <div class="card-bg" style="background: radial-gradient(ellipse 120% 120% at 50% 110%, #5A3010 0%, #1E0E06 60%, #0A0604 100%);"></div>
+              <div class="card-grain"></div>
+              <div class="card-vignette"></div>
+              <div class="card-overlay"></div>
+              <!-- skeleton silhouette -->
+              <div class="card-skel">
+                <svg class="skel-svg" viewBox="0 0 160 280" fill="none" xmlns="http://www.w3.org/2000/svg" opacity="0.5">
+                  <!-- head -->
+                  <circle cx="80" cy="28" r="16" stroke="rgba(255,255,255,0.6)" stroke-width="2.5" fill="none"/>
+                  <!-- neck -->
+                  <line x1="80" y1="44" x2="80" y2="58" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <!-- shoulders -->
+                  <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+                  <!-- spine -->
+                  <line x1="80" y1="58" x2="80" y2="130" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <!-- left arm — bench press up position -->
+                  <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <!-- right arm -->
+                  <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <!-- barbell -->
+                  <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(255,255,255,0.7)" stroke-width="3.5"/>
+                  <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(255,255,255,0.5)"/>
+                  <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(255,255,255,0.5)"/>
+                  <!-- hips -->
+                  <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <!-- left leg -->
+                  <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <line x1="46" y1="200" x2="40" y2="256" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <!-- right leg -->
+                  <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <line x1="114" y1="200" x2="120" y2="256" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+                  <!-- joints -->
+                  <circle cx="80" cy="58" r="4" fill="rgba(255,255,255,0.6)"/>
+                  <circle cx="38" cy="76" r="3.5" fill="rgba(255,255,255,0.55)"/>
+                  <circle cx="122" cy="76" r="3.5" fill="rgba(255,255,255,0.55)"/>
+                  <circle cx="18" cy="60" r="3" fill="rgba(255,255,255,0.5)"/>
+                  <circle cx="142" cy="60" r="3" fill="rgba(255,255,255,0.5)"/>
+                  <circle cx="80" cy="130" r="4" fill="rgba(255,255,255,0.6)"/>
+                  <circle cx="54" cy="144" r="3.5" fill="rgba(255,255,255,0.55)"/>
+                  <circle cx="106" cy="144" r="3.5" fill="rgba(255,255,255,0.55)"/>
+                  <circle cx="46" cy="200" r="3" fill="rgba(255,255,255,0.5)"/>
+                  <circle cx="114" cy="200" r="3" fill="rgba(255,255,255,0.5)"/>
+                </svg>
+              </div>
+              <!-- Stats overlay -->
+              <div class="card-stats">
+                <div class="cs-exercise" style="color: #EA9430;">Bench Press</div>
+                <div class="cs-accent-bar" style="background: #EA9430;"></div>
+                <div class="cs-main">225 lbs × 8</div>
+                <div class="cs-row">
+                  <div class="cs-sub">Est. 1RM · 285 lbs</div>
+                  <div class="cs-sub">Mar 30, 2026</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Photo Swap Row -->
+          <div class="photo-swap-row">
+            <div class="ps-btn">
+              <div class="ps-icon">📷</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.6)">Camera</div>
+            </div>
+            <div class="ps-btn">
+              <div class="ps-icon">🤳</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.6)">Selfie</div>
+            </div>
+            <div class="ps-btn">
+              <div class="ps-icon">🖼️</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.6)">Library</div>
+            </div>
+            <div class="ps-reset">Reset ›</div>
+          </div>
+
+          <!-- Filter Strip — 8 themes -->
+          <div class="filter-strip">
+            <!-- CIN selected -->
+            <div class="filter-item">
+              <div class="filter-thumb filter-thumb--selected" style="outline-color:#EA9430;">
+                <div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5A3010 0%, #1E0E06 55%, #080402 100%);"></div>
+                <div class="filter-thumb-skel" style="opacity:.45; font-size:22px;">🏋️</div>
+              </div>
+              <div class="filter-name filter-name--selected">CIN</div>
+            </div>
+            <!-- POR -->
+            <div class="filter-item">
+              <div class="filter-thumb" style="">
+                <div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5C3C10 0%, #2A1A08 55%, #0C0804 100%);"></div>
+                <div class="filter-thumb-skel" style="opacity:.35; font-size:22px;">🏋️</div>
+              </div>
+              <div class="filter-name">POR</div>
+            </div>
+            <!-- BLE -->
+            <div class="filter-item">
+              <div class="filter-thumb">
+                <div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #505850 0%, #202820 50%, #080A08 100%);"></div>
+                <div class="filter-thumb-skel" style="opacity:.3; font-size:22px; filter:saturate(0.1);">🏋️</div>
+              </div>
+              <div class="filter-name">BLE</div>
+            </div>
+            <!-- CHR -->
+            <div class="filter-item">
+              <div class="filter-thumb">
+                <div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #1A3C5A 0%, #0A1E30 50%, #040810 100%);"></div>
+                <div class="filter-thumb-skel" style="opacity:.35; font-size:22px;">🏋️</div>
+              </div>
+              <div class="filter-name">CHR</div>
+            </div>
+            <!-- MOO -->
+            <div class="filter-item">
+              <div class="filter-thumb">
+                <div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #1A2050 0%, #0A0E28 50%, #040408 100%);"></div>
+                <div class="filter-thumb-skel" style="opacity:.3; font-size:22px;">🏋️</div>
+              </div>
+              <div class="filter-name">MOO</div>
+            </div>
+            <!-- GOL -->
+            <div class="filter-item">
+              <div class="filter-thumb">
+                <div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5A4010 0%, #281C06 50%, #0A0804 100%);"></div>
+                <div class="filter-thumb-skel" style="opacity:.4; font-size:22px;">🏋️</div>
+              </div>
+              <div class="filter-name">GOL</div>
+            </div>
+            <!-- GRI -->
+            <div class="filter-item">
+              <div class="filter-thumb">
+                <div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 50%, #282420 0%, #100E0C 50%, #060606 100%); filter: saturate(0);"></div>
+                <div class="filter-thumb-skel" style="opacity:.35; font-size:22px; filter:saturate(0);">🏋️</div>
+              </div>
+              <div class="filter-name">GRI</div>
+            </div>
+            <!-- VEL -->
+            <div class="filter-item">
+              <div class="filter-thumb">
+                <div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 0%, #006090 0%, #003040 50%, #000C18 100%);"></div>
+                <div class="filter-thumb-skel" style="opacity:.35; font-size:22px;">🏋️</div>
+              </div>
+              <div class="filter-name">VEL</div>
+            </div>
+          </div>
+
+          <!-- Background Swatch Row -->
+          <div class="bg-strip">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div class="bg-swatch bg-swatch--selected" style="background:#0D0B08; outline:2px solid #fff;">
+                <div class="bg-swatch-label">Dark</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div class="bg-swatch" style="background:linear-gradient(135deg,#2A1C0E,#1A0E04);">
+                <div class="bg-swatch-label">Blur</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div class="bg-swatch" style="background:linear-gradient(135deg,#D8C8B0,#C0A880);">
+                <div class="bg-swatch-label" style="color:rgba(0,0,0,.5)">Light</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div class="bg-swatch" style="background:radial-gradient(ellipse 140% 140% at 50% 110%,#5A3010,#0A0604);">
+                <div class="bg-swatch-label">Glow</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stat Toggle Chips -->
+          <div class="stat-chips">
+            <div class="chip chip--on"><span class="chip-check">✓</span> Exercise</div>
+            <div class="chip chip--on"><span class="chip-check">✓</span> Weight × Reps</div>
+            <div class="chip chip--off">Est. 1RM</div>
+            <div class="chip chip--off">Date</div>
+          </div>
+
+          <!-- CTA Row -->
+          <div class="cta-row">
+            <div class="btn btn--skip">Skip</div>
+            <div class="btn btn--save"><span class="btn-icon">↓</span> Save</div>
+            <div class="btn btn--share"><span class="btn-icon">↑</span> Share</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">Default: CIN theme · normal set · 2 cards left</div>
+    </div>
+
+    <!-- Phone 2: PR state — gold PR badge visible, 1 card left (warning red) -->
+    <div class="phone-wrap">
+      <div class="tag tag--gold">PR State</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-grab"></div>
+        <div class="sheet-nav">
+          <div class="nav-title-stack">
+            <div class="nav-title">Share Your Set</div>
+            <div class="nav-sub nav-sub--warn">1 card left this month</div>
+          </div>
+        </div>
+
+        <div class="sheet-scroll">
+          <div class="card-preview-wrap">
+            <div class="share-card">
+              <!-- GOL theme: golden warm -->
+              <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #7A5010 0%, #2C1C04 60%, #0A0802 100%);"></div>
+              <div class="card-grain"></div>
+              <div class="card-vignette"></div>
+              <div class="card-overlay"></div>
+              <!-- PR badge top-right -->
+              <div class="pr-badge-abs">🏆 NEW PR</div>
+              <!-- skeleton -->
+              <div class="card-skel">
+                <svg class="skel-svg" viewBox="0 0 160 280" fill="none" xmlns="http://www.w3.org/2000/svg" opacity="0.5">
+                  <circle cx="80" cy="28" r="16" stroke="rgba(255,200,80,0.7)" stroke-width="2.5" fill="none"/>
+                  <line x1="80" y1="44" x2="80" y2="58" stroke="rgba(255,200,80,0.6)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(255,200,80,0.6)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(255,200,80,0.6)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="80" y2="130" stroke="rgba(255,200,80,0.55)" stroke-width="2.5"/>
+                  <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(255,200,80,0.55)" stroke-width="2.5"/>
+                  <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(255,200,80,0.55)" stroke-width="2.5"/>
+                  <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(255,200,80,0.55)" stroke-width="2.5"/>
+                  <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(255,200,80,0.55)" stroke-width="2.5"/>
+                  <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(255,200,80,0.8)" stroke-width="3.5"/>
+                  <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(255,200,80,0.6)"/>
+                  <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(255,200,80,0.6)"/>
+                  <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(255,200,80,0.55)" stroke-width="2.5"/>
+                  <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(255,200,80,0.55)" stroke-width="2.5"/>
+                  <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(255,200,80,0.5)" stroke-width="2.5"/>
+                  <line x1="46" y1="200" x2="40" y2="256" stroke="rgba(255,200,80,0.5)" stroke-width="2.5"/>
+                  <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(255,200,80,0.5)" stroke-width="2.5"/>
+                  <line x1="114" y1="200" x2="120" y2="256" stroke="rgba(255,200,80,0.5)" stroke-width="2.5"/>
+                  <circle cx="80" cy="58" r="4" fill="rgba(255,200,80,0.7)"/>
+                  <circle cx="38" cy="76" r="3.5" fill="rgba(255,200,80,0.65)"/>
+                  <circle cx="122" cy="76" r="3.5" fill="rgba(255,200,80,0.65)"/>
+                  <circle cx="18" cy="60" r="3" fill="rgba(255,200,80,0.6)"/>
+                  <circle cx="142" cy="60" r="3" fill="rgba(255,200,80,0.6)"/>
+                  <circle cx="80" cy="130" r="4" fill="rgba(255,200,80,0.7)"/>
+                  <circle cx="54" cy="144" r="3.5" fill="rgba(255,200,80,0.65)"/>
+                  <circle cx="106" cy="144" r="3.5" fill="rgba(255,200,80,0.65)"/>
+                  <circle cx="46" cy="200" r="3" fill="rgba(255,200,80,0.6)"/>
+                  <circle cx="114" cy="200" r="3" fill="rgba(255,200,80,0.6)"/>
+                </svg>
+              </div>
+              <div class="card-stats">
+                <div class="cs-exercise" style="color:#E8A020;">Bench Press</div>
+                <div class="cs-accent-bar" style="background:#E8A020;"></div>
+                <div class="cs-main">245 lbs × 6</div>
+                <div class="cs-row">
+                  <div class="cs-pr">🏆 NEW PR</div>
+                  <div class="cs-sub">Mar 30, 2026</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Photo Swap Row -->
+          <div class="photo-swap-row">
+            <div class="ps-btn"><div class="ps-icon">📷</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Camera</div></div>
+            <div class="ps-btn"><div class="ps-icon">🤳</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Selfie</div></div>
+            <div class="ps-btn"><div class="ps-icon">🖼️</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Library</div></div>
+            <div class="ps-reset">Reset ›</div>
+          </div>
+
+          <!-- Filter Strip — GOL selected -->
+          <div class="filter-strip">
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5A3010 0%, #1E0E06 55%, #080402 100%);"></div><div class="filter-thumb-skel" style="opacity:.4;font-size:22px;">🏋️</div></div><div class="filter-name">CIN</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5C3C10 0%, #2A1A08 55%, #0C0804 100%);"></div><div class="filter-thumb-skel" style="opacity:.35;font-size:22px;">🏋️</div></div><div class="filter-name">POR</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #505850 0%, #202820 50%, #080A08 100%);"></div><div class="filter-thumb-skel" style="opacity:.3;font-size:22px;filter:saturate(0.1);">🏋️</div></div><div class="filter-name">BLE</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #1A3C5A 0%, #0A1E30 50%, #040810 100%);"></div><div class="filter-thumb-skel" style="opacity:.35;font-size:22px;">🏋️</div></div><div class="filter-name">CHR</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #1A2050 0%, #0A0E28 50%, #040408 100%);"></div><div class="filter-thumb-skel" style="opacity:.3;font-size:22px;">🏋️</div></div><div class="filter-name">MOO</div></div>
+            <!-- GOL selected -->
+            <div class="filter-item"><div class="filter-thumb filter-thumb--selected" style="outline-color:#E8A020;"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5A4010 0%, #281C06 50%, #0A0804 100%);"></div><div class="filter-thumb-skel" style="opacity:.4;font-size:22px;">🏋️</div></div><div class="filter-name filter-name--selected">GOL</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 50%, #282420 0%, #100E0C 50%, #060606 100%); filter:saturate(0);"></div><div class="filter-thumb-skel" style="opacity:.35;font-size:22px;filter:saturate(0);">🏋️</div></div><div class="filter-name">GRI</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 0%, #006090 0%, #003040 50%, #000C18 100%);"></div><div class="filter-thumb-skel" style="opacity:.35;font-size:22px;">🏋️</div></div><div class="filter-name">VEL</div></div>
+          </div>
+
+          <!-- BG swatches -->
+          <div class="bg-strip">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:#0D0B08;"><div class="bg-swatch-label">Dark</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:linear-gradient(135deg,#3A2C0E,#1A1004);"><div class="bg-swatch-label">Blur</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:linear-gradient(135deg,#E0D0B0,#C8B080);"><div class="bg-swatch-label" style="color:rgba(0,0,0,.5)">Light</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch bg-swatch--selected" style="background:radial-gradient(ellipse 140% 140% at 50% 110%,#5A4010,#0A0804); outline:2px solid #fff;"><div class="bg-swatch-label">Glow</div></div></div>
+          </div>
+
+          <!-- Stat chips — all 4 on for PR card -->
+          <div class="stat-chips">
+            <div class="chip chip--on"><span class="chip-check">✓</span> Exercise</div>
+            <div class="chip chip--on"><span class="chip-check">✓</span> Weight × Reps</div>
+            <div class="chip chip--on"><span class="chip-check">✓</span> Est. 1RM</div>
+            <div class="chip chip--off">Date</div>
+          </div>
+
+          <div class="cta-row">
+            <div class="btn btn--skip">Skip</div>
+            <div class="btn btn--save"><span class="btn-icon">↓</span> Save</div>
+            <div class="btn btn--share"><span class="btn-icon">↑</span> Share</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">PR state · GOL theme · gold skeleton · 🏆 badge visible · 1 card left (red warning)</div>
+    </div>
+
+    <!-- Phone 3: Loading state + "Saved to Photos" toast -->
+    <div class="phone-wrap">
+      <div class="tag tag--green">Loading + Toast</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-grab"></div>
+        <div class="sheet-nav">
+          <div class="nav-title-stack">
+            <div class="nav-title">Share Your Set</div>
+            <div class="nav-sub">Pro — Unlimited</div>
+          </div>
+        </div>
+
+        <div class="sheet-scroll" style="position:relative;">
+          <div class="card-preview-wrap">
+            <div class="share-card">
+              <!-- VEL theme: vivid cyan -->
+              <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 0%, #004870 0%, #001C30 55%, #000810 100%);"></div>
+              <div class="card-grain"></div>
+              <div class="card-vignette"></div>
+              <div class="card-overlay" style="background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.35) 28%, transparent 55%);"></div>
+              <div class="card-skel">
+                <svg class="skel-svg" viewBox="0 0 160 280" fill="none" xmlns="http://www.w3.org/2000/svg" opacity="0.55">
+                  <circle cx="80" cy="28" r="16" stroke="rgba(0,200,255,0.65)" stroke-width="2.5" fill="none"/>
+                  <line x1="80" y1="44" x2="80" y2="58" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(0,200,255,0.6)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(0,200,255,0.6)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="80" y2="130" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+                  <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(0,200,255,0.5)" stroke-width="2.5"/>
+                  <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(0,200,255,0.5)" stroke-width="2.5"/>
+                  <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(0,200,255,0.5)" stroke-width="2.5"/>
+                  <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(0,200,255,0.5)" stroke-width="2.5"/>
+                  <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(0,200,255,0.75)" stroke-width="3.5"/>
+                  <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(0,200,255,0.5)"/>
+                  <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(0,200,255,0.5)"/>
+                  <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(0,200,255,0.5)" stroke-width="2.5"/>
+                  <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(0,200,255,0.5)" stroke-width="2.5"/>
+                  <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(0,200,255,0.45)" stroke-width="2.5"/>
+                  <line x1="46" y1="200" x2="40" y2="256" stroke="rgba(0,200,255,0.45)" stroke-width="2.5"/>
+                  <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(0,200,255,0.45)" stroke-width="2.5"/>
+                  <line x1="114" y1="200" x2="120" y2="256" stroke="rgba(0,200,255,0.45)" stroke-width="2.5"/>
+                  <circle cx="80" cy="58" r="4" fill="rgba(0,200,255,0.65)"/>
+                  <circle cx="38" cy="76" r="3.5" fill="rgba(0,200,255,0.6)"/>
+                  <circle cx="122" cy="76" r="3.5" fill="rgba(0,200,255,0.6)"/>
+                  <circle cx="18" cy="60" r="3" fill="rgba(0,200,255,0.55)"/>
+                  <circle cx="142" cy="60" r="3" fill="rgba(0,200,255,0.55)"/>
+                  <circle cx="80" cy="130" r="4" fill="rgba(0,200,255,0.65)"/>
+                  <circle cx="54" cy="144" r="3.5" fill="rgba(0,200,255,0.6)"/>
+                  <circle cx="106" cy="144" r="3.5" fill="rgba(0,200,255,0.6)"/>
+                  <circle cx="46" cy="200" r="3" fill="rgba(0,200,255,0.55)"/>
+                  <circle cx="114" cy="200" r="3" fill="rgba(0,200,255,0.55)"/>
+                </svg>
+              </div>
+              <div class="card-stats">
+                <div class="cs-exercise" style="color:#10C8E8;">Pull-ups</div>
+                <div class="cs-accent-bar" style="background:#10C8E8;"></div>
+                <div class="cs-main">BW × 12</div>
+                <div class="cs-row">
+                  <div class="cs-sub">Est. 1RM · 15 reps</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Photo Swap Row -->
+          <div class="photo-swap-row">
+            <div class="ps-btn"><div class="ps-icon">📷</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Camera</div></div>
+            <div class="ps-btn"><div class="ps-icon">🤳</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Selfie</div></div>
+            <div class="ps-btn"><div class="ps-icon">🖼️</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Library</div></div>
+            <div class="ps-reset">Reset ›</div>
+          </div>
+
+          <!-- Filter Strip — VEL selected -->
+          <div class="filter-strip">
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5A3010 0%, #1E0E06 55%, #080402 100%);"></div><div class="filter-thumb-skel" style="opacity:.4;font-size:22px;">🏋️</div></div><div class="filter-name">CIN</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5C3C10 0%, #2A1A08 55%, #0C0804 100%);"></div></div><div class="filter-name">POR</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #505850 0%, #202820 50%, #080A08 100%);"></div></div><div class="filter-name">BLE</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #1A3C5A 0%, #0A1E30 50%, #040810 100%);"></div></div><div class="filter-name">CHR</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #1A2050 0%, #0A0E28 50%, #040408 100%);"></div></div><div class="filter-name">MOO</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5A4010 0%, #281C06 50%, #0A0804 100%);"></div></div><div class="filter-name">GOL</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 50%, #282420 0%, #100E0C 50%, #060606 100%); filter:saturate(0);"></div></div><div class="filter-name">GRI</div></div>
+            <!-- VEL selected -->
+            <div class="filter-item"><div class="filter-thumb filter-thumb--selected" style="outline-color:#10C8E8;"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 0%, #006090 0%, #003040 50%, #000C18 100%);"></div><div class="filter-thumb-skel" style="opacity:.4;font-size:22px;">🏋️</div></div><div class="filter-name filter-name--selected">VEL</div></div>
+          </div>
+
+          <!-- BG swatches -->
+          <div class="bg-strip">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:#0D0B08;"><div class="bg-swatch-label">Dark</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch bg-swatch--selected" style="background:linear-gradient(135deg,#003040,#000C18); outline:2px solid #fff;"><div class="bg-swatch-label">Blur</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:linear-gradient(135deg,#D0E4F0,#A8C8E0);"><div class="bg-swatch-label" style="color:rgba(0,0,0,.5)">Light</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:radial-gradient(ellipse 140% 140% at 50% 0%,#006090,#000C18);"><div class="bg-swatch-label">Glow</div></div></div>
+          </div>
+
+          <div class="stat-chips">
+            <div class="chip chip--on"><span class="chip-check">✓</span> Exercise</div>
+            <div class="chip chip--on"><span class="chip-check">✓</span> Weight × Reps</div>
+            <div class="chip chip--off">Est. 1RM</div>
+            <div class="chip chip--off">Date</div>
+          </div>
+
+          <!-- CTA row — Save button loading -->
+          <div class="cta-row">
+            <div class="btn btn--skip">Skip</div>
+            <div class="btn btn--save" style="opacity:.55;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="animation:spin 1s linear infinite;">
+                <circle cx="8" cy="8" r="6" stroke="#E8384A" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="btn btn--share btn--share--loading" style="opacity:.65;"><span class="btn-icon">↑</span> Share</div>
+          </div>
+
+          <!-- Toast -->
+          <div class="toast-overlay">
+            <span class="toast-check">✓</span>
+            <span style="font-size:13px;font-weight:600;">Saved to Photos</span>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">Rendering state · VEL theme · Pro (unlimited) · "Saved to Photos" toast</div>
+    </div>
+
+  </div><!-- /phones-row -->
+</div><!-- /section 1 -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ROW 2: All 8 theme card variations (tall cards, no phone shell)    -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">All 8 Card Themes — Preview</div>
+  <div class="themes-grid">
+
+    <!-- CIN -->
+    <div class="theme-card-wrap">
+      <div class="theme-card">
+        <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #6A3C12 0%, #2A1208 60%, #0C0604 100%);"></div>
+        <div class="card-grain"></div>
+        <div class="card-vignette"></div>
+        <div class="card-overlay"></div>
+        <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">
+          <svg width="110" height="190" viewBox="0 0 160 280" fill="none" opacity="0.45">
+            <circle cx="80" cy="28" r="16" stroke="rgba(255,255,255,0.6)" stroke-width="2.5" fill="none"/>
+            <line x1="80" y1="44" x2="80" y2="58" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="80" y2="130" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(255,255,255,0.7)" stroke-width="3.5"/>
+            <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(255,255,255,0.5)"/>
+            <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(255,255,255,0.5)"/>
+            <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="46" y1="200" x2="40" y2="256" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+            <line x1="114" y1="200" x2="120" y2="256" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="card-stats" style="bottom:12px;left:10px;right:10px;">
+          <div class="cs-exercise" style="color:#EA9430;font-size:9px;">Bench Press</div>
+          <div class="cs-accent-bar" style="background:#EA9430;width:22px;height:2px;border-radius:1px;margin-bottom:4px;"></div>
+          <div class="cs-main" style="font-size:17px;">225 lbs × 8</div>
+          <div class="cs-row"><div class="cs-sub" style="font-size:9px;">Mar 30, 2026</div></div>
+        </div>
+      </div>
+      <div class="theme-label">CINEMATIC</div>
+    </div>
+
+    <!-- POR -->
+    <div class="theme-card-wrap">
+      <div class="theme-card">
+        <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #7A5020 0%, #3C2A0C 60%, #140E04 100%);"></div>
+        <div class="card-grain"></div>
+        <div class="card-vignette"></div>
+        <div class="card-overlay"></div>
+        <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">
+          <svg width="110" height="190" viewBox="0 0 160 280" fill="none" opacity="0.45">
+            <circle cx="80" cy="28" r="16" stroke="rgba(255,220,140,0.6)" stroke-width="2.5" fill="none"/>
+            <line x1="80" y1="44" x2="80" y2="130" stroke="rgba(255,220,140,0.5)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(255,220,140,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(255,220,140,0.55)" stroke-width="2.5"/>
+            <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(255,220,140,0.5)" stroke-width="2.5"/>
+            <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(255,220,140,0.5)" stroke-width="2.5"/>
+            <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(255,220,140,0.5)" stroke-width="2.5"/>
+            <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(255,220,140,0.5)" stroke-width="2.5"/>
+            <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(255,220,140,0.7)" stroke-width="3.5"/>
+            <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(255,220,140,0.5)"/>
+            <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(255,220,140,0.5)"/>
+            <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(255,220,140,0.5)" stroke-width="2.5"/>
+            <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(255,220,140,0.5)" stroke-width="2.5"/>
+            <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(255,220,140,0.45)" stroke-width="2.5"/>
+            <line x1="46" y1="200" x2="40" y2="256" stroke="rgba(255,220,140,0.45)" stroke-width="2.5"/>
+            <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(255,220,140,0.45)" stroke-width="2.5"/>
+            <line x1="114" y1="200" x2="120" y2="256" stroke="rgba(255,220,140,0.45)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="card-stats" style="bottom:12px;left:10px;right:10px;">
+          <div class="cs-exercise" style="color:#FFDA9A;font-size:9px;">Bench Press</div>
+          <div class="cs-accent-bar" style="background:#FFDA9A;width:22px;height:2px;border-radius:1px;margin-bottom:4px;"></div>
+          <div class="cs-main" style="font-size:17px;">225 lbs × 8</div>
+          <div class="cs-row"><div class="cs-sub" style="font-size:9px;">Mar 30, 2026</div></div>
+        </div>
+      </div>
+      <div class="theme-label">PORTRA</div>
+    </div>
+
+    <!-- BLE -->
+    <div class="theme-card-wrap">
+      <div class="theme-card">
+        <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #606860 0%, #282E28 60%, #0C0E0C 100%); filter:saturate(0.15);"></div>
+        <div class="card-grain"></div>
+        <div class="card-vignette"></div>
+        <div class="card-overlay"></div>
+        <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">
+          <svg width="110" height="190" viewBox="0 0 160 280" fill="none" opacity="0.45">
+            <circle cx="80" cy="28" r="16" stroke="rgba(220,224,218,0.6)" stroke-width="2.5" fill="none"/>
+            <line x1="80" y1="44" x2="80" y2="130" stroke="rgba(220,224,218,0.5)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(220,224,218,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(220,224,218,0.55)" stroke-width="2.5"/>
+            <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(220,224,218,0.5)" stroke-width="2.5"/>
+            <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(220,224,218,0.5)" stroke-width="2.5"/>
+            <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(220,224,218,0.5)" stroke-width="2.5"/>
+            <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(220,224,218,0.5)" stroke-width="2.5"/>
+            <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(220,224,218,0.7)" stroke-width="3.5"/>
+            <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(220,224,218,0.5)"/>
+            <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(220,224,218,0.5)"/>
+            <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(220,224,218,0.5)" stroke-width="2.5"/>
+            <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(220,224,218,0.5)" stroke-width="2.5"/>
+            <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(220,224,218,0.45)" stroke-width="2.5"/>
+            <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(220,224,218,0.45)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="card-stats" style="bottom:12px;left:10px;right:10px;">
+          <div class="cs-exercise" style="color:rgba(220,224,218,0.85);font-size:9px;">Bench Press</div>
+          <div class="cs-accent-bar" style="background:rgba(220,224,218,0.8);width:22px;height:2px;border-radius:1px;margin-bottom:4px;"></div>
+          <div class="cs-main" style="font-size:17px;">225 lbs × 8</div>
+          <div class="cs-row"><div class="cs-sub" style="font-size:9px;">Mar 30, 2026</div></div>
+        </div>
+      </div>
+      <div class="theme-label">BLEACH</div>
+    </div>
+
+    <!-- CHR -->
+    <div class="theme-card-wrap">
+      <div class="theme-card">
+        <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #1E4870 0%, #0C2440 60%, #040C18 100%);"></div>
+        <div class="card-grain"></div>
+        <div class="card-vignette"></div>
+        <div class="card-overlay"></div>
+        <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">
+          <svg width="110" height="190" viewBox="0 0 160 280" fill="none" opacity="0.45">
+            <circle cx="80" cy="28" r="16" stroke="rgba(90,160,220,0.65)" stroke-width="2.5" fill="none"/>
+            <line x1="80" y1="44" x2="80" y2="130" stroke="rgba(90,160,220,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(90,160,220,0.6)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(90,160,220,0.6)" stroke-width="2.5"/>
+            <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(90,160,220,0.55)" stroke-width="2.5"/>
+            <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(90,160,220,0.55)" stroke-width="2.5"/>
+            <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(90,160,220,0.55)" stroke-width="2.5"/>
+            <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(90,160,220,0.55)" stroke-width="2.5"/>
+            <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(90,160,220,0.75)" stroke-width="3.5"/>
+            <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(90,160,220,0.5)"/>
+            <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(90,160,220,0.5)"/>
+            <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(90,160,220,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(90,160,220,0.55)" stroke-width="2.5"/>
+            <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(90,160,220,0.5)" stroke-width="2.5"/>
+            <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(90,160,220,0.5)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="card-stats" style="bottom:12px;left:10px;right:10px;">
+          <div class="cs-exercise" style="color:#5A90C8;font-size:9px;">Bench Press</div>
+          <div class="cs-accent-bar" style="background:#5A90C8;width:22px;height:2px;border-radius:1px;margin-bottom:4px;"></div>
+          <div class="cs-main" style="font-size:17px;">225 lbs × 8</div>
+          <div class="cs-row"><div class="cs-sub" style="font-size:9px;">Mar 30, 2026</div></div>
+        </div>
+      </div>
+      <div class="theme-label">CHROME</div>
+    </div>
+
+    <!-- MOO -->
+    <div class="theme-card-wrap">
+      <div class="theme-card">
+        <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #1E2260 0%, #0C1030 60%, #040408 100%);"></div>
+        <div class="card-grain"></div>
+        <div class="card-vignette"></div>
+        <div class="card-overlay"></div>
+        <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">
+          <svg width="110" height="190" viewBox="0 0 160 280" fill="none" opacity="0.45">
+            <circle cx="80" cy="28" r="16" stroke="rgba(88,112,180,0.65)" stroke-width="2.5" fill="none"/>
+            <line x1="80" y1="44" x2="80" y2="130" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(88,112,180,0.6)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(88,112,180,0.6)" stroke-width="2.5"/>
+            <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+            <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+            <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+            <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+            <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(88,112,180,0.75)" stroke-width="3.5"/>
+            <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(88,112,180,0.5)"/>
+            <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(88,112,180,0.5)"/>
+            <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+            <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(88,112,180,0.5)" stroke-width="2.5"/>
+            <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(88,112,180,0.5)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="card-stats" style="bottom:12px;left:10px;right:10px;">
+          <div class="cs-exercise" style="color:#7888C0;font-size:9px;">Bench Press</div>
+          <div class="cs-accent-bar" style="background:#7888C0;width:22px;height:2px;border-radius:1px;margin-bottom:4px;"></div>
+          <div class="cs-main" style="font-size:17px;">225 lbs × 8</div>
+          <div class="cs-row"><div class="cs-sub" style="font-size:9px;">Mar 30, 2026</div></div>
+        </div>
+      </div>
+      <div class="theme-label">MOODY</div>
+    </div>
+
+    <!-- GOL -->
+    <div class="theme-card-wrap">
+      <div class="theme-card">
+        <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #6A4814 0%, #301E06 60%, #0E0A02 100%);"></div>
+        <div class="card-grain"></div>
+        <div class="card-vignette"></div>
+        <div class="card-overlay"></div>
+        <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">
+          <svg width="110" height="190" viewBox="0 0 160 280" fill="none" opacity="0.45">
+            <circle cx="80" cy="28" r="16" stroke="rgba(240,170,40,0.65)" stroke-width="2.5" fill="none"/>
+            <line x1="80" y1="44" x2="80" y2="130" stroke="rgba(240,170,40,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(240,170,40,0.6)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(240,170,40,0.6)" stroke-width="2.5"/>
+            <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(240,170,40,0.55)" stroke-width="2.5"/>
+            <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(240,170,40,0.55)" stroke-width="2.5"/>
+            <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(240,170,40,0.55)" stroke-width="2.5"/>
+            <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(240,170,40,0.55)" stroke-width="2.5"/>
+            <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(240,170,40,0.75)" stroke-width="3.5"/>
+            <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(240,170,40,0.5)"/>
+            <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(240,170,40,0.5)"/>
+            <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(240,170,40,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(240,170,40,0.55)" stroke-width="2.5"/>
+            <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(240,170,40,0.5)" stroke-width="2.5"/>
+            <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(240,170,40,0.5)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="card-stats" style="bottom:12px;left:10px;right:10px;">
+          <div class="cs-exercise" style="color:#E8A020;font-size:9px;">Bench Press</div>
+          <div class="cs-accent-bar" style="background:#E8A020;width:22px;height:2px;border-radius:1px;margin-bottom:4px;"></div>
+          <div class="cs-main" style="font-size:17px;">225 lbs × 8</div>
+          <div class="cs-row"><div class="cs-sub" style="font-size:9px;">Mar 30, 2026</div></div>
+        </div>
+      </div>
+      <div class="theme-label">GOLDEN HOUR</div>
+    </div>
+
+    <!-- GRI -->
+    <div class="theme-card-wrap">
+      <div class="theme-card">
+        <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 50%, #3A3630 0%, #1A1614 60%, #080606 100%); filter:saturate(0);"></div>
+        <div class="card-grain" style="opacity:.1;"></div>
+        <div class="card-vignette"></div>
+        <div class="card-overlay"></div>
+        <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">
+          <svg width="110" height="190" viewBox="0 0 160 280" fill="none" opacity="0.5">
+            <circle cx="80" cy="28" r="16" stroke="rgba(200,196,188,0.65)" stroke-width="2.5" fill="none"/>
+            <line x1="80" y1="44" x2="80" y2="130" stroke="rgba(200,196,188,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(200,196,188,0.6)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(200,196,188,0.6)" stroke-width="2.5"/>
+            <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(200,196,188,0.55)" stroke-width="2.5"/>
+            <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(200,196,188,0.55)" stroke-width="2.5"/>
+            <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(200,196,188,0.55)" stroke-width="2.5"/>
+            <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(200,196,188,0.55)" stroke-width="2.5"/>
+            <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(200,196,188,0.75)" stroke-width="3.5"/>
+            <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(200,196,188,0.5)"/>
+            <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(200,196,188,0.5)"/>
+            <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(200,196,188,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(200,196,188,0.55)" stroke-width="2.5"/>
+            <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(200,196,188,0.5)" stroke-width="2.5"/>
+            <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(200,196,188,0.5)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="card-stats" style="bottom:12px;left:10px;right:10px;">
+          <div class="cs-exercise" style="color:rgba(200,196,188,0.85);font-size:9px;">Bench Press</div>
+          <div class="cs-accent-bar" style="background:rgba(200,196,188,0.7);width:22px;height:2px;border-radius:1px;margin-bottom:4px;"></div>
+          <div class="cs-main" style="font-size:17px;">225 lbs × 8</div>
+          <div class="cs-row"><div class="cs-sub" style="font-size:9px;">Mar 30, 2026</div></div>
+        </div>
+      </div>
+      <div class="theme-label">GRIT</div>
+    </div>
+
+    <!-- VEL -->
+    <div class="theme-card-wrap">
+      <div class="theme-card">
+        <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 0%, #006090 0%, #003040 55%, #000C18 100%);"></div>
+        <div class="card-grain"></div>
+        <div class="card-vignette"></div>
+        <div class="card-overlay"></div>
+        <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">
+          <svg width="110" height="190" viewBox="0 0 160 280" fill="none" opacity="0.5">
+            <circle cx="80" cy="28" r="16" stroke="rgba(0,200,255,0.65)" stroke-width="2.5" fill="none"/>
+            <line x1="80" y1="44" x2="80" y2="130" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(0,200,255,0.6)" stroke-width="2.5"/>
+            <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(0,200,255,0.6)" stroke-width="2.5"/>
+            <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+            <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+            <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+            <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+            <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(0,200,255,0.75)" stroke-width="3.5"/>
+            <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(0,200,255,0.5)"/>
+            <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(0,200,255,0.5)"/>
+            <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+            <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(0,200,255,0.55)" stroke-width="2.5"/>
+            <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(0,200,255,0.5)" stroke-width="2.5"/>
+            <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(0,200,255,0.5)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="card-stats" style="bottom:12px;left:10px;right:10px;">
+          <div class="cs-exercise" style="color:#10C8E8;font-size:9px;">Bench Press</div>
+          <div class="cs-accent-bar" style="background:#10C8E8;width:22px;height:2px;border-radius:1px;margin-bottom:4px;"></div>
+          <div class="cs-main" style="font-size:17px;">225 lbs × 8</div>
+          <div class="cs-row"><div class="cs-sub" style="font-size:9px;">Mar 30, 2026</div></div>
+        </div>
+      </div>
+      <div class="theme-label">VELVIA</div>
+    </div>
+
+  </div><!-- /themes-grid -->
+</div><!-- /section 2 -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ROW 3: Edge cases                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Edge Cases</div>
+  <div class="phones-row">
+
+    <!-- Phone 4: Free tier — 0 cards left (locked/paywall) -->
+    <div class="phone-wrap">
+      <div class="tag tag--red">Free Tier — No Cards Left</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-grab"></div>
+        <div class="sheet-nav">
+          <div class="nav-title-stack">
+            <div class="nav-title">Share Your Set</div>
+            <div class="nav-sub nav-sub--warn">0 cards left · Upgrade to share</div>
+          </div>
+        </div>
+
+        <div class="sheet-scroll">
+          <div class="card-preview-wrap">
+            <div class="share-card" style="opacity:.45; filter:blur(1px);">
+              <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #5A3010 0%, #1E0E06 60%, #0A0604 100%);"></div>
+              <div class="card-grain"></div>
+              <div class="card-vignette"></div>
+              <div class="card-overlay"></div>
+              <div class="card-skel" style="opacity:.3; font-size:48px;">🏋️</div>
+              <div class="card-stats">
+                <div class="cs-exercise" style="color:#EA9430;">Bench Press</div>
+                <div class="cs-accent-bar" style="background:#EA9430;"></div>
+                <div class="cs-main">225 lbs × 8</div>
+              </div>
+            </div>
+            <!-- Lock overlay -->
+            <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;gap:12px;">
+              <div style="font-size:36px;">🔒</div>
+              <div style="font-size:14px;font-weight:700;text-align:center;">Monthly limit reached</div>
+              <div style="font-size:12px;color:rgba(255,255,255,.5);text-align:center;max-width:200px;">Free plan includes 3 share cards/month</div>
+              <div style="background:#E8384A;color:#fff;font-size:13px;font-weight:700;padding:10px 24px;border-radius:10px;margin-top:4px;">Upgrade to Pro</div>
+            </div>
+          </div>
+
+          <!-- Disabled controls -->
+          <div class="photo-swap-row" style="opacity:.25; pointer-events:none;">
+            <div class="ps-btn"><div class="ps-icon">📷</div><div style="font-size:10px;">Camera</div></div>
+            <div class="ps-btn"><div class="ps-icon">🤳</div><div style="font-size:10px;">Selfie</div></div>
+            <div class="ps-btn"><div class="ps-icon">🖼️</div><div style="font-size:10px;">Library</div></div>
+          </div>
+
+          <div class="filter-strip" style="opacity:.2;">
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background:#1E0E06;"></div></div><div class="filter-name">CIN</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background:#1E0E06;"></div></div><div class="filter-name">POR</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background:#1E0E06;"></div></div><div class="filter-name">BLE</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background:#1E0E06;"></div></div><div class="filter-name">CHR</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background:#1E0E06;"></div></div><div class="filter-name">MOO</div></div>
+          </div>
+
+          <div class="cta-row" style="margin-top:auto;">
+            <div class="btn btn--skip">Skip</div>
+            <div class="btn btn--save" style="opacity:.25;">↓ Save</div>
+            <div class="btn" style="flex:1.1;background:rgba(232,56,74,.3);color:rgba(255,255,255,.4);padding:13px 8px;border-radius:12px;text-align:center;font-size:14px;font-weight:700;">🔒 Share</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">Free tier — 0 cards remaining · blurred preview · lock overlay + upgrade CTA</div>
+    </div>
+
+    <!-- Phone 5: All stat chips toggled, "Est 1RM" and "Date" visible on card -->
+    <div class="phone-wrap">
+      <div class="tag tag--blue">All Stats Visible</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-grab"></div>
+        <div class="sheet-nav">
+          <div class="nav-title-stack">
+            <div class="nav-title">Share Your Set</div>
+            <div class="nav-sub">Pro — Unlimited</div>
+          </div>
+        </div>
+
+        <div class="sheet-scroll">
+          <div class="card-preview-wrap">
+            <div class="share-card">
+              <!-- MOO theme -->
+              <div class="card-bg" style="background: radial-gradient(ellipse 130% 130% at 50% 110%, #1E2260 0%, #0C1030 60%, #040408 100%);"></div>
+              <div class="card-grain"></div>
+              <div class="card-vignette"></div>
+              <div class="card-overlay"></div>
+              <div class="card-skel" style="display:flex;align-items:center;justify-content:center;padding-bottom:110px;">
+                <svg width="130" height="220" viewBox="0 0 160 280" fill="none" opacity="0.45">
+                  <circle cx="80" cy="28" r="16" stroke="rgba(88,112,180,0.65)" stroke-width="2.5" fill="none"/>
+                  <line x1="80" y1="44" x2="80" y2="130" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="38" y2="76" stroke="rgba(88,112,180,0.6)" stroke-width="2.5"/>
+                  <line x1="80" y1="58" x2="122" y2="76" stroke="rgba(88,112,180,0.6)" stroke-width="2.5"/>
+                  <line x1="38" y1="76" x2="18" y2="60" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+                  <line x1="18" y1="60" x2="10" y2="46" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+                  <line x1="122" y1="76" x2="142" y2="60" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+                  <line x1="142" y1="60" x2="150" y2="46" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+                  <line x1="4" y1="42" x2="156" y2="42" stroke="rgba(88,112,180,0.75)" stroke-width="3.5"/>
+                  <rect x="4" y="36" width="8" height="12" rx="2" fill="rgba(88,112,180,0.5)"/>
+                  <rect x="148" y="36" width="8" height="12" rx="2" fill="rgba(88,112,180,0.5)"/>
+                  <line x1="80" y1="130" x2="54" y2="144" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+                  <line x1="80" y1="130" x2="106" y2="144" stroke="rgba(88,112,180,0.55)" stroke-width="2.5"/>
+                  <line x1="54" y1="144" x2="46" y2="200" stroke="rgba(88,112,180,0.5)" stroke-width="2.5"/>
+                  <line x1="106" y1="144" x2="114" y2="200" stroke="rgba(88,112,180,0.5)" stroke-width="2.5"/>
+                </svg>
+              </div>
+              <!-- All 4 stats visible on card -->
+              <div class="card-stats">
+                <div class="cs-exercise" style="color:#7888C0;">Deadlift</div>
+                <div class="cs-accent-bar" style="background:#7888C0;"></div>
+                <div class="cs-main">405 lbs × 5</div>
+                <div class="cs-row" style="margin-bottom:4px;">
+                  <div class="cs-sub">Est. 1RM · 473 lbs</div>
+                </div>
+                <div class="cs-row">
+                  <div class="cs-sub" style="font-size:9px;opacity:.45;">Mar 30, 2026</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="photo-swap-row">
+            <div class="ps-btn"><div class="ps-icon">📷</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Camera</div></div>
+            <div class="ps-btn"><div class="ps-icon">🤳</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Selfie</div></div>
+            <div class="ps-btn"><div class="ps-icon">🖼️</div><div style="font-size:10px;color:rgba(255,255,255,.6)">Library</div></div>
+            <div class="ps-reset">Reset ›</div>
+          </div>
+
+          <div class="filter-strip">
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5A3010 0%, #1E0E06 55%, #080402 100%);"></div></div><div class="filter-name">CIN</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5C3C10 0%, #2A1A08 55%, #0C0804 100%);"></div></div><div class="filter-name">POR</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #505850 0%, #202820 50%, #080A08 100%);"></div></div><div class="filter-name">BLE</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #1A3C5A 0%, #0A1E30 50%, #040810 100%);"></div></div><div class="filter-name">CHR</div></div>
+            <!-- MOO selected -->
+            <div class="filter-item"><div class="filter-thumb filter-thumb--selected" style="outline-color:#7888C0;"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #1A2050 0%, #0A0E28 50%, #040408 100%);"></div><div class="filter-thumb-skel" style="opacity:.35;font-size:22px;">🏋️</div></div><div class="filter-name filter-name--selected">MOO</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 110%, #5A4010 0%, #281C06 50%, #0A0804 100%);"></div></div><div class="filter-name">GOL</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 50%, #282420 0%, #100E0C 50%, #060606 100%);filter:saturate(0);"></div></div><div class="filter-name">GRI</div></div>
+            <div class="filter-item"><div class="filter-thumb"><div class="filter-thumb-bg" style="background: radial-gradient(ellipse 140% 140% at 50% 0%, #006090 0%, #003040 50%, #000C18 100%);"></div></div><div class="filter-name">VEL</div></div>
+          </div>
+
+          <div class="bg-strip">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch bg-swatch--selected" style="background:#0D0B08; outline:2px solid #fff;"><div class="bg-swatch-label">Dark</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:linear-gradient(135deg,#0A0E28,#040408);"><div class="bg-swatch-label">Blur</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:linear-gradient(135deg,#D0D4E8,#B0B8D0);"><div class="bg-swatch-label" style="color:rgba(0,0,0,.5)">Light</div></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div class="bg-swatch" style="background:radial-gradient(ellipse 140% 140% at 50% 110%,#1A2060,#040408);"><div class="bg-swatch-label">Glow</div></div></div>
+          </div>
+
+          <!-- All 4 chips on -->
+          <div class="stat-chips">
+            <div class="chip chip--on"><span class="chip-check">✓</span> Exercise</div>
+            <div class="chip chip--on"><span class="chip-check">✓</span> Weight×Reps</div>
+            <div class="chip chip--on"><span class="chip-check">✓</span> Est. 1RM</div>
+            <div class="chip chip--on"><span class="chip-check">✓</span> Date</div>
+          </div>
+
+          <div class="cta-row">
+            <div class="btn btn--skip">Skip</div>
+            <div class="btn btn--save"><span class="btn-icon">↓</span> Save</div>
+            <div class="btn btn--share"><span class="btn-icon">↑</span> Share</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">All 4 stat chips on · MOO theme · Deadlift 405×5 · Est. 1RM + Date on card</div>
+    </div>
+
+  </div><!-- /phones-row -->
+</div><!-- /section 3 -->
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+.card-preview-wrap { position: relative; }
+</style>
+
+</body>
+</html>

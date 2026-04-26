@@ -51,10 +51,12 @@ struct UnitFormatter {
     /// Format weight without decimals
     static func formatWeightCompact(_ weight: Double, showUnit: Bool = true) -> String {
         let displayWeight = convertToDisplay(weight)
+        let valueStr = displayWeight.truncatingRemainder(dividingBy: 1) == 0
+            ? "\(Int(displayWeight))" : String(format: "%.1f", displayWeight)
         if showUnit {
-            return String(format: "%.0f %@", displayWeight, currentSystem.weightUnit)
+            return "\(valueStr) \(currentSystem.weightUnit)"
         }
-        return String(format: "%.0f", displayWeight)
+        return valueStr
     }
 
     /// Convert stored weight (always in lbs) to display unit

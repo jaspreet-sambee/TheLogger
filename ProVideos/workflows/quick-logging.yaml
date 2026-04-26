@@ -1,0 +1,100 @@
+# ==============================================================================
+# Quick Logging Flow — Speed is the feature
+# ==============================================================================
+# Shows how fast you can log a complete set: search → add → log → done.
+# Emphasizes the QuickLogStrip for rapid repeat sets.
+#
+# Style: Apple-style, dark mode, speed ramp through navigation
+# Duration: ~18s
+# ==============================================================================
+
+name: "Quick Logging Flow"
+description: "Log a set in 3 taps — no friction, just reps"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 25
+  settle_time: 2
+  test_method: "testQuicklogStripDemo"
+
+output:
+  filename: "quick-logging"
+  background_color: "#0D1117"     # GitHub-dark (neutral premium)
+  include_device_frame: true
+  twitter_optimized: true
+  caption: "Log a set in 3 taps. No friction. Just reps."
+  hashtags: ["TheLogger", "WorkoutApp", "GymLife", "FitnessTracker"]
+
+effects:
+  # Trim springboard / test teardown
+  trim_start: 8.0
+  trim_end: 2.0
+
+  # Speed up the navigation, keep logging real-time
+  speed_ramp:
+    start: 0
+    end: 12
+    speed: 1.4
+
+  # Zoom into key interactions
+  zoom_moments:
+    - time: 3.0        # Exercise search
+      scale: 1.15
+      duration: 2.5
+      anchor: "center"
+      ease: 0.3
+
+    - time: 7.0        # QuickLogStrip — THE feature
+      scale: 1.35
+      duration: 5.0
+      anchor: "bottom"
+      ease: 0.4
+
+    - time: 14.0       # First set committed
+      scale: 1.25
+      duration: 1.0
+      anchor: "bottom_center"
+      ease: 0.2
+
+    - time: 16.0       # Second set — rapid fire
+      scale: 1.2
+      duration: 0.8
+      anchor: "bottom_center"
+      ease: 0.2
+
+    - time: 18.0       # Third set
+      scale: 1.2
+      duration: 0.8
+      anchor: "bottom_center"
+      ease: 0.2
+
+  # Flash on each set commit (satisfying feedback)
+  flash_moments:
+    - time: 14.0
+      duration: 0.06
+    - time: 16.0
+      duration: 0.06
+    - time: 18.0
+      duration: 0.06
+
+  text_overlays:
+    - text: "Log a set in 3 taps."
+      start: 1.0
+      end: 6.0
+      position: "bottom"
+      fontsize: 44
+
+    - text: "No friction. Just reps."
+      start: 15.0
+      end: 20.0
+      position: "bottom"
+      fontsize: 44
+
+  music: true
+  music_volume: 0.20
+
+  vignette: true
+  color_grade: "cinematic"

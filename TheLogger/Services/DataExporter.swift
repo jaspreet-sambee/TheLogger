@@ -45,6 +45,8 @@ struct WorkoutDataExporter {
             }
         }
 
+        Analytics.send(Analytics.Signal.backupExportedCSV, parameters: ["workoutCount": "\(completedWorkouts.count)"])
+
         return csv
     }
 

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Onboarding Screen Sample</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060608;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px 80px;gap:20px;-webkit-font-smoothing:antialiased;}
+.page-heading{color:rgba(255,255,255,.4);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
+.page-sub{color:rgba(255,255,255,.2);font-size:11px;margin-bottom:16px;}
+
+.phones-row{display:flex;gap:48px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.phone-label{font-size:11px;font-weight:600;color:rgba(255,255,255,.3);letter-spacing:.06em;text-transform:uppercase;}
+
+/* iPhone shell */
+.iphone{
+  width:390px;height:844px;background:#0a0a0f;border-radius:52px;
+  border:1px solid rgba(255,255,255,.08);overflow:hidden;position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,.03),0 40px 100px rgba(0,0,0,.85);
+  display:flex;flex-direction:column;
+}
+.di{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:20;}
+
+/* Content */
+.screen{
+  flex:1;display:flex;flex-direction:column;padding:50px 24px 28px;
+  position:relative;overflow:hidden;
+}
+
+/* Subtle background tint */
+.screen::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 20%,rgba(232,56,74,.07),transparent 65%);
+  pointer-events:none;
+}
+
+/* Page dots */
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:20px;position:relative;z-index:1;}
+.dot{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.18);transition:all .2s;}
+.dot.active{width:20px;background:#e8384a;}
+
+/* Phone frame with screenshot */
+.phone-frame{
+  position:relative;width:220px;margin:0 auto 20px;
+  border-radius:28px;overflow:hidden;
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,.08),
+    0 0 0 4px rgba(0,0,0,.5),
+    0 20px 50px rgba(0,0,0,.6),
+    0 0 40px rgba(232,56,74,.06);
+}
+.phone-frame img{
+  width:100%;display:block;border-radius:28px;
+}
+/* Gloss reflection on phone frame */
+.phone-frame::after{
+  content:'';position:absolute;inset:0;border-radius:28px;
+  background:linear-gradient(165deg,rgba(255,255,255,.06) 0%,transparent 40%);
+  pointer-events:none;
+}
+
+/* Title area */
+.onboard-title{
+  font-size:24px;font-weight:800;text-align:center;color:#fff;
+  letter-spacing:-.5px;margin-bottom:4px;position:relative;z-index:1;
+}
+.onboard-sub{
+  font-size:13px;text-align:center;color:rgba(255,255,255,.35);
+  margin-bottom:16px;position:relative;z-index:1;
+}
+
+/* Feature bullets */
+.bullets{display:flex;flex-direction:column;gap:10px;margin-bottom:auto;position:relative;z-index:1;}
+.bullet{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+}
+.bullet-icon{
+  width:34px;height:34px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+}
+.bullet-icon-red{background:rgba(232,56,74,.12);}
+.bullet-icon-gold{background:rgba(255,184,77,.12);}
+.bullet-icon-blue{background:rgba(128,166,255,.12);}
+.bullet-text{flex:1;}
+.bullet-title{font-size:14px;font-weight:600;color:rgba(255,255,255,.9);}
+.bullet-desc{font-size:11px;color:rgba(255,255,255,.35);margin-top:1px;}
+
+/* CTA */
+.btn-cta{
+  width:100%;height:52px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,#e8384a,#ff5a30);
+  box-shadow:0 8px 24px rgba(232,56,74,.3);
+  position:relative;overflow:hidden;z-index:1;
+  margin-top:16px;
+}
+.btn-cta::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:50%;
+  background:linear-gradient(to bottom,rgba(255,255,255,.12),transparent);
+}
+
+/* Annotations */
+.annotations{max-width:500px;width:100%;margin-top:32px;}
+.ann-title{font-size:12px;font-weight:600;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;}
+.ann{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;}
+.ann-num{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:#e8384a;}
+.ann-text{font-size:12px;color:rgba(255,255,255,.4);line-height:1.55;}
+.ann-text strong{color:rgba(255,255,255,.7);}
+</style>
+</head>
+<body>
+
+<div class="page-heading">Onboarding Screen — Sample</div>
+<div class="page-sub">Screen 2: Quick Logging (with real app screenshot)</div>
+
+<div class="phones-row">
+<div class="phone-wrap">
+<div class="phone-label">Logging Feature Screen</div>
+<div class="iphone">
+  <div class="di"></div>
+  <div class="screen">
+    <!-- Page dots -->
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot active"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+
+    <!-- Screenshot in phone frame -->
+    <div class="phone-frame">
+      <img src="assets/onboard-logging.png" alt="Logging screenshot">
+    </div>
+
+    <!-- Title + subtitle -->
+    <div class="onboard-title">Log Sets in Seconds</div>
+    <div class="onboard-sub">The fastest way to track your lifts</div>
+
+    <!-- Feature bullets -->
+    <div class="bullets">
+      <div class="bullet">
+        <div class="bullet-icon bullet-icon-red">⚡</div>
+        <div class="bullet-text">
+          <div class="bullet-title">Tap to Log</div>
+          <div class="bullet-desc">Reps, weight, set type — done in one tap</div>
+        </div>
+      </div>
+      <div class="bullet">
+        <div class="bullet-icon bullet-icon-gold">🔄</div>
+        <div class="bullet-text">
+          <div class="bullet-title">Auto-Remembers</div>
+          <div class="bullet-desc">Pre-fills your last weights and reps</div>
+        </div>
+      </div>
+      <div class="bullet">
+        <div class="bullet-icon bullet-icon-blue">📋</div>
+        <div class="bullet-text">
+          <div class="bullet-title">Templates</div>
+          <div class="bullet-desc">Start workouts with one tap from saved templates</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="btn-cta">Continue</div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- Annotations -->
+<div class="annotations">
+  <div class="ann-title">Design Breakdown</div>
+  <div class="ann">
+    <div class="ann-num">1</div>
+    <div class="ann-text"><strong>Real app screenshot</strong> inside a phone frame with rounded corners, subtle border glow, and glass reflection overlay. Shows the actual UI the user will see.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-num">2</div>
+    <div class="ann-text"><strong>Elongated active dot</strong> page indicator at top — same style as the Highlights gallery. Shows progress through 8 screens.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-num">3</div>
+    <div class="ann-text"><strong>Feature bullets with icon boxes</strong> — colored backgrounds matching the feature's accent (red for logging, gold for memory, blue for templates). Title + subtitle per bullet.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-num">4</div>
+    <div class="ann-text"><strong>Gradient CTA</strong> — red→orange with top shine, consistent with all other primary buttons in the app.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-num">5</div>
+    <div class="ann-text"><strong>Subtle red tint</strong> radial gradient on the background — each screen gets its own tint color (blue for camera, gold for PRs, etc.).</div>
+  </div>
+</div>
+
+</body>
+</html>

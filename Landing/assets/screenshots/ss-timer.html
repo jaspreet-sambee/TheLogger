@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390">
+  <title>TheLogger — Rest Timer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 390px; height: 844px; overflow: hidden;
+      background: #0F0D0B;
+      color: #F2EDE8;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      position: relative;
+    }
+    body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    /* Multi-layer ambient glow */
+    .glow-outer {
+      position: absolute; top: 26%; left: 50%; transform: translate(-50%,-50%);
+      width: 420px; height: 420px; z-index: 0; pointer-events: none;
+      background: radial-gradient(ellipse, rgba(245,87,62,0.1) 0%, transparent 60%);
+    }
+    .glow-inner {
+      position: absolute; top: 26%; left: 50%; transform: translate(-50%,-50%);
+      width: 280px; height: 280px; z-index: 0; pointer-events: none;
+      background: radial-gradient(ellipse, rgba(245,87,62,0.18) 0%, transparent 60%);
+    }
+    .dynamic-island {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 28px; background: #000; border-radius: 20px; z-index: 10;
+    }
+    .status-bar {
+      width: 100%; height: 54px; display: flex; align-items: flex-end;
+      justify-content: space-between; padding: 0 24px 10px; position: relative; z-index: 2;
+    }
+    .status-time { font-size: 15px; font-weight: 600; }
+    .status-icons svg { fill: #F2EDE8; }
+
+    /* Context */
+    .context { text-align: center; margin-top: 22px; position: relative; z-index: 2; }
+    .context-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #8C8680;
+    }
+    .context-detail { font-size: 16px; font-weight: 700; margin-top: 5px; }
+
+    /* Ring */
+    .ring-wrap {
+      position: relative; width: 288px; height: 288px;
+      display: flex; align-items: center; justify-content: center; z-index: 2;
+      margin-top: 30px;
+    }
+    .ring-svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+    .ring-track { stroke: rgba(255,255,255,0.05); fill: none; }
+    .ring-bg-track { stroke: rgba(255,255,255,0.03); fill: none; }
+    .ring-prog {
+      stroke: url(#timerGrad); fill: none; stroke-linecap: round;
+      stroke-dasharray: 770; stroke-dashoffset: 257;
+      filter: drop-shadow(0 0 12px rgba(245,87,62,0.7));
+    }
+    .ring-center { text-align: center; }
+    .ring-time { font-size: 68px; font-weight: 900; letter-spacing: -4px; line-height: 1; }
+    .ring-of { font-size: 14px; color: #8C8680; font-weight: 500; margin-top: 5px; }
+
+    /* Adjust row */
+    .adjust-row {
+      display: flex; align-items: center; gap: 44px; margin-top: 38px; position: relative; z-index: 2;
+    }
+    .adj-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .adj-circle {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 4px 14px rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #F2EDE8; letter-spacing: -0.3px;
+    }
+    .adj-lbl { font-size: 11px; color: #8C8680; font-weight: 600; }
+    .pause-btn {
+      width: 76px; height: 76px; border-radius: 50%;
+      background: linear-gradient(135deg, #F57055 0%, #E83520 100%);
+      display: flex; align-items: center; justify-content: center; font-size: 26px;
+      box-shadow: 0 8px 28px rgba(232,53,32,0.5), 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,180,160,0.25);
+    }
+
+    /* Skip */
+    .skip-row { margin-top: 26px; position: relative; z-index: 2; }
+    .skip { font-size: 15px; color: #8C8680; font-weight: 600; }
+
+    /* Next card */
+    .next-card {
+      position: absolute; bottom: 34px; left: 14px; right: 14px; z-index: 2;
+      background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 18px; padding: 16px 18px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 4px 20px rgba(0,0,0,0.35);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .next-lbl {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #8C8680; margin-bottom: 4px;
+    }
+    .next-ex { font-size: 16px; font-weight: 800; }
+    .next-sets { font-size: 12px; color: #8C8680; margin-top: 3px; }
+    .next-wt { font-size: 26px; font-weight: 900; color: #F5573E; letter-spacing: -1px; }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#F5A03E"/>
+        <stop offset="50%" stop-color="#F5573E"/>
+        <stop offset="100%" stop-color="#E83520"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="dynamic-island"></div>
+  <div class="glow-outer"></div>
+  <div class="glow-inner"></div>
+
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="2.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="rgba(255,255,255,0.4)"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="#F2EDE8"/></svg>
+    </div>
+  </div>
+
+  <div class="context">
+    <div class="context-label">Resting after</div>
+    <div class="context-detail">Bench Press · Set 3 &nbsp;·&nbsp; <span style="color:#E8A833">🏆 PR</span></div>
+  </div>
+
+  <div class="ring-wrap">
+    <svg class="ring-svg" viewBox="0 0 288 288">
+      <circle class="ring-bg-track" cx="144" cy="144" r="124" stroke-width="18"/>
+      <circle class="ring-track" cx="144" cy="144" r="124" stroke-width="14"/>
+      <circle class="ring-prog" cx="144" cy="144" r="124" stroke-width="14"/>
+    </svg>
+    <div class="ring-center">
+      <div class="ring-time">1:20</div>
+      <div class="ring-of">of 2:00</div>
+    </div>
+  </div>
+
+  <div class="adjust-row">
+    <div class="adj-btn"><div class="adj-circle">−30s</div><span class="adj-lbl">less</span></div>
+    <div class="pause-btn">⏸</div>
+    <div class="adj-btn"><div class="adj-circle">+30s</div><span class="adj-lbl">more</span></div>
+  </div>
+
+  <div class="skip-row"><span class="skip">Skip rest →</span></div>
+
+  <div class="next-card">
+    <div>
+      <div class="next-lbl">Next Set</div>
+      <div class="next-ex">Bench Press</div>
+      <div class="next-sets">Set 4 of 4 · Last: 190 lbs × 5</div>
+    </div>
+    <div>
+      <div class="next-wt">190</div>
+      <div style="font-size:12px;color:#8C8680;font-weight:500;text-align:right;margin-top:1px">lbs</div>
+    </div>
+  </div>
+</body>
+</html>

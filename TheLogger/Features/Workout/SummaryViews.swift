@@ -103,6 +103,7 @@ struct WorkoutEndSummaryView: View {
                 .padding(.bottom, 40)
             }
             .onAppear {
+                Analytics.send(Analytics.Signal.workoutSummaryViewed)
                 let options = ["Nice work", "Well done", "Great session", "Solid effort", "Keep it up"]
                 affirmation = options.randomElement() ?? "Nice work"
 
@@ -157,19 +158,24 @@ struct WorkoutEndSummaryView: View {
     }
 
     private var headerSection: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18))
+        VStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(AppColors.accentGold.opacity(0.12))
+                    .frame(width: 72, height: 72)
+                    .overlay(
+                        Circle()
+                            .stroke(AppColors.accentGold.opacity(0.4), lineWidth: 2)
+                    )
+                    .shadow(color: AppColors.accentGold.opacity(0.3), radius: 20, y: 0)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(AppColors.accentGold)
-                Text("Workout complete")
-                    .font(.system(.caption, weight: .semibold))
-                    .foregroundStyle(.secondary)
             }
 
             if !workoutName.isEmpty {
                 Text(workoutName)
-                    .font(.system(.headline, weight: .semibold))
+                    .font(.system(.title2, weight: .bold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
             }
@@ -183,7 +189,7 @@ struct WorkoutEndSummaryView: View {
         HStack(spacing: 8) {
             Image(systemName: "star.fill")
                 .font(.system(size: 22))
-                .foregroundStyle(.yellow.opacity(0.9))
+                .foregroundStyle(AppColors.accentGold.opacity(0.9))
             Text(affirmation)
                 .font(.system(.title2, weight: .semibold))
                 .foregroundStyle(.primary)
@@ -211,26 +217,44 @@ struct WorkoutEndSummaryView: View {
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 18)
                 .fill(AppColors.accent.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(AppColors.accent.opacity(0.18), lineWidth: 1)
+                )
         )
     }
 
     private var secondaryStats: some View {
-        HStack(spacing: 20) {
-            statItem(value: "\(summary.totalExercises)", label: "exercises", icon: "figure.strengthtraining.traditional")
-            statItem(value: "\(summary.totalSets)", label: "sets", icon: "square.stack.3d.up")
-            statItem(value: "\(summary.totalReps)", label: "reps", icon: "repeat")
-            if summary.totalVolume > 0 {
-                statItem(value: summary.formattedVolume, label: "volume", icon: "scalemass")
-            }
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            statGridCell(value: summary.formattedDuration, label: "duration", isHighlight: true)
+            statGridCell(value: summary.totalVolume > 0 ? summary.formattedVolume : "—", label: "volume", isHighlight: false)
+            statGridCell(value: "\(summary.totalExercises)", label: "exercises", isHighlight: false)
+            statGridCell(value: "\(summary.totalSets)", label: "sets", isHighlight: false)
         }
-        .padding(.vertical, 16)
-        .padding(.horizontal, 12)
+    }
+
+    private func statGridCell(value: String, label: String, isHighlight: Bool) -> some View {
+        VStack(spacing: 6) {
+            Text(value)
+                .font(.system(size: 32, weight: .heavy, design: .rounded))
+                .foregroundStyle(isHighlight ? AppColors.accent : Color.white.opacity(0.85))
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+            Text(label)
+                .font(.system(.caption, weight: .medium))
+                .foregroundStyle(Color.white.opacity(0.38))
+        }
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
         .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.white.opacity(0.07))
+            RoundedRectangle(cornerRadius: 16)
+                .fill(isHighlight ? AppColors.accent.opacity(0.06) : Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(isHighlight ? AppColors.accent.opacity(0.20) : Color.white.opacity(0.08), lineWidth: 1)
+                )
         )
     }
 
@@ -239,7 +263,7 @@ struct WorkoutEndSummaryView: View {
             HStack(spacing: 10) {
                 Image(systemName: "medal.fill")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(hasPRs ? .yellow : .secondary.opacity(0.7))
+                    .foregroundStyle(hasPRs ? AppColors.accentGold : .secondary.opacity(0.7))
                     .symbolEffect(.bounce, value: medalBounce)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(hasPRs ? "PRs achieved this workout" : "Personal Records")
@@ -284,13 +308,17 @@ struct WorkoutEndSummaryView: View {
                                 .foregroundStyle(AppColors.accent)
                             Image(systemName: "sparkles")
                                 .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.yellow)
+                                .foregroundStyle(AppColors.accentGold)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.yellow.opacity(0.12))
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(AppColors.accentGold.opacity(0.10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(AppColors.accentGold.opacity(0.22), lineWidth: 1)
+                                )
                         )
                         .opacity(index < prRowsRevealed ? 1 : 0)
                         .offset(y: index < prRowsRevealed ? 0 : 8)
@@ -302,24 +330,24 @@ struct WorkoutEndSummaryView: View {
         .padding(.vertical, 20)
         .padding(.horizontal, 20)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 18)
                         .fill(
                             hasPRs
                                 ? LinearGradient(
-                                    colors: [Color.yellow.opacity(0.15), AppColors.accent.opacity(0.08)],
+                                    colors: [AppColors.accentGold.opacity(0.10), AppColors.accent.opacity(0.06)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                                 : LinearGradient(
-                                    colors: [Color.white.opacity(0.06), Color.white.opacity(0.04)],
+                                    colors: [Color.white.opacity(0.04), Color.white.opacity(0.04)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: 18)
                                 .stroke(
-                                    hasPRs ? Color.yellow.opacity(0.35) : Color.white.opacity(0.1),
+                                    hasPRs ? AppColors.accentGold.opacity(0.35) : Color.white.opacity(0.1),
                                     lineWidth: 1
                                 )
                         )
@@ -331,22 +359,6 @@ struct WorkoutEndSummaryView: View {
             return "\(UnitFormatter.formatWeight(item.weight, showUnit: false)) × \(item.reps)"
         }
         return "BW × \(item.reps)"
-    }
-
-    private func statItem(value: String, label: String, icon: String) -> some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(.caption2, weight: .medium))
-                .foregroundStyle(AppColors.accent.opacity(0.8))
-            Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-                .contentTransition(.numericText())
-            Text(label)
-                .font(.system(.caption2, weight: .medium))
-                .foregroundStyle(.secondary)
-        }
-        .frame(minWidth: 56)
     }
 
     private var dismissButton: some View {
@@ -361,20 +373,22 @@ struct WorkoutEndSummaryView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(AppColors.accent.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: 14)
                                 .stroke(AppColors.accent.opacity(0.3), lineWidth: 1)
                         )
                 }
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
 
-            Button(action: onDismiss) {
+            Button {
+                Analytics.send(Analytics.Signal.workoutSummaryDismissed)
+                onDismiss()
+            } label: {
                 HStack(spacing: 8) {
                     if canDismiss {
                         Text("Done")
-                            .font(.system(.body, weight: .semibold))
                     } else {
                         ProgressView()
                             .tint(.white)
@@ -382,14 +396,9 @@ struct WorkoutEndSummaryView: View {
                             .font(.system(.subheadline, weight: .medium))
                     }
                 }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(canDismiss ? AppColors.accent : Color.gray)
-                )
             }
+            .gradientCTA()
+            .opacity(canDismiss ? 1 : 0.55)
             .disabled(!canDismiss)
         }
         .padding(.top, 8)
@@ -550,10 +559,13 @@ private struct WorkoutSummaryEditorView: View {
                 }
                 .padding(.top, 16)
             }
+            .scrollContentBackground(.hidden)
+            .background(AppColors.background)
             .navigationTitle("Share Workout")
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.large])
+        .presentationBackground(AppColors.background)
         .confirmationDialog("Add Photo", isPresented: $showReplacePhotoOptions) {
             Button("Take Photo") { useFrontCamera = false; showCameraPicker = true }
             Button("Take Selfie") { useFrontCamera = true; showCameraPicker = true }

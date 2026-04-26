@@ -134,10 +134,10 @@ struct AchievementsView: View {
             }
             .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 18)
                     .fill(AppColors.accentGold.opacity(0.08))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 18)
                             .stroke(AppColors.accentGold.opacity(0.25), lineWidth: 1)
                     )
             )
@@ -150,16 +150,16 @@ struct AchievementsView: View {
         VStack(spacing: 8) {
             ZStack {
                 Circle()
-                    .stroke(AppColors.accent.opacity(0.2), lineWidth: 8)
+                    .stroke(AppColors.accentGold.opacity(0.2), lineWidth: 8)
                 Circle()
                     .trim(from: 0, to: totalCount > 0 ? Double(unlockedCount) / Double(totalCount) : 0)
-                    .stroke(AppColors.accent, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .stroke(AppColors.accentGold, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                     .rotationEffect(.degrees(-90))
 
                 VStack(spacing: 2) {
                     Text("\(unlockedCount)")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppColors.accent)
+                        .foregroundStyle(AppColors.accentGold)
                     Text("of \(totalCount)")
                         .font(.system(.caption2, weight: .medium))
                         .foregroundStyle(.secondary)
@@ -194,13 +194,17 @@ struct AchievementsView: View {
             }
         } label: {
             Text(label)
-                .font(.system(.caption, weight: .semibold))
+                .font(.system(.subheadline, weight: .semibold))
                 .foregroundStyle(isSelected ? .white : .secondary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
                 .background(
                     Capsule()
-                        .fill(isSelected ? AppColors.accent : Color.white.opacity(0.08))
+                        .fill(isSelected ? AppColors.accent : Color.white.opacity(0.07))
+                        .overlay(
+                            Capsule()
+                                .stroke(isSelected ? Color.clear : Color.white.opacity(0.12), lineWidth: 1)
+                        )
                 )
         }
         .buttonStyle(.plain)
@@ -278,13 +282,14 @@ struct AchievementCard: View {
         .padding(12)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 18)
                 .fill(isUnlocked ? tierColor.opacity(0.06) : Color.white.opacity(0.04))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 18)
                         .stroke(isUnlocked ? tierColor.opacity(0.3) : Color.white.opacity(0.1), lineWidth: 1)
                 )
         )
+        .shadow(color: isUnlocked ? tierColor.opacity(0.12) : .clear, radius: 12, y: 4)
     }
 
     private var tierColor: Color {

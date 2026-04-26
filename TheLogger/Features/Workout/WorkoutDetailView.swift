@@ -46,38 +46,65 @@ struct WorkoutDetailView: View {
     @State private var elapsedTime: TimeInterval = 0
     @State private var timerTask: Task<Void, Never>? = nil
     @State private var showingSettings = false
+    @State private var showingRenameAlert = false
     @State private var exerciseToNavigate: Exercise?
     @State private var cachedSuggestions: [String] = []
 
     var body: some View {
         workoutList
-            .navigationTitle("Workout Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .principal) {
                     Button {
-                        showingSettings = true
+                        workoutNameText = workout.name
+                        showingRenameAlert = true
                     } label: {
-                        Image(systemName: "gearshape")
-                            .foregroundStyle(.secondary)
+                        Text(workout.name.isEmpty ? "Workout" : workout.name)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
                 }
-                if workout.isActive {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("End") {
-                            showingEndWorkoutConfirmation = true
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if workout.isActive {
+                        HStack(spacing: 0) {
+                            Button {
+                                showingSettings = true
+                            } label: {
+                                Image(systemName: "gearshape")
+                                    .font(.system(.subheadline, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 36, height: 30)
+                            }
+                            .buttonStyle(.plain)
+                            Rectangle()
+                                .fill(Color.white.opacity(0.15))
+                                .frame(width: 1, height: 16)
+                            Button {
+                                showingEndWorkoutConfirmation = true
+                            } label: {
+                                Text("End")
+                                    .font(.system(.subheadline, weight: .bold))
+                                    .foregroundStyle(AppColors.accent)
+                                    .frame(width: 44, height: 30)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("endWorkoutButton")
                         }
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppColors.accent)
-                        .accessibilityIdentifier("endWorkoutButton")
-                    }
-                } else if workout.isCompleted {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                        .clipShape(Capsule())
+                    } else if workout.isCompleted {
                         Button("Log Again") {
                             onLogAgain?(workout)
                         }
                         .fontWeight(.semibold)
                         .foregroundStyle(AppColors.accent)
+                    } else {
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -147,6 +174,17 @@ struct WorkoutDetailView: View {
             } message: {
                 Text("Are you sure you want to delete \(pendingDeleteIndices.count == 1 ? "this exercise" : "these exercises")? This cannot be undone.")
             }
+            .alert("Rename Workout", isPresented: $showingRenameAlert) {
+                TextField("Workout name", text: $workoutNameText)
+                Button("Save") {
+                    let trimmed = workoutNameText.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.isEmpty {
+                        workout.name = trimmed
+                        saveWorkout()
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            }
             .sheet(item: $endSummaryData) { data in
                 WorkoutEndSummaryView(
                     summary: data.summary,
@@ -168,8 +206,7 @@ struct WorkoutDetailView: View {
 
     private var workoutList: some View {
         List {
-            workoutInfoSection
-            summarySection
+            elapsedBanner
             exercisesSection
             saveAsTemplateSection
         }
@@ -210,6 +247,92 @@ struct WorkoutDetailView: View {
     }
 
     // MARK: - View Components
+
+    private var workoutNameRow_list: some View {
+        Section {
+            HStack(spacing: 8) {
+                if isEditingWorkoutName {
+                    TextField("Workout Name", text: $workoutNameText)
+                        .font(.system(.title2, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .focused($workoutNameFocused)
+                        .textFieldStyle(.plain)
+                        .onSubmit { saveWorkoutName() }
+                        .onChange(of: workoutNameFocused) { oldValue, newValue in
+                            if !newValue && isEditingWorkoutName { saveWorkoutName() }
+                        }
+                } else {
+                    Text(workout.name.isEmpty ? "Untitled Workout" : workout.name)
+                        .font(.system(.title2, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .contentShape(Rectangle())
+                        .onTapGesture { startEditingWorkoutName() }
+                }
+
+                if workout.isActive {
+                    activeBadge
+                }
+
+                if !isEditingWorkoutName {
+                    Button { startEditingWorkoutName() } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(AppColors.accent)
+                            .padding(6)
+                    }
+                }
+
+                Spacer()
+
+                // Date picker for completed workouts
+                if !workout.isActive {
+                    DatePicker("", selection: $workout.date, displayedComponents: [.date])
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .environment(\.colorScheme, .dark)
+                }
+            }
+            .padding(.vertical, 6)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+        }
+    }
+
+    private var elapsedBanner: some View {
+        let totalVolume = (workout.exercises ?? [])
+            .flatMap { $0.sets ?? [] }
+            .reduce(0.0) { $0 + Double($1.reps) * $1.weight }
+        let statsStr = "\(workout.exerciseCount) exercises · \(UnitFormatter.formatWeightCompact(totalVolume, showUnit: true))"
+
+        return Section {
+            HStack {
+                Text(workout.isActive ? "IN PROGRESS" : workout.formattedDate)
+                    .font(.system(.caption2, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.28))
+                    .kerning(0.5)
+
+                Spacer()
+
+                if workout.isActive, workout.startTime != nil {
+                    Text(formatElapsedTime(elapsedTime))
+                        .font(.system(size: 17, weight: .bold, design: .monospaced))
+                        .foregroundStyle(AppColors.accent)
+                }
+
+                Spacer()
+
+                Text(statsStr)
+                    .font(.system(.caption2, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.30))
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+        }
+    }
 
     private var workoutInfoSection: some View {
         Section {
@@ -392,12 +515,6 @@ struct WorkoutDetailView: View {
             if (workout.exercises ?? []).isEmpty {
                 emptyExercisesView
             } else {
-                if !cachedSuggestions.isEmpty {
-                    recentExercisesQuickAdd
-                        .listRowBackground(cardBackground(variant: .neutral))
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                }
                 exercisesList
             }
         } header: {
@@ -586,24 +703,11 @@ struct WorkoutDetailView: View {
     }
 
     private var exercisesSectionHeader: some View {
-        HStack {
-            Text("Exercises")
-                .font(.system(.caption, weight: .medium))
-            if !(workout.exercises ?? []).isEmpty {
-                Spacer()
-                Text("\((workout.exercises ?? []).count)")
-                    .font(.system(.caption, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.white.opacity(0.12))
-                    )
-            }
-        }
-        .foregroundStyle(.secondary)
-        .textCase(nil)
+        Text("EXERCISES")
+            .font(.system(.caption2, weight: .semibold))
+            .foregroundStyle(Color.white.opacity(0.28))
+            .kerning(0.5)
+            .textCase(nil)
     }
 
     private var addExerciseButton: some View {
@@ -611,13 +715,8 @@ struct WorkoutDetailView: View {
             showingAddExercise = true
         } label: {
             Label("Add Exercise", systemImage: "plus.circle.fill")
-                .font(.system(.body, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(AppColors.accent)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
         }
+        .gradientCTA()
         .buttonStyle(.plain)
         .accessibilityIdentifier("addExerciseButton")
         .padding(.horizontal)
@@ -861,6 +960,12 @@ struct WorkoutDetailView: View {
 
         do {
             try modelContext.save()
+            // Store near-miss PR data for tomorrow's smart notification
+            NotificationScheduler.shared.onWorkoutEnded(
+                workout: workout,
+                prExercises: prExercises,
+                modelContext: modelContext
+            )
             // Invalidate PR cache and notify so Recent PRs section updates
             PRManager.shared.invalidateCache()
             NotificationCenter.default.post(name: .workoutEnded, object: nil)
@@ -1227,9 +1332,11 @@ struct SupersetExerciseRow: View {
             debugLog("Error saving template: \(error)")
         }
 
-        showingSaveAsTemplate = true
         if thenEnd {
+            // Skip the "Template Saved" alert — summary screen confirms the end
             endWorkout()
+        } else {
+            showingSaveAsTemplate = true
         }
     }
 }

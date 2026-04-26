@@ -28,6 +28,15 @@ nonisolated final class RepCounter {
         case up = "UP"          // Extended / top — rep just completed or returning
     }
 
+    /// Per-rep tempo and ROM metrics, collected after each completed rep
+    struct RepMetrics {
+        let eccentricDuration: TimeInterval  // time going down (seconds)
+        let concentricDuration: TimeInterval // time coming back up (seconds)
+        var totalDuration: TimeInterval { eccentricDuration + concentricDuration }
+        let rom: Double                      // range of motion (degrees)
+        let avgConfidence: Double            // average pose confidence during rep
+    }
+
     /// Feedback for the current movement state
     enum MovementFeedback: String {
         case settingUp = "Setting up..."
@@ -82,8 +91,19 @@ nonisolated final class RepCounter {
     /// Number of reps rejected for being too fast
     private(set) var rejectedFastCount: Int = 0
 
+    /// Per-rep metrics (tempo, ROM, confidence) — populated after each completed rep
+    private(set) var completedRepMetrics: [RepMetrics] = []
+
     /// Whether detection is currently active
     var isActive: Bool = true
+
+    /// Set to true after a rep completes and no new rep starts within autoLogTimeout seconds.
+    /// View observes this to show the auto-log countdown overlay.
+    private(set) var autoLogPending: Bool = false
+
+    /// When true, the stability window for arming is shortened (~3 frames vs 12).
+    /// Set by the camera view after rest ends so the user can get "Ready" almost instantly.
+    var reducedArmingWindow: Bool = false
 
     /// ROM multiplier for sensitivity control (0.25 = easy, 0.4 = normal, 0.5 = strict)
     var sensitivityMultiplier: Double = 0.4
@@ -154,8 +174,10 @@ nonisolated final class RepCounter {
     private var repMinAngle: Double = .greatestFiniteMagnitude
     /// Maximum angle observed during current rep cycle
     private var repMaxAngle: Double = -.greatestFiniteMagnitude
-    /// Time when the "down" phase started
+    /// Time when the "down" phase started (eccentric begins)
     private var phaseStartTime: Date?
+    /// Time when the peak contraction was reached (eccentric→concentric boundary)
+    private var peakTime: Date?
     /// Minimum time for a full rep cycle (down → up)
     static let minimumRepDuration: TimeInterval = 0.6
 
@@ -165,6 +187,13 @@ nonisolated final class RepCounter {
     private var lastRepTime: Date = .distantPast
     /// Seconds of inactivity before returning to idle
     static let autoDisarmTimeout: TimeInterval = 8.0
+
+    // MARK: - Auto-Log Timer
+
+    /// Fires autoLogTimeout seconds after the last rep with no new rep — signals hands-free auto-log.
+    private var autoLogTimer: Timer?
+    /// Inactivity (post-rep) threshold before auto-log is triggered.
+    static let autoLogTimeout: TimeInterval = 4.0
 
     // MARK: - Confidence Tracking
 
@@ -258,6 +287,8 @@ nonisolated final class RepCounter {
         repMinAngle = .greatestFiniteMagnitude
         repMaxAngle = -.greatestFiniteMagnitude
         phaseStartTime = nil
+        peakTime = nil
+        completedRepMetrics = []
         lastRejectionReason = .none
         isLowConfidenceRep = false
         rejectedShallowCount = 0
@@ -270,6 +301,10 @@ nonisolated final class RepCounter {
         debugLastOutlierRejected = false
         debugIsNearStart = false
         debugIsStable = false
+        autoLogTimer?.invalidate()
+        autoLogTimer = nil
+        autoLogPending = false
+        reducedArmingWindow = false
     }
 
     /// Manually add a rep
@@ -283,6 +318,13 @@ nonisolated final class RepCounter {
         if repCount > 0 {
             repCount -= 1
         }
+    }
+
+    /// Cancel a pending auto-log signal (called by the "Cancel" button or when a new rep starts).
+    func cancelAutoLog() {
+        autoLogTimer?.invalidate()
+        autoLogTimer = nil
+        autoLogPending = false
     }
 
     // MARK: - Private: State Machine
@@ -313,15 +355,21 @@ nonisolated final class RepCounter {
         debugIsNearStart = isNearStart
         debugIsStable = isStable
 
+        // After rest ends in hands-free mode, use a shorter stability window so user re-arms quickly.
+        let requiredFrames = reducedArmingWindow
+            ? max(3, Self.requiredStabilityFrames / 4)
+            : Self.requiredStabilityFrames
+
         if isNearStart && isStable {
             stabilityFrameCount += 1
-            stabilityProgress = min(1.0, Double(stabilityFrameCount) / Double(Self.requiredStabilityFrames))
+            stabilityProgress = min(1.0, Double(stabilityFrameCount) / Double(requiredFrames))
 
-            if stabilityFrameCount >= Self.requiredStabilityFrames {
+            if stabilityFrameCount >= requiredFrames {
                 // Transition → armed
                 currentPhase = .armed
                 feedback = .armed
                 stabilityProgress = 1.0
+                reducedArmingWindow = false   // auto-reset after first arm
                 lastRepTime = Date() // reset disarm timer on arming
 
                 // Fade "Ready!" → "Ready" after a short delay
@@ -363,6 +411,7 @@ nonisolated final class RepCounter {
         repMaxAngle = max(repMaxAngle, angle)
 
         if isNewExtreme {
+            peakTime = Date()
             onPeakContraction?()
         }
 
@@ -400,6 +449,8 @@ nonisolated final class RepCounter {
         if configuration.startsAtBottom {
             // Ascending exercises: start low, look for angle to RISE past upThreshold
             if angle > (configuration.upThreshold - hysteresis) {
+                // Cancel any pending auto-log — user started a new rep
+                cancelAutoLog()
                 currentPhase = .down  // "down" phase = peak of ascending movement
                 feedback = .holdingDown
                 phaseStartTime = Date()
@@ -416,6 +467,8 @@ nonisolated final class RepCounter {
         } else {
             // Descending exercises: start high, look for angle to DROP past downThreshold
             if angle < (configuration.downThreshold + hysteresis) {
+                // Cancel any pending auto-log — user started a new rep
+                cancelAutoLog()
                 currentPhase = .down
                 feedback = .holdingDown
                 phaseStartTime = Date()
@@ -464,11 +517,27 @@ nonisolated final class RepCounter {
     }
 
     private func completeRep() -> Bool {
-        lastRepTime = Date()
+        let completionTime = Date()
+        lastRepTime = completionTime
         currentPhase = .up
         repCount += 1
         feedback = .repComplete
         lastRejectionReason = .none
+
+        // Collect tempo metrics before resetting
+        if let start = phaseStartTime {
+            let peak = peakTime ?? completionTime
+            let eccentric = peak.timeIntervalSince(start)
+            let concentric = completionTime.timeIntervalSince(peak)
+            let rom = repMaxAngle - repMinAngle
+            let confidence = repConfidenceCount > 0 ? repConfidenceSum / Double(repConfidenceCount) : 1.0
+            completedRepMetrics.append(RepMetrics(
+                eccentricDuration: max(0, eccentric),
+                concentricDuration: max(0, concentric),
+                rom: rom,
+                avgConfidence: confidence
+            ))
+        }
 
         triggerHaptic()
 
@@ -481,6 +550,19 @@ nonisolated final class RepCounter {
                 if self?.feedback == .repComplete {
                     self?.feedback = .ready
                 }
+            }
+        }
+
+        // Schedule auto-log signal — fires if no new rep starts within autoLogTimeout seconds.
+        // In test mode, set synchronously so tests don't need real timers.
+        if forTesting {
+            autoLogPending = true
+        } else {
+            autoLogTimer?.invalidate()
+            autoLogTimer = Timer.scheduledTimer(withTimeInterval: Self.autoLogTimeout, repeats: false) { [weak self] _ in
+                guard let self, self.repCount > 0,
+                      self.currentPhase == .up || self.currentPhase == .armed else { return }
+                DispatchQueue.main.async { self.autoLogPending = true }
             }
         }
 
@@ -530,6 +612,7 @@ nonisolated final class RepCounter {
         repMinAngle = .greatestFiniteMagnitude
         repMaxAngle = -.greatestFiniteMagnitude
         phaseStartTime = nil
+        peakTime = nil
         repConfidenceSum = 0
         repConfidenceCount = 0
     }

@@ -74,10 +74,10 @@ struct RecentWorkoutCard: View {
             }
             .padding(12)
             .frame(width: 140, height: 110)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
             }
             .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
         }

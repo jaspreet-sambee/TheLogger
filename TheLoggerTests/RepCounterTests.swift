@@ -1018,4 +1018,73 @@ final class RepCounterTests: XCTestCase {
         XCTAssertEqual(counter.sensitivityMultiplier, 0.25)
         XCTAssertEqual(counter.minimumRepDurationOverride, 0.4)
     }
+
+    // MARK: - Hands-Free: Auto-Log Signal
+
+    func testAutoLogPendingAfterRep() {
+        // forTesting=true sets autoLogPending synchronously after completeRep()
+        let counter = makeSquatCounter()
+        armCounter(counter, exerciseType: .squat)
+        XCTAssertFalse(counter.autoLogPending, "Should not be pending before any rep")
+        performRep(counter, downAngle: 80, upAngle: 115)
+        XCTAssertEqual(counter.repCount, 1)
+        XCTAssertTrue(counter.autoLogPending, "Should be pending after completing a rep with no follow-up")
+    }
+
+    func testAutoLogCancelledByCancelAutoLog() {
+        let counter = makeSquatCounter()
+        armCounter(counter, exerciseType: .squat)
+        performRep(counter, downAngle: 80, upAngle: 115)
+        XCTAssertTrue(counter.autoLogPending)
+        counter.cancelAutoLog()
+        XCTAssertFalse(counter.autoLogPending, "cancelAutoLog() should clear the pending flag")
+    }
+
+    func testAutoLogCancelledByNewRep() {
+        let counter = makeSquatCounter()
+        armCounter(counter, exerciseType: .squat)
+        // Complete first rep — autoLogPending becomes true in test mode
+        performRep(counter, downAngle: 80, upAngle: 115)
+        XCTAssertTrue(counter.autoLogPending)
+        // Starting second rep should cancel it
+        transitionAngle(counter, to: 80)   // descend past downThreshold → .down
+        XCTAssertFalse(counter.autoLogPending, "Starting a new rep should cancel the auto-log signal")
+    }
+
+    func testAutoLogResetOnCounterReset() {
+        let counter = makeSquatCounter()
+        armCounter(counter, exerciseType: .squat)
+        performRep(counter, downAngle: 80, upAngle: 115)
+        XCTAssertTrue(counter.autoLogPending)
+        counter.reset()
+        XCTAssertFalse(counter.autoLogPending, "reset() should clear autoLogPending")
+    }
+
+    // MARK: - Hands-Free: Reduced Arming Window
+
+    func testReducedArmingWindow_armsWithFewerFrames() {
+        let counter = makeSquatCounter()
+        counter.reducedArmingWindow = true
+        // Feed initial angle then 4 stable frames — normally needs 12, reduced needs only 3
+        counter.processAngle(115)
+        feedStable(counter, angle: 115, frames: 4)
+        XCTAssertEqual(counter.currentPhase, .armed, "Should arm quickly with reducedArmingWindow = true")
+    }
+
+    func testReducedArmingWindow_resetsAfterArm() {
+        let counter = makeSquatCounter()
+        counter.reducedArmingWindow = true
+        counter.processAngle(115)
+        feedStable(counter, angle: 115, frames: 5)
+        XCTAssertEqual(counter.currentPhase, .armed)
+        XCTAssertFalse(counter.reducedArmingWindow, "reducedArmingWindow should auto-reset to false after arming")
+    }
+
+    func testNormalArmingWindow_requiresFullFrames() {
+        let counter = makeSquatCounter()
+        // Without reduced window, 4 frames should not be enough to arm (needs 12)
+        counter.processAngle(115)
+        feedStable(counter, angle: 115, frames: 4)
+        XCTAssertNotEqual(counter.currentPhase, .armed, "Should not arm with only 4 frames in normal mode")
+    }
 }

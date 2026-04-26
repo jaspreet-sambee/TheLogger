@@ -340,6 +340,87 @@ final class GamificationEngineTests: XCTestCase {
         XCTAssertEqual(engine.volumeTrend.count, 8)
         XCTAssertGreaterThanOrEqual(engine.thisWeekPRCount, 1)
     }
+
+    // MARK: - Level For Workout Count
+
+    func testLevelForWorkoutCount_zeroWorkouts_returnsLevel1() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(0), 1)
+    }
+
+    func testLevelForWorkoutCount_fourWorkouts_returnsLevel1() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(4), 1)
+    }
+
+    func testLevelForWorkoutCount_fiveWorkouts_returnsLevel2() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(5), 2)
+    }
+
+    func testLevelForWorkoutCount_fourteenWorkouts_returnsLevel2() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(14), 2)
+    }
+
+    func testLevelForWorkoutCount_fifteenWorkouts_returnsLevel3() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(15), 3)
+    }
+
+    func testLevelForWorkoutCount_thirtyWorkouts_returnsLevel4() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(30), 4)
+    }
+
+    func testLevelForWorkoutCount_fiftyWorkouts_returnsLevel5() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(50), 5)
+    }
+
+    func testLevelForWorkoutCount_hundredWorkouts_returnsLevel6() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(100), 6)
+    }
+
+    func testLevelForWorkoutCount_twoHundredWorkouts_returnsLevel7() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(200), 7)
+    }
+
+    func testLevelForWorkoutCount_fiveHundredWorkouts_returnsLevel8() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(500), 8)
+    }
+
+    func testLevelForWorkoutCount_thousandWorkouts_returnsLevel8() {
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(1000), 8)
+    }
+
+    func testLevelForWorkoutCount_allBoundaries() {
+        // Test every boundary transition
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(4), 1)
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(5), 2)   // boundary
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(14), 2)
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(15), 3)  // boundary
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(29), 3)
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(30), 4)  // boundary
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(49), 4)
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(50), 5)  // boundary
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(99), 5)
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(100), 6) // boundary
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(199), 6)
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(200), 7) // boundary
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(499), 7)
+        XCTAssertEqual(GamificationEngine.levelForWorkoutCount(500), 8) // boundary
+    }
+
+    func testLevelForWorkoutCount_isMonotonicallyIncreasing() {
+        var previousLevel = 0
+        for count in stride(from: 0, to: 600, by: 1) {
+            let level = GamificationEngine.levelForWorkoutCount(count)
+            XCTAssertGreaterThanOrEqual(level, previousLevel, "Level should never decrease (count=\(count))")
+            previousLevel = level
+        }
+    }
+
+    func testLevelForWorkoutCount_levelRangeIsOneToEight() {
+        for count in [0, 1, 5, 15, 30, 50, 100, 200, 500, 1000, 9999] {
+            let level = GamificationEngine.levelForWorkoutCount(count)
+            XCTAssertGreaterThanOrEqual(level, 1, "Level should be >= 1 for count \(count)")
+            XCTAssertLessThanOrEqual(level, 8, "Level should be <= 8 for count \(count)")
+        }
+    }
 }
 
 // MARK: - Achievement Manager Tests

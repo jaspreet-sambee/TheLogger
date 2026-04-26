@@ -60,9 +60,26 @@ final class Exercise: Identifiable {
         }
     }
 
-    /// Sets in stable display order (SwiftData relationship order is not guaranteed)
+    /// Sets in stable display order (SwiftData relationship order is not guaranteed).
+    /// Uses sortOrder as primary key; falls back to creation-time UUID comparison for ties.
     var setsByOrder: [WorkoutSet] {
-        (sets ?? []).sorted { $0.sortOrder < $1.sortOrder }
+        (sets ?? []).sorted {
+            if $0.sortOrder != $1.sortOrder { return $0.sortOrder < $1.sortOrder }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    /// Re-assign sortOrder sequentially if any duplicates exist (CloudKit sync can reset to 0).
+    func repairSortOrderIfNeeded() {
+        let ordered = setsByOrder
+        var needsRepair = false
+        for (i, s) in ordered.enumerated() where s.sortOrder != i {
+            needsRepair = true; break
+        }
+        guard needsRepair else { return }
+        for (i, s) in ordered.enumerated() {
+            s.sortOrder = i
+        }
     }
 
     /// Remove a set by ID

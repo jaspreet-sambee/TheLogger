@@ -1,0 +1,81 @@
+# ==============================================================================
+# PR Celebration — The emotional moment
+# ==============================================================================
+# Shows the confetti animation when you hit a new Personal Record.
+# This is the dopamine hit — makes people WANT the app.
+#
+# Style: Dark mode, dramatic zoom out for confetti, flash on achievement
+# Duration: ~12s
+# ==============================================================================
+
+name: "PR Celebration"
+description: "Hit a new PR and the app celebrates with you"
+
+simulator:
+  device: "iPhone 17 Pro"
+  appearance: "dark"
+
+recording:
+  duration: 15
+  settle_time: 3
+  test_method: "testPrCelebrationDemo"
+
+output:
+  filename: "pr-celebration"
+  background_color: "#000000"     # Pure black — let confetti shine
+  include_device_frame: true
+  twitter_optimized: true
+  caption: "New PR? Your app celebrates with you."
+  hashtags: ["TheLogger", "PersonalRecord", "GymMotivation", "FitnessGoals", "PR"]
+
+effects:
+  trim_start: 6.0
+  trim_end: 1.0
+
+  # No speed ramp — real-time for maximum impact
+
+  # Ken Burns for subtle drama
+  ken_burns:
+    enabled: true
+    scale_start: 1.0
+    scale_end: 1.02
+
+  zoom_moments:
+    # Logging the PR set
+    - time: 1.0
+      scale: 1.2
+      duration: 2.0
+      anchor: "bottom_center"
+      ease: 0.3
+
+    # ZOOM OUT just before confetti — reveals the full celebration
+    - time: 5.0
+      scale: 0.92
+      duration: 0.5
+      anchor: "center"
+      ease: 0.2
+
+    # Zoom in on the PR badge/trophy card
+    - time: 7.0
+      scale: 1.15
+      duration: 2.5
+      anchor: "center"
+      ease: 0.4
+
+  # Flash on confetti burst
+  flash_moments:
+    - time: 5.2
+      duration: 0.12
+
+  text_overlays:
+    - text: "New PR? Celebrated."
+      start: 6.0
+      end: 10.5
+      position: "bottom"
+      fontsize: 48
+
+  music: true
+  music_volume: 0.28    # Louder for celebration energy
+
+  vignette: true
+  color_grade: "warm"   # Warm tones for achievement glow

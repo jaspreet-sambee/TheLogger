@@ -2,45 +2,41 @@
 //  QuickLogStrip.swift
 //  TheLogger
 //
-//  Quick log strip for rapid set entry
+//  Hero log area: reps pill + weight pill (Option A: single ± + step toggle) + LOG SET button
 //
 
 import SwiftUI
 import SwiftData
 
 // MARK: - Quick Log Strip
-/// Stepper row below the set list: shows the last set's values with live
-/// reps / weight (or duration) adjustment. Tap checkmark to log.
-/// Hidden while rest timer is active; reappears once rest completes.
-/// Tap reps or weight to edit inline — no sheet, keyboard appears once.
 struct QuickLogStrip: View {
-    let lastSet: WorkoutSet?  // Now optional - defaults to 0/0 when nil
+    let lastSet: WorkoutSet?
     let isTimeBased: Bool
-    /// Log a set: (reps, weight-in-storage-units, duration-seconds?)
-    let onLog: (Int, Double, Int?) -> Void
-    /// Open the full inline add-set form (optional - not needed for auto-chain flow)
+    let setCount: Int  // Total logged sets — used for "Set N" label
+    let onLog: (Int, Double, Int?, SetType) -> Void
     let onCustom: (() -> Void)?
 
     @AppStorage("unitSystem") private var unitSystem: String = "Imperial"
 
     @State private var reps: Int
-    @State private var weightDisplay: Double   // display units (lbs or kg)
-    @State private var duration: Int           // seconds
+    @State private var weightDisplay: Double
+    @State private var duration: Int
     @State private var commitScale: CGFloat = 1.0
-    @State private var commitRotation: Double = 0
+    @State private var weightStep: Double = 5.0
+    @State private var setType: SetType = .working
 
-    // Inline editing — replaces sheet-based input for zero-lag keyboard
     private enum StripField: Hashable { case reps, weight, duration }
     @FocusState private var focusedField: StripField?
     @State private var repsText: String = ""
     @State private var weightText: String = ""
     @State private var durationText: String = ""
 
-    init(lastSet: WorkoutSet?, isTimeBased: Bool,
-         onLog: @escaping (Int, Double, Int?) -> Void,
+    init(lastSet: WorkoutSet?, isTimeBased: Bool, setCount: Int = 0,
+         onLog: @escaping (Int, Double, Int?, SetType) -> Void,
          onCustom: (() -> Void)? = nil) {
         self.lastSet = lastSet
         self.isTimeBased = isTimeBased
+        self.setCount = setCount
         self.onLog = onLog
         self.onCustom = onCustom
 
@@ -52,7 +48,6 @@ struct QuickLogStrip: View {
         self._weightDisplay = State(initialValue: initialWeight)
         self._duration = State(initialValue: initialDuration)
 
-        // Init text states to match display values
         let weightStr = initialWeight == initialWeight.rounded()
             ? "\(Int(initialWeight))"
             : String(format: "%.1f", initialWeight)
@@ -61,87 +56,104 @@ struct QuickLogStrip: View {
         self._durationText = State(initialValue: "\(initialDuration)")
     }
 
-    private var smallWeightStep: Double { unitSystem == "Imperial" ? 2.5 : 1.25 }
-    private var largeWeightStep: Double { unitSystem == "Imperial" ? 5.0 : 2.5 }
+    // Step size options adapt to unit system
+    private var weightStepOptions: [Double] {
+        unitSystem == "Imperial" ? [2.5, 5.0, 10.0] : [1.25, 2.5, 5.0]
+    }
 
     var body: some View {
-        HStack(spacing: 10) {
-            if isTimeBased {
-                durationGroup
-            } else {
-                repsGroup
-                weightGroup
-            }
-
-            Spacer()
-
-            Button {
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
-                    commitScale = 1.3
-                    commitRotation = 360
-                }
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    commit()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        commitScale = 1.0
+        VStack(spacing: 10) {
+            // "Same as last" header
+            if !isTimeBased, lastSet != nil {
+                HStack {
+                    Text("Set \(setCount + 1)")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(AppColors.accent.opacity(0.55))
+                        .kerning(1.0)
+                        .textCase(.uppercase)
+                    Spacer()
+                    Button {
+                        resetToLastSet()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 10, weight: .semibold))
+                            Text("Same as last")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.white.opacity(0.55))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.white.opacity(0.08))
+                                .overlay(Capsule().stroke(Color.white.opacity(0.13), lineWidth: 1))
+                        )
                     }
+                    .buttonStyle(.plain)
                 }
-            } label: {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(.title3))
-                    .foregroundStyle(AppColors.accentGold)
-                    .scaleEffect(commitScale)
-                    .rotationEffect(.degrees(commitRotation))
+                .padding(.horizontal, 4)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("quickLogCommitButton")
+
+            if isTimeBased {
+                durationGroup.frame(maxWidth: .infinity)
+            } else {
+                HStack(spacing: 10) {
+                    repsGroup.frame(maxWidth: .infinity)
+                    weightGroup.frame(maxWidth: .infinity)
+                        .layoutPriority(1) // weight pill gets more space (flex: 1.4 in mockup)
+                }
+            }
+
+            // Set type picker
+            setTypePicker
+
+            logButton
         }
-        .padding(.vertical, 8)
-        // Commit text when focus leaves; select all when focus arrives
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(AppColors.accent.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(AppColors.accent.opacity(0.15), lineWidth: 1)
+                )
+        )
         .onChange(of: focusedField) { oldField, newField in
             switch oldField {
-            case .reps: commitRepsText()
-            case .weight: commitWeightText()
+            case .reps:     commitRepsText()
+            case .weight:   commitWeightText()
             case .duration: commitDurationText()
-            case nil: break
+            case nil:       break
             }
             if newField != nil {
-                // Select all so typing immediately replaces the existing value
                 DispatchQueue.main.async {
                     UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
                 }
             }
         }
-        // Keep text in sync when steppers mutate the numeric state
-        .onChange(of: reps) { _, newVal in
-            if focusedField != .reps { repsText = "\(newVal)" }
-        }
-        .onChange(of: weightDisplay) { _, newVal in
-            if focusedField != .weight { weightText = formatWeight(newVal) }
-        }
-        .onChange(of: duration) { _, newVal in
-            if focusedField != .duration { durationText = "\(newVal)" }
-        }
+        .onChange(of: reps) { _, v in if focusedField != .reps { repsText = "\(v)" } }
+        .onChange(of: weightDisplay) { _, v in if focusedField != .weight { weightText = formatWeight(v) } }
+        .onChange(of: duration) { _, v in if focusedField != .duration { durationText = "\(v)" } }
         .onChange(of: lastSet?.reps) { _, newReps in
-            if let newReps, focusedField != .reps {
-                reps = newReps
-                repsText = "\(newReps)"
-            }
+            if let newReps, focusedField != .reps { reps = newReps; repsText = "\(newReps)" }
         }
         .onChange(of: lastSet?.weight) { _, newWeight in
             if let newWeight, focusedField != .weight {
                 let w = UnitFormatter.convertToDisplay(newWeight)
-                weightDisplay = w
-                weightText = formatWeight(w)
+                weightDisplay = w; weightText = formatWeight(w)
             }
         }
         .onChange(of: lastSet?.durationSeconds) { _, newDuration in
             if focusedField != .duration {
-                let d = newDuration ?? 30
-                duration = d
-                durationText = "\(d)"
+                let d = newDuration ?? 30; duration = d; durationText = "\(d)"
             }
+        }
+        // Sync step options when unit system changes
+        .onChange(of: unitSystem) { _, _ in
+            weightStep = unitSystem == "Imperial" ? 5.0 : 2.5
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -154,7 +166,6 @@ struct QuickLogStrip: View {
                     case nil:       break
                     }
                     focusedField = nil
-                    // Dismiss keyboard for any other focused field (e.g. exercise name)
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
                 .fontWeight(.semibold)
@@ -162,83 +173,259 @@ struct QuickLogStrip: View {
         }
     }
 
-    // MARK: - Stepper Groups
-    // TextFields are always in the hierarchy — no conditional view swapping.
-    // This is required for focus to work reliably inside a List.
+    // MARK: - LOG SET Button
 
-    private var repsGroup: some View {
-        HStack(spacing: 0) {
-            stepButton("\u{2212}") { reps = max(0, reps - 1) }
-            TextField("0", text: $repsText)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.center)
-                .font(.system(.subheadline, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(AppColors.accent)
-                .frame(width: 36)
-                .focused($focusedField, equals: .reps)
-                .onSubmit {
-                    commitRepsText()
-                    focusedField = .weight
-                }
-            stepButton("+") { reps += 1 }
+    private var logButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.15, dampingFraction: 0.6)) { commitScale = 0.96 }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                commit()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { commitScale = 1.0 }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .heavy))
+                Text("LOG SET")
+                    .font(.system(size: 14, weight: .heavy))
+                    .kerning(0.8)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(
+                LinearGradient(
+                    colors: [AppColors.accent, Color(red: 0.75, green: 0.14, blue: 0.23)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: AppColors.accent.opacity(0.4), radius: 8, x: 0, y: 4)
+            .scaleEffect(commitScale)
         }
-        .background(Capsule().fill(Color.secondary.opacity(0.1)))
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("quickLogCommitButton")
     }
 
+    // MARK: - Reps Group
+
+    private var repsGroup: some View {
+        VStack(spacing: 6) {
+            Text("Reps")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.28))
+                .kerning(0.6)
+                .textCase(.uppercase)
+
+            HStack(spacing: 4) {
+                largePillButton("−") { reps = max(0, reps - 1) }
+                TextField("0", text: $repsText)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .font(.system(size: 28, weight: .heavy))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 44)
+                    .focused($focusedField, equals: .reps)
+                    .onSubmit { commitRepsText(); focusedField = .weight }
+                largePillButton("+") { reps += 1 }
+            }
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.09), lineWidth: 1))
+        )
+    }
+
+    // MARK: - Weight Group (Option A: single ± + step toggle)
+
     private var weightGroup: some View {
-        HStack(spacing: 4) {
-            iconStepButton("minus.circle.fill", size: .large) {
-                weightDisplay = max(0, weightDisplay - largeWeightStep)
-            }
-            iconStepButton("minus.circle", size: .small) {
-                weightDisplay = max(0, weightDisplay - smallWeightStep)
-            }
+        VStack(spacing: 8) {
+            weightMainRow
+            weightStepToggle
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.09), lineWidth: 1))
+        )
+    }
+
+    private var weightMainRow: some View {
+        HStack(spacing: 6) {
+            weightPmButton("−") { weightDisplay = max(0, weightDisplay - weightStep) }
             TextField("0", text: $weightText)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.center)
-                .font(.system(.subheadline, weight: .semibold))
+                .font(.system(size: 24, weight: .heavy))
                 .monospacedDigit()
-                .foregroundStyle(AppColors.accent)
-                .frame(width: 56)
+                .minimumScaleFactor(0.6)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity)
                 .focused($focusedField, equals: .weight)
-                .onSubmit {
-                    commitWeightText()
-                    focusedField = nil
+                .onSubmit { commitWeightText(); focusedField = nil }
+            weightPmButton("+") { weightDisplay += weightStep }
+        }
+    }
+
+    private var weightStepToggle: some View {
+        HStack(spacing: 0) {
+            ForEach(weightStepOptions, id: \.self) { step in
+                Button {
+                    weightStep = step
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.5)
+                } label: {
+                    Text(formatStep(step))
+                        .font(.system(size: 11, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(weightStep == step ? AppColors.accent : Color.white.opacity(0.28))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(weightStep == step ? AppColors.accent.opacity(0.15) : Color.clear)
                 }
-            iconStepButton("plus.circle", size: .small) {
-                weightDisplay += smallWeightStep
-            }
-            iconStepButton("plus.circle.fill", size: .large) {
-                weightDisplay += largeWeightStep
+                .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .background(Capsule().fill(Color.secondary.opacity(0.1)))
+        .clipShape(Capsule())
+        .background(
+            Capsule()
+                .fill(Color.white.opacity(0.06))
+                .overlay(Capsule().stroke(Color.white.opacity(0.09), lineWidth: 1))
+        )
     }
+
+    // MARK: - Set Type Picker
+
+    private var setTypePicker: some View {
+        HStack(spacing: 6) {
+            ForEach([SetType.warmup, .working, .dropSet, .failure], id: \.self) { type in
+                Button {
+                    setType = type
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.5)
+                } label: {
+                    Text(type == .dropSet ? "Drop" : type.rawValue)
+                        .font(.system(size: 11, weight: .bold))
+                        .kerning(0.2)
+                        .foregroundStyle(setType == type ? type.color : Color.white.opacity(0.35))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 30)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(setType == type ? type.color.opacity(0.12) : Color.white.opacity(0.04))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(setType == type ? type.color.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 1)
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Duration Group
 
     private var durationGroup: some View {
-        HStack(spacing: 0) {
-            stepButton("\u{2212}") { duration = max(5, duration - 5) }
-            TextField("0", text: $durationText)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.center)
-                .font(.system(.subheadline, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(AppColors.accent)
-                .frame(width: 44)
-                .focused($focusedField, equals: .duration)
-                .onSubmit {
-                    commitDurationText()
-                    focusedField = nil
-                }
-            stepButton("+") { duration += 5 }
+        VStack(spacing: 6) {
+            Text("DURATION (sec)")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.30))
+                .kerning(0.5)
+
+            HStack(spacing: 0) {
+                largePillButton("−") { duration = max(5, duration - 5) }
+                TextField("0", text: $durationText)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .font(.system(size: 24, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                    .frame(width: 62)
+                    .focused($focusedField, equals: .duration)
+                    .onSubmit { commitDurationText(); focusedField = nil }
+                largePillButton("+") { duration += 5 }
+            }
         }
-        .background(Capsule().fill(Color.secondary.opacity(0.1)))
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white.opacity(0.06))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.09), lineWidth: 1))
+        )
     }
 
-    // MARK: - Text commit helpers
+    // MARK: - Helpers
+
+    private func largePillButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.6)
+            action()
+        } label: {
+            Text(label)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(AppColors.accent)
+                .frame(width: 34, height: 34)
+                .background(
+                    Circle()
+                        .fill(AppColors.accent.opacity(0.10))
+                        .overlay(Circle().stroke(AppColors.accent.opacity(0.20), lineWidth: 1))
+                )
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func weightPmButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.7)
+            action()
+        } label: {
+            Text(label)
+                .font(.system(size: 22, weight: .light))
+                .foregroundStyle(Color.white.opacity(0.60))
+                .frame(width: 40, height: 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.07))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func formatStep(_ step: Double) -> String {
+        step == step.rounded() ? "\(Int(step))" : String(format: "%.1f", step)
+    }
+
+    private func formatWeight(_ value: Double) -> String {
+        value == value.rounded() ? "\(Int(value))" : String(format: "%.1f", value)
+    }
+
+    private func resetToLastSet() {
+        guard let lastSet else { return }
+        // Dismiss keyboard first
+        focusedField = nil
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        // Reset values
+        reps = lastSet.reps
+        let w = UnitFormatter.convertToDisplay(lastSet.weight)
+        weightDisplay = w
+        repsText = "\(lastSet.reps)"
+        weightText = formatWeight(w)
+        if let d = lastSet.durationSeconds {
+            duration = d
+            durationText = "\(d)"
+        }
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.6)
+    }
+
+    // MARK: - Text commit
 
     private func commitRepsText() {
         if let v = Int(repsText.trimmingCharacters(in: .whitespaces)), v >= 0 { reps = v }
@@ -253,55 +440,18 @@ struct QuickLogStrip: View {
         if let v = Int(durationText.trimmingCharacters(in: .whitespaces)), v > 0 { duration = v }
     }
 
-    // MARK: - Helpers
-
-    private enum ButtonSize { case small, large }
-
-    private func stepButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.6)
-            action()
-        } label: {
-            Text(label)
-                .font(.system(.subheadline, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 26, height: 28)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func iconStepButton(_ systemName: String, size: ButtonSize = .large, action: @escaping () -> Void) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: size == .large ? .light : .soft).impactOccurred(intensity: size == .large ? 0.7 : 0.5)
-            action()
-        } label: {
-            Image(systemName: systemName)
-                .font(.system(size == .large ? .body : .caption, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: size == .large ? 24 : 20, height: size == .large ? 24 : 20)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Integer when whole, one decimal otherwise
-    private func formatWeight(_ value: Double) -> String {
-        value == value.rounded() ? "\(Int(value))" : String(format: "%.1f", value)
-    }
-
     private func commit() {
-        // Commit any pending inline text edit before logging
         switch focusedField {
-        case .reps: commitRepsText()
-        case .weight: commitWeightText()
+        case .reps:     commitRepsText()
+        case .weight:   commitWeightText()
         case .duration: commitDurationText()
-        case nil: break
+        case nil:       break
         }
         focusedField = nil
         if isTimeBased {
-            onLog(0, 0, duration)
+            onLog(0, 0, duration, setType)
         } else {
-            onLog(reps, UnitFormatter.convertToStorage(weightDisplay), nil)
+            onLog(reps, UnitFormatter.convertToStorage(weightDisplay), nil, setType)
         }
     }
 }

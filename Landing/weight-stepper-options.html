@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weight Stepper Options</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0d16;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    padding: 48px 40px 80px;
+    color: #fff;
+  }
+  h1 {
+    font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.3);
+    margin-bottom: 40px; letter-spacing: .12em; text-transform: uppercase;
+  }
+
+  .options-row { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+
+  .option-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    width: 280px;
+  }
+  .option-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    text-align: center;
+  }
+  .option-desc {
+    font-size: 12px; color: rgba(255,255,255,0.35); text-align: center;
+    line-height: 1.5; max-width: 240px;
+  }
+
+  /* ── Shared pill container ── */
+  .pill {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 16px;
+    padding: 12px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .pill-top-label {
+    font-size: 9px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: rgba(255,255,255,0.28);
+    align-self: flex-start; padding-left: 2px;
+  }
+
+  /* ═══════════════════════════════════════
+     OPTION A — Single ± pair + step toggle
+     Tap the ±2.5/±5 pill to switch
+     ═══════════════════════════════════════ */
+  .opt-a-row {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+  }
+  .opt-a-btn {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 300; color: rgba(255,255,255,0.6);
+    flex-shrink: 0;
+  }
+  .opt-a-center {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  }
+  .opt-a-val {
+    font-size: 30px; font-weight: 800; color: #fff; letter-spacing: -1px; line-height: 1;
+  }
+  /* Step toggle pill */
+  .step-toggle {
+    display: flex; border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.09);
+    overflow: hidden;
+    gap: 0;
+  }
+  .step-opt {
+    padding: 3px 10px;
+    font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.30);
+  }
+  .step-opt.active {
+    background: rgba(232,56,74,0.18);
+    color: #E8384A;
+  }
+
+  /* ═══════════════════════════════════════
+     OPTION B — Drag / scrub the value
+     Swipe left/right on the number
+     ═══════════════════════════════════════ */
+  .opt-b-row {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+  }
+  .opt-b-arrows {
+    display: flex; flex-direction: column; gap: 2px; align-items: center;
+  }
+  .opt-b-arrow {
+    font-size: 9px; color: rgba(255,255,255,0.20);
+    line-height: 1;
+  }
+  .opt-b-center {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .opt-b-hint {
+    font-size: 9px; color: rgba(255,255,255,0.20);
+    letter-spacing: .04em;
+    display: flex; align-items: center; gap: 4px;
+  }
+  /* Drag handle visual on the value */
+  .opt-b-val {
+    font-size: 30px; font-weight: 800; color: #fff; letter-spacing: -1px; line-height: 1;
+    padding: 4px 14px;
+    background: rgba(232,56,74,0.08);
+    border: 1px solid rgba(232,56,74,0.18);
+    border-radius: 12px;
+    position: relative;
+  }
+  .drag-dots {
+    display: flex; gap: 3px; justify-content: center; opacity: 0.3;
+  }
+  .drag-dot {
+    width: 3px; height: 3px; border-radius: 50%; background: rgba(255,255,255,0.5);
+  }
+  .opt-b-unit {
+    font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.28); letter-spacing: .04em;
+  }
+
+  /* ═══════════════════════════════════════
+     OPTION C — Scrollable preset chips row
+     Common jumps: -10 -5 -2.5 +2.5 +5 +10
+     ═══════════════════════════════════════ */
+  .opt-c-val-row {
+    display: flex; align-items: baseline; gap: 5px; justify-content: center;
+  }
+  .opt-c-val {
+    font-size: 30px; font-weight: 800; color: #fff; letter-spacing: -1px;
+  }
+  .opt-c-unit {
+    font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.30);
+  }
+  .opt-c-chips {
+    display: flex; gap: 5px; width: 100%; justify-content: center;
+  }
+  .opt-c-chip {
+    flex: 1; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .opt-c-chip.dec {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.40);
+  }
+  .opt-c-chip.inc {
+    background: rgba(232,56,74,0.08);
+    border: 1px solid rgba(232,56,74,0.15);
+    color: rgba(232,56,74,0.75);
+  }
+  /* Larger chips for ±5 */
+  .opt-c-chip.dec.major { color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.07); }
+  .opt-c-chip.inc.major { color: rgba(232,56,74,0.90); background: rgba(232,56,74,0.12); border-color: rgba(232,56,74,0.22); }
+
+  /* ─── Divider ─── */
+  .divider {
+    width: 1px; height: 180px;
+    background: rgba(255,255,255,0.07);
+    align-self: center;
+    margin: 0 4px;
+  }
+</style>
+</head>
+<body>
+<h1>Weight Stepper — Design Options</h1>
+
+<div class="options-row">
+
+  <!-- ══════════════════════
+       OPTION A
+       Single ± pair, step toggle
+       ══════════════════════ -->
+  <div class="option-wrap">
+    <div class="option-label">A — Step Toggle</div>
+    <div class="pill">
+      <div class="pill-top-label">Weight</div>
+      <div class="opt-a-row">
+        <div class="opt-a-btn">−</div>
+        <div class="opt-a-center">
+          <div class="opt-a-val">225</div>
+          <!-- Tap to toggle step size -->
+          <div class="step-toggle">
+            <div class="step-opt">2.5</div>
+            <div class="step-opt active">5</div>
+            <div class="step-opt">10</div>
+          </div>
+        </div>
+        <div class="opt-a-btn">+</div>
+      </div>
+    </div>
+    <div class="option-desc">
+      Single large ± pair. A small segmented pill below the value lets the user pick their step size (2.5 / 5 / 10). Tap ± applies that step. Clean, minimal.
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════
+       OPTION B
+       Drag / scrub the value
+       ══════════════════════ -->
+  <div class="option-wrap">
+    <div class="option-label">B — Drag to Scrub</div>
+    <div class="pill">
+      <div class="pill-top-label">Weight</div>
+      <div class="opt-b-row">
+        <div class="opt-b-arrows">
+          <div class="opt-b-arrow">‹</div>
+          <div class="opt-b-arrow">‹</div>
+        </div>
+        <div class="opt-b-center">
+          <div class="opt-b-val">225</div>
+          <div class="drag-dots">
+            <div class="drag-dot"></div><div class="drag-dot"></div>
+            <div class="drag-dot"></div><div class="drag-dot"></div>
+            <div class="drag-dot"></div>
+          </div>
+          <div class="opt-b-hint">← drag to adjust · tap to type →</div>
+        </div>
+        <div class="opt-b-arrows">
+          <div class="opt-b-arrow">›</div>
+          <div class="opt-b-arrow">›</div>
+        </div>
+      </div>
+    </div>
+    <div class="option-desc">
+      Drag left/right on the value to scrub (like adjusting camera exposure). Tap to type exact value. No buttons — the UI is completely uncluttered.
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════
+       OPTION C
+       Preset jump chips
+       ══════════════════════ -->
+  <div class="option-wrap">
+    <div class="option-label">C — Preset Chips</div>
+    <div class="pill">
+      <div class="pill-top-label">Weight</div>
+      <div class="opt-c-val-row">
+        <div class="opt-c-val">225</div>
+        <div class="opt-c-unit">lbs</div>
+      </div>
+      <div class="opt-c-chips">
+        <div class="opt-c-chip dec major">−10</div>
+        <div class="opt-c-chip dec">−5</div>
+        <div class="opt-c-chip dec">−2.5</div>
+        <div class="opt-c-chip inc">+2.5</div>
+        <div class="opt-c-chip inc">+5</div>
+        <div class="opt-c-chip inc major">+10</div>
+      </div>
+    </div>
+    <div class="option-desc">
+      Value up top, a row of preset jump chips below. All increments visible at a glance. Tap any to jump. −/+ colour coded. Fast for large weight changes.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -55,6 +55,7 @@ nonisolated final class GamificationEngine {
     var streakData: StreakData = .empty
     var volumeTrend: [VolumeTrendPoint] = []
     var thisWeekPRCount: Int = 0
+    private var previousLevel: Int = 0
 
     func refresh(workouts: [Workout], prs: [PersonalRecord], weeklyGoal: Int = 4) {
         let completed = workouts.filter { $0.isCompleted && !$0.isTemplate }
@@ -62,6 +63,37 @@ nonisolated final class GamificationEngine {
         streakData = computeStreakData(from: completed, weeklyGoal: weeklyGoal)
         volumeTrend = computeVolumeTrend(from: completed, weeks: 8)
         thisWeekPRCount = computeThisWeekPRCount(from: prs)
+
+        // Analytics: streak milestone
+        let streakMilestones = [7, 14, 21, 30, 50, 100]
+        if streakMilestones.contains(streakData.current) {
+            Analytics.send(Analytics.Signal.streakMilestone, parameters: ["days": "\(streakData.current)"])
+        }
+
+        // Analytics: weekly goal achieved (current week meets goal)
+        if weeklyGoal > 0 && weeklyStats.workoutCount >= weeklyGoal {
+            Analytics.send(Analytics.Signal.weeklyGoalAchieved, parameters: ["goal": "\(weeklyGoal)", "actual": "\(weeklyStats.workoutCount)"])
+        }
+
+        // Analytics: level up
+        let level = Self.levelForWorkoutCount(completed.count)
+        if previousLevel > 0 && level > previousLevel {
+            Analytics.send(Analytics.Signal.levelUp, parameters: ["newLevel": "\(level)"])
+        }
+        previousLevel = level
+    }
+
+    static func levelForWorkoutCount(_ count: Int) -> Int {
+        switch count {
+        case 0..<5: return 1
+        case 5..<15: return 2
+        case 15..<30: return 3
+        case 30..<50: return 4
+        case 50..<100: return 5
+        case 100..<200: return 6
+        case 200..<500: return 7
+        default: return 8
+        }
     }
 
     // MARK: - Weekly Stats
@@ -69,10 +101,15 @@ nonisolated final class GamificationEngine {
     func computeWeeklyStats(from workouts: [Workout]) -> WeeklyStats {
         let calendar = Calendar.current
         guard let thisWeekInterval = calendar.dateInterval(of: .weekOfYear, for: Date()) else {
+            debugLog("[STATS] No week interval for today")
             return .empty
         }
 
         let thisWeekWorkouts = workouts.filter { $0.date >= thisWeekInterval.start && $0.date < thisWeekInterval.end }
+        let fmt = DateFormatter(); fmt.dateFormat = "E MMM d HH:mm"
+        let allDates = workouts.map { fmt.string(from: $0.date) }.joined(separator: ", ")
+        debugLog("[STATS] Week: \(fmt.string(from: thisWeekInterval.start)) to \(fmt.string(from: thisWeekInterval.end)), workouts(\(workouts.count)) this week: \(thisWeekWorkouts.count)")
+        debugLog("[STATS] Last 5 workout dates: \(workouts.suffix(5).map { fmt.string(from: $0.date) })")
         let thisWeek = statsForWorkouts(thisWeekWorkouts)
 
         // Last week for deltas

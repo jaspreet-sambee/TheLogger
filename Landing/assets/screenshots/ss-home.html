@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390">
+  <title>TheLogger — Home</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent: #F5573E; --gold: #E8A833; --blue: #6B9FFF;
+      --teal: #3DBDAE; --green: #30B955;
+      --text: #F2EDE8; --muted: #8C8680; --dim: #504A45;
+    }
+    body {
+      width: 390px; height: 844px; overflow: hidden;
+      background: #0F0D0B;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      position: relative;
+    }
+    /* Subtle warm radial environment */
+    .env-top {
+      position: absolute; top: -80px; left: -80px; width: 340px; height: 340px;
+      background: radial-gradient(ellipse, rgba(245,87,62,0.13) 0%, transparent 65%);
+      pointer-events: none; z-index: 0;
+    }
+    .env-mid {
+      position: absolute; top: 180px; right: -60px; width: 220px; height: 220px;
+      background: radial-gradient(ellipse, rgba(107,159,255,0.07) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    /* Film grain */
+    body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .dynamic-island {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 28px; background: #000; border-radius: 20px; z-index: 20;
+    }
+    .status-bar {
+      height: 54px; display: flex; align-items: flex-end;
+      justify-content: space-between; padding: 0 24px 10px; position: relative; z-index: 2;
+    }
+    .status-time { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .status-icons { display: flex; align-items: center; gap: 6px; }
+    .status-icons svg { fill: var(--text); }
+
+    /* Header */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 20px 16px; position: relative; z-index: 2;
+    }
+    .greeting-name { font-size: 20px; font-weight: 800; letter-spacing: -0.6px; }
+    .greeting-sub { font-size: 13px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+    /* Weekly goal ring */
+    .goal-ring-wrap { position: relative; width: 52px; height: 52px; }
+    .goal-ring-svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+    .goal-track { stroke: rgba(255,255,255,0.07); fill: none; }
+    .goal-prog { stroke: url(#ringGrad); fill: none; stroke-linecap: round; stroke-dasharray: 132; stroke-dashoffset: 33; filter: drop-shadow(0 0 5px rgba(245,87,62,0.6)); }
+    .goal-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .goal-num { font-size: 14px; font-weight: 900; letter-spacing: -0.5px; color: var(--accent); line-height: 1; }
+    .goal-sub { font-size: 8px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; margin-top: 1px; }
+
+    /* Content */
+    .content { padding: 0 16px; position: relative; z-index: 2; }
+
+    /* Streak hero banner */
+    .streak-hero {
+      background: rgba(245,87,62,0.08); border: 1px solid rgba(245,87,62,0.22);
+      border-radius: 16px; padding: 14px 16px; margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: inset 0 1px 0 rgba(255,150,130,0.08);
+    }
+    .streak-flame { font-size: 28px; line-height: 1; }
+    .streak-text { flex: 1; margin-left: 12px; }
+    .streak-num { font-size: 28px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; color: var(--accent); }
+    .streak-lbl { font-size: 11px; font-weight: 700; color: var(--muted); margin-top: 2px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .streak-best { text-align: right; }
+    .streak-best-num { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; color: var(--gold); }
+    .streak-best-lbl { font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+
+    /* Section label */
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); margin: 12px 0 8px;
+    }
+
+    /* Quick start pills */
+    .quick-pills { display: flex; gap: 8px; overflow: hidden; margin-bottom: 12px; }
+    .quick-pill {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px; padding: 10px 13px; white-space: nowrap;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .quick-pill--active {
+      background: rgba(245,87,62,0.12); border-color: rgba(245,87,62,0.32);
+      box-shadow: inset 0 1px 0 rgba(255,150,130,0.1), 0 2px 14px rgba(245,72,48,0.18);
+    }
+    .quick-pill-name { font-size: 13px; font-weight: 700; }
+    .quick-pill-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* CTA Button */
+    .cta-btn {
+      width: 100%; border: none; border-radius: 14px; padding: 16px;
+      background: linear-gradient(135deg, #F57055 0%, #E83520 100%);
+      color: #fff; font-size: 16px; font-weight: 800; letter-spacing: -0.2px;
+      font-family: inherit;
+      box-shadow: 0 10px 28px rgba(232,53,32,0.4), inset 0 1px 0 rgba(255,180,160,0.3);
+    }
+
+    /* Last workout card */
+    .card {
+      background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 16px; padding: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 20px rgba(0,0,0,0.35);
+    }
+    .last-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .last-card-title { font-size: 15px; font-weight: 700; }
+    .last-card-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .last-card-cta { font-size: 13px; font-weight: 700; color: var(--accent); }
+    .exercise-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .exercise-row:last-child { border-bottom: none; }
+    .ex-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); margin-right: 7px; flex-shrink: 0; }
+    .ex-dot--pr { background: var(--gold); box-shadow: 0 0 5px rgba(232,168,51,0.6); }
+    .exercise-left { display: flex; align-items: center; }
+    .exercise-name { font-size: 13px; color: var(--muted); }
+    .exercise-sets { font-size: 13px; font-weight: 600; }
+
+    /* History */
+    .history-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .history-row:last-child { border-bottom: none; }
+    .history-name { font-size: 14px; font-weight: 700; }
+    .history-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .history-right { text-align: right; }
+    .history-sets { font-size: 13px; font-weight: 700; color: var(--muted); }
+    .history-vol { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+    /* Tab bar */
+    .tab-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 83px;
+      background: rgba(15,13,11,0.97);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: flex-start; justify-content: space-around;
+      padding-top: 12px; z-index: 10;
+      backdrop-filter: blur(24px);
+    }
+    .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .tab-icon { font-size: 22px; }
+    .tab-label { font-size: 10px; font-weight: 600; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="dynamic-island"></div>
+  <div class="env-top"></div>
+  <div class="env-mid"></div>
+
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#F5A03E"/>
+        <stop offset="100%" stop-color="#F5573E"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" opacity="0.4"/><rect x="4.5" y="2" width="3" height="10" rx="1" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="1" opacity="0.8"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="2.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="rgba(255,255,255,0.4)"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="#F2EDE8"/></svg>
+    </div>
+  </div>
+
+  <div class="header">
+    <div>
+      <div class="greeting-name">Good morning, Jas 👋</div>
+      <div class="greeting-sub">4/4 workouts this week</div>
+    </div>
+    <div class="goal-ring-wrap">
+      <svg class="goal-ring-svg" viewBox="0 0 52 52">
+        <circle class="goal-track" cx="26" cy="26" r="21" stroke-width="5"/>
+        <circle class="goal-prog" cx="26" cy="26" r="21" stroke-width="5"/>
+      </svg>
+      <div class="goal-center">
+        <div class="goal-num">4</div>
+        <div class="goal-sub">/ WK</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="streak-hero">
+      <div class="streak-flame">🔥</div>
+      <div class="streak-text">
+        <div class="streak-num">7</div>
+        <div class="streak-lbl">Day Streak</div>
+      </div>
+      <div class="streak-best">
+        <div class="streak-best-num">32</div>
+        <div class="streak-best-lbl">Best ever</div>
+      </div>
+    </div>
+
+    <div class="section-label">Quick Start</div>
+    <div class="quick-pills">
+      <div class="quick-pill quick-pill--active">
+        <div class="quick-pill-name">Leg Day A</div>
+        <div class="quick-pill-sub">2 days ago</div>
+      </div>
+      <div class="quick-pill">
+        <div class="quick-pill-name">Push Day</div>
+        <div class="quick-pill-sub">Yesterday</div>
+      </div>
+      <div class="quick-pill">
+        <div class="quick-pill-name">Pull Day</div>
+        <div class="quick-pill-sub">3 days ago</div>
+      </div>
+    </div>
+    <button class="cta-btn">▶  Start Leg Day A</button>
+
+    <div class="section-label" style="margin-top:14px">Last Workout</div>
+    <div class="card">
+      <div class="last-card-header">
+        <div>
+          <div class="last-card-title">Push Day</div>
+          <div class="last-card-meta">Yesterday · 1h 12m · 18 sets</div>
+        </div>
+        <div class="last-card-cta">Log Again →</div>
+      </div>
+      <div class="exercise-row">
+        <div class="exercise-left"><div class="ex-dot ex-dot--pr"></div><span class="exercise-name">Bench Press</span></div>
+        <span class="exercise-sets" style="color:var(--gold)">185×8 · 190×5 🏆</span>
+      </div>
+      <div class="exercise-row">
+        <div class="exercise-left"><div class="ex-dot"></div><span class="exercise-name">Overhead Press</span></div>
+        <span class="exercise-sets">115×8 · 120×6</span>
+      </div>
+      <div class="exercise-row">
+        <div class="exercise-left"><div class="ex-dot"></div><span class="exercise-name">Tricep Pushdown</span></div>
+        <span class="exercise-sets">60×12 · 65×10</span>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:14px">Recent</div>
+    <div class="history-row">
+      <div><div class="history-name">Leg Day A</div><div class="history-date">Mon, Mar 22</div></div>
+      <div class="history-right"><div class="history-sets">20 sets</div><div class="history-vol">3,240 lbs</div></div>
+    </div>
+    <div class="history-row">
+      <div><div class="history-name">Pull Day</div><div class="history-date">Sun, Mar 21</div></div>
+      <div class="history-right"><div class="history-sets">16 sets</div><div class="history-vol">2,810 lbs</div></div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab-item">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label" style="color:var(--accent)">Home</span>
+    </div>
+    <div class="tab-item">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Stats</span>
+    </div>
+    <div class="tab-item">
+      <span class="tab-icon">👤</span>
+      <span class="tab-label">Profile</span>
+    </div>
+  </div>
+</body>
+</html>

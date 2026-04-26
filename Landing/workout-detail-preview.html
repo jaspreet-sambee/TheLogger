@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Workout Detail + Exercise Edit</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#0d0d14;
+  font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+  padding:40px 20px 60px; gap:48px;
+}
+h1 { color:rgba(255,255,255,0.4); font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; }
+.phones-row { display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+.phone-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; }
+.label { font-size:11px; font-weight:600; color:rgba(255,255,255,0.3); letter-spacing:.06em; text-transform:uppercase; }
+
+/* iPhone shell */
+.iphone {
+  width:375px; height:812px; background:#0a0a0f;
+  border-radius:52px; border:1px solid rgba(255,255,255,0.1);
+  overflow:hidden; position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.05), 0 30px 80px rgba(0,0,0,0.8);
+}
+.iphone::before {
+  content:''; position:absolute; top:-80px; left:50%; transform:translateX(-50%);
+  width:280px; height:280px;
+  background:radial-gradient(circle,rgba(232,56,74,0.08) 0%,transparent 70%);
+  pointer-events:none; z-index:0;
+}
+.di { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:120px; height:34px; background:#000; border-radius:20px; z-index:20; }
+.sb { position:relative; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:14px 28px 0; height:44px; }
+.sb-time { font-size:15px; font-weight:600; color:rgba(255,255,255,0.9); }
+.sb-icons { display:flex; gap:6px; align-items:center; }
+.sb-icons svg { fill:rgba(255,255,255,0.8); }
+
+/* Nav bar */
+.nav-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 20px 12px; position:relative; z-index:5;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.nav-back { font-size:13px; font-weight:600; color:#e8384a; display:flex; align-items:center; gap:4px; }
+.nav-title { font-size:16px; font-weight:700; color:rgba(255,255,255,0.92); letter-spacing:-0.2px; }
+.nav-end {
+  font-size:13px; font-weight:700; color:#e8384a;
+  padding:6px 14px; border-radius:8px;
+  background:rgba(232,56,74,0.12); border:1px solid rgba(232,56,74,0.25);
+}
+
+/* Content */
+.screen { position:relative; z-index:1; height:calc(812px - 44px - 83px); overflow:hidden; }
+
+/* Elapsed banner */
+.elapsed-banner {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 20px 8px;
+}
+.elapsed-label { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,0.28); }
+.elapsed-time { font-size:13px; font-weight:700; color:#e8384a; font-variant-numeric:tabular-nums; }
+.elapsed-stats { font-size:12px; color:rgba(255,255,255,0.3); }
+
+/* Exercise card */
+.ex-card {
+  margin:0 16px 10px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.09);
+  overflow:hidden; position:relative;
+}
+.ex-card.active {
+  background:rgba(232,56,74,0.05);
+  border:1px solid rgba(232,56,74,0.35);
+}
+.ex-card.active::before {
+  content:''; position:absolute; inset:-1px;
+  border-radius:19px;
+  background:linear-gradient(135deg,rgba(232,56,74,0.6),rgba(255,90,48,0.6),rgba(232,56,74,0.6));
+  z-index:0;
+  animation:rotateBorder 3s linear infinite;
+}
+@keyframes rotateBorder {
+  0% { opacity:0.5; }
+  50% { opacity:1; }
+  100% { opacity:0.5; }
+}
+.ex-card.active .ex-inner { position:relative; z-index:1; background:#0a0a0f; border-radius:17px; margin:1px; }
+.ex-card.done { border:1px solid rgba(255,196,40,0.25); background:rgba(255,196,40,0.03); }
+.ex-inner { padding:14px 14px 12px; display:flex; align-items:flex-start; gap:0; }
+.ex-accent-bar { width:3px; height:100%; min-height:40px; border-radius:2px; margin-right:12px; flex-shrink:0; align-self:stretch; }
+.ex-accent-bar.red { background:linear-gradient(to bottom,#e8384a,rgba(232,56,74,0.2)); }
+.ex-accent-bar.gold { background:linear-gradient(to bottom,#ffc428,rgba(255,196,40,0.2)); }
+.ex-accent-bar.dim { background:linear-gradient(to bottom,rgba(255,255,255,0.25),rgba(255,255,255,0.06)); }
+.ex-content { flex:1; }
+.ex-name { font-size:15px; font-weight:700; color:rgba(255,255,255,0.9); margin-bottom:5px; }
+.ex-meta { font-size:12px; color:rgba(255,255,255,0.38); margin-bottom:8px; }
+.set-badges { display:flex; gap:6px; flex-wrap:wrap; }
+.set-badge {
+  padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600;
+}
+.set-badge.working { background:rgba(232,56,74,0.12); color:#e8384a; border:1px solid rgba(232,56,74,0.2); }
+.set-badge.warmup { background:rgba(128,165,255,0.12); color:#80a5ff; border:1px solid rgba(128,165,255,0.2); }
+.set-badge.drop { background:rgba(255,90,48,0.12); color:#ff5a30; border:1px solid rgba(255,90,48,0.2); }
+.set-badge.pr { background:rgba(255,196,40,0.15); color:#ffc428; border:1px solid rgba(255,196,40,0.3); }
+.set-badge.dim { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.35); }
+.ex-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.sets-count { font-size:22px; font-weight:800; color:rgba(255,255,255,0.7); line-height:1; }
+.sets-label { font-size:10px; color:rgba(255,255,255,0.3); font-weight:500; }
+
+/* Section header */
+.sec-hdr {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 20px 8px;
+}
+.sec-title { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,0.28); }
+.sec-action { font-size:13px; font-weight:600; color:#e8384a; }
+
+/* Add exercise CTA */
+.add-ex-btn {
+  margin:8px 16px 0;
+  height:52px; border-radius:14px;
+  background:linear-gradient(135deg,#e8384a 0%,#ff5a30 100%);
+  display:flex; align-items:center; justify-content:center;
+  gap:9px; font-size:15px; font-weight:700; color:white;
+  position:relative;
+  box-shadow:0 8px 24px rgba(232,56,74,0.4), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.add-ex-btn::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:50%;
+  border-radius:14px 14px 0 0;
+  background:linear-gradient(to bottom,rgba(255,255,255,0.12),transparent);
+}
+
+/* Tab bar */
+.tab-bar {
+  position:absolute; bottom:0; left:0; right:0; height:83px;
+  background:rgba(10,10,15,0.92); backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,0.07);
+  display:flex; align-items:flex-start; justify-content:space-around; padding:10px 0 0;
+}
+.tab-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.tab-icon { font-size:22px; opacity:0.3; }
+.tab-icon.active { opacity:1; filter:drop-shadow(0 0 6px rgba(232,56,74,0.7)); }
+.tab-lbl { font-size:10px; font-weight:500; color:rgba(255,255,255,0.3); }
+.tab-lbl.active { color:#e8384a; font-weight:600; }
+
+/* ── Exercise Edit View ── */
+.exercise-edit-screen { padding:0; }
+.edit-header { padding:14px 20px 10px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.edit-ex-name { font-size:20px; font-weight:800; color:rgba(255,255,255,0.95); letter-spacing:-0.3px; }
+.edit-ex-sub { font-size:12px; color:rgba(255,255,255,0.35); margin-top:3px; }
+
+.edit-section { padding:10px 16px 0; }
+.edit-sec-label { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,0.28); padding:0 4px 8px; }
+
+/* Set row */
+.set-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:13px;
+  margin-bottom:7px;
+}
+.set-num { font-size:12px; font-weight:700; color:rgba(255,255,255,0.3); width:20px; }
+.set-type-pill {
+  padding:3px 9px; border-radius:999px; font-size:10px; font-weight:700;
+}
+.set-val { font-size:15px; font-weight:700; color:rgba(255,255,255,0.88); flex:1; text-align:center; }
+.set-unit { font-size:11px; color:rgba(255,255,255,0.35); }
+.set-pr { font-size:10px; font-weight:700; color:#ffc428; padding:2px 6px; border-radius:999px; background:rgba(255,196,40,0.12); border:1px solid rgba(255,196,40,0.2); }
+
+/* Rest timer strip */
+.rest-strip {
+  margin:0 16px 10px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,196,40,0.05);
+  border:1px solid rgba(255,196,40,0.15);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.rest-label { font-size:12px; font-weight:600; color:rgba(255,196,40,0.7); display:flex; align-items:center; gap:6px; }
+.rest-val { font-size:15px; font-weight:800; color:#ffc428; font-variant-numeric:tabular-nums; }
+
+/* PR section */
+.pr-strip {
+  margin:0 16px 10px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,196,40,0.05);
+  border:1px solid rgba(255,196,40,0.15);
+}
+.pr-row2 { display:flex; align-items:center; justify-content:space-between; }
+.pr-title2 { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:rgba(255,196,40,0.7); }
+.pr-weight2 { font-size:16px; font-weight:800; color:#ffc428; }
+.pr-sub2 { font-size:11px; color:rgba(255,255,255,0.3); margin-top:2px; }
+
+/* Add set */
+.add-set-btn {
+  margin:4px 16px 0;
+  height:44px; border-radius:12px;
+  background:rgba(232,56,74,0.1); border:1px solid rgba(232,56,74,0.22);
+  display:flex; align-items:center; justify-content:center;
+  gap:7px; font-size:14px; font-weight:700; color:#e8384a;
+}
+</style>
+</head>
+<body>
+<h1>Group 2 — Workout Detail + Exercise Edit</h1>
+
+<div class="phones-row">
+
+  <!-- Phone 1: Workout Detail -->
+  <div class="phone-wrap">
+    <div class="label">Workout Detail</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb">
+        <span class="sb-time">9:41</span>
+        <div class="sb-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+      <div class="nav-bar">
+        <div class="nav-back">← Home</div>
+        <div class="nav-title">Log Day A</div>
+        <div class="nav-end">End</div>
+      </div>
+      <div class="screen">
+        <div class="elapsed-banner">
+          <div class="elapsed-label">In progress</div>
+          <div class="elapsed-time">24:17</div>
+          <div class="elapsed-stats">4 exercises · 3,240 lbs</div>
+        </div>
+
+        <div class="sec-hdr"><span class="sec-title">Exercises</span></div>
+
+        <!-- Active exercise -->
+        <div class="ex-card active">
+          <div class="ex-inner">
+            <div class="ex-accent-bar red"></div>
+            <div class="ex-content">
+              <div class="ex-name">Bench Press</div>
+              <div class="ex-meta">Chest · 4 sets planned</div>
+              <div class="set-badges">
+                <span class="set-badge warmup">W 45 × 12</span>
+                <span class="set-badge working">135 × 10</span>
+                <span class="set-badge working">185 × 8</span>
+                <span class="set-badge pr">225 × 5 🏆</span>
+              </div>
+            </div>
+            <div class="ex-right">
+              <div class="sets-count">4</div>
+              <div class="sets-label">sets</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completed exercise -->
+        <div class="ex-card done">
+          <div class="ex-inner">
+            <div class="ex-accent-bar gold"></div>
+            <div class="ex-content">
+              <div class="ex-name">Incline DB Press</div>
+              <div class="ex-meta">Chest · Done</div>
+              <div class="set-badges">
+                <span class="set-badge working">70 × 10</span>
+                <span class="set-badge working">80 × 8</span>
+                <span class="set-badge pr">90 × 6 🏆</span>
+              </div>
+            </div>
+            <div class="ex-right">
+              <div class="sets-count" style="color:#ffc428;">3</div>
+              <div class="sets-label">sets</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending exercises -->
+        <div class="ex-card">
+          <div class="ex-inner">
+            <div class="ex-accent-bar dim"></div>
+            <div class="ex-content">
+              <div class="ex-name">Cable Fly</div>
+              <div class="ex-meta">Chest · 3 sets planned</div>
+              <div class="set-badges">
+                <span class="set-badge dim">Not started</span>
+              </div>
+            </div>
+            <div class="ex-right">
+              <div class="sets-count" style="color:rgba(255,255,255,0.25);">—</div>
+              <div class="sets-label">sets</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ex-card">
+          <div class="ex-inner">
+            <div class="ex-accent-bar dim"></div>
+            <div class="ex-content">
+              <div class="ex-name">Tricep Pushdown</div>
+              <div class="ex-meta">Triceps · 3 sets planned</div>
+              <div class="set-badges">
+                <span class="set-badge dim">Not started</span>
+              </div>
+            </div>
+            <div class="ex-right">
+              <div class="sets-count" style="color:rgba(255,255,255,0.25);">—</div>
+              <div class="sets-label">sets</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="add-ex-btn">＋&nbsp; Add Exercise</div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-lbl active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phone 2: Exercise Edit -->
+  <div class="phone-wrap">
+    <div class="label">Exercise Edit</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb">
+        <span class="sb-time">9:41</span>
+        <div class="sb-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+      <div class="nav-bar">
+        <div class="nav-back">← Log Day A</div>
+        <div class="nav-title">Bench Press</div>
+        <div style="width:52px;"></div>
+      </div>
+      <div class="screen exercise-edit-screen">
+
+        <div class="edit-section" style="padding-top:14px;">
+          <div class="edit-sec-label">Sets</div>
+
+          <div class="set-row">
+            <div class="set-num">W</div>
+            <span class="set-type-pill working" style="background:rgba(128,165,255,0.12);color:#80a5ff;border:1px solid rgba(128,165,255,0.2);">Warm-up</span>
+            <div class="set-val">45</div><div class="set-unit">lbs</div>
+            <div class="set-val">×</div>
+            <div class="set-val">12</div><div class="set-unit">reps</div>
+          </div>
+
+          <div class="set-row">
+            <div class="set-num">1</div>
+            <span class="set-type-pill" style="background:rgba(232,56,74,0.12);color:#e8384a;border:1px solid rgba(232,56,74,0.2);">Working</span>
+            <div class="set-val">135</div><div class="set-unit">lbs</div>
+            <div class="set-val">×</div>
+            <div class="set-val">10</div><div class="set-unit">reps</div>
+          </div>
+
+          <div class="set-row">
+            <div class="set-num">2</div>
+            <span class="set-type-pill" style="background:rgba(232,56,74,0.12);color:#e8384a;border:1px solid rgba(232,56,74,0.2);">Working</span>
+            <div class="set-val">185</div><div class="set-unit">lbs</div>
+            <div class="set-val">×</div>
+            <div class="set-val">8</div><div class="set-unit">reps</div>
+          </div>
+
+          <div class="set-row" style="border-color:rgba(255,196,40,0.3); background:rgba(255,196,40,0.04);">
+            <div class="set-num">3</div>
+            <span class="set-type-pill" style="background:rgba(232,56,74,0.12);color:#e8384a;border:1px solid rgba(232,56,74,0.2);">Working</span>
+            <div class="set-val">225</div><div class="set-unit">lbs</div>
+            <div class="set-val">×</div>
+            <div class="set-val">5</div><div class="set-unit">reps</div>
+            <div class="set-pr">🏆 PR</div>
+          </div>
+
+          <div class="add-set-btn">＋&nbsp; Add Set</div>
+        </div>
+
+        <!-- Rest timer -->
+        <div style="padding:12px 16px 0;">
+          <div class="edit-sec-label" style="padding-left:4px; margin-bottom:8px;">Rest Timer</div>
+          <div class="rest-strip">
+            <div class="rest-label">⏱ Auto-start after set</div>
+            <div class="rest-val">2:00</div>
+          </div>
+        </div>
+
+        <!-- PR section -->
+        <div style="padding:0 16px;">
+          <div class="edit-sec-label" style="padding-left:4px; margin-bottom:8px;">Personal Record</div>
+          <div class="pr-strip">
+            <div class="pr-row2">
+              <div>
+                <div class="pr-title2">🏆 Current PR</div>
+                <div class="pr-sub2">Set today · estimated 1RM 253 lbs</div>
+              </div>
+              <div class="pr-weight2">225 lbs × 5</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Camera -->
+        <div style="padding:12px 16px 0;">
+          <div style="
+            height:48px; border-radius:13px;
+            background:rgba(232,56,74,0.08); border:1px solid rgba(232,56,74,0.2);
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            font-size:14px; font-weight:700; color:#e8384a;
+          ">📷&nbsp; Rep Counter (Camera)</div>
+        </div>
+
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-lbl active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rest Day Challenges — TheLogger</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #060608; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; padding: 48px 40px 80px; color: #fff; }
+  h1 { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.28); margin-bottom: 4px; }
+  .page-sub { font-size: 12px; color: rgba(255,255,255,.16); margin-bottom: 44px; }
+  .section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.18); margin-bottom: 18px; margin-top: 52px; }
+  .phones-row { display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap; }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.22); }
+
+  .iphone { width: 390px; background: #0A0A0F; border-radius: 52px; border: 1px solid rgba(255,255,255,.07); overflow: hidden; box-shadow: 0 40px 80px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.05); display: flex; flex-direction: column; position: relative; }
+  .di { width: 126px; height: 36px; background: #000; border-radius: 0 0 22px 22px; margin: 0 auto; flex-shrink: 0; }
+  .sb { display: flex; align-items: center; justify-content: space-between; padding: 6px 24px 0; font-size: 15px; font-weight: 600; flex-shrink: 0; }
+  .nav { padding: 4px 20px 10px; flex-shrink: 0; }
+  .nav-title { font-size: 34px; font-weight: 700; letter-spacing: -.5px; }
+  .screen { flex: 1; overflow: hidden; padding: 6px 16px 32px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── Challenge Card ── */
+  .ch-card {
+    background: rgba(255,184,77,0.05);
+    border: 1px solid rgba(255,184,77,0.22);
+    border-radius: 18px;
+    padding: 16px;
+    position: relative; overflow: hidden;
+  }
+  .ch-card::before {
+    content: '';
+    position: absolute; top: -20px; right: -20px;
+    width: 100px; height: 100px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,184,77,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .ch-card--green { background: rgba(48,200,90,0.05); border-color: rgba(48,200,90,0.22); }
+  .ch-card--green::before { background: radial-gradient(circle, rgba(48,200,90,0.12) 0%, transparent 70%); }
+
+  .ch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .ch-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 100px;
+    background: rgba(255,184,77,0.15); color: #FFB84D;
+  }
+  .ch-badge--green { background: rgba(48,200,90,0.15); color: #30C85A; }
+  .ch-streak { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35); display: flex; align-items: center; gap: 4px; }
+
+  .ch-title { font-size: 16px; font-weight: 800; color: rgba(255,255,255,0.90); margin-bottom: 4px; }
+  .ch-sub { font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 14px; line-height: 1.4; }
+
+  /* 3-option picker */
+  .ch-options { display: flex; gap: 10px; }
+  .ch-opt {
+    flex: 1; padding: 14px 10px; border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    cursor: pointer; text-align: center;
+  }
+  .ch-opt:hover { border-color: rgba(255,184,77,0.35); }
+  .ch-opt--active { border-color: rgba(255,184,77,0.45); background: rgba(255,184,77,0.08); }
+  .ch-opt-icon { font-size: 24px; }
+  .ch-opt-name { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.75); }
+  .ch-opt-desc { font-size: 10px; color: rgba(255,255,255,0.30); line-height: 1.3; }
+  .ch-opt-time { font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.20); margin-top: 2px; }
+
+  .ch-reward { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.28); margin-top: 12px; }
+  .ch-reward-xp { color: #FFB84D; font-weight: 700; }
+
+  /* ── Quiz UI ── */
+  .quiz-card {
+    background: rgba(128,166,255,0.05);
+    border: 1px solid rgba(128,166,255,0.20);
+    border-radius: 18px;
+    padding: 18px;
+  }
+  .quiz-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .quiz-badge { font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 100px; background: rgba(128,166,255,0.15); color: #80A6FF; }
+  .quiz-progress { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); }
+  .quiz-q { font-size: 17px; font-weight: 700; margin-bottom: 14px; line-height: 1.4; }
+  .quiz-opts { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-opt {
+    padding: 12px 14px; border-radius: 12px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+    font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.70);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .quiz-opt--correct {
+    background: rgba(48,200,90,0.12); border-color: rgba(48,200,90,0.35);
+    color: #30C85A;
+  }
+  .quiz-opt--wrong {
+    background: rgba(255,69,58,0.10); border-color: rgba(255,69,58,0.30);
+    color: #FF453A;
+  }
+  .quiz-opt-letter {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.45); flex-shrink: 0;
+  }
+  .quiz-opt--correct .quiz-opt-letter { background: rgba(48,200,90,0.25); color: #30C85A; }
+
+  /* ── Quick Hit UI ── */
+  .quickhit-card {
+    background: rgba(232,56,74,0.05);
+    border: 1px solid rgba(232,56,74,0.20);
+    border-radius: 18px;
+    padding: 18px;
+    text-align: center;
+  }
+  .qh-exercise { font-size: 28px; margin-bottom: 6px; }
+  .qh-name { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+  .qh-target { font-size: 14px; color: rgba(255,255,255,0.40); margin-bottom: 16px; }
+  .qh-counter-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
+  .qh-btn {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 300;
+  }
+  .qh-btn--minus { background: rgba(255,60,60,0.12); border: 1px solid rgba(255,60,60,0.25); color: rgba(255,60,60,0.8); }
+  .qh-btn--plus { background: rgba(232,56,74,0.12); border: 1px solid rgba(232,56,74,0.25); color: #E8384A; }
+  .qh-count { font-size: 48px; font-weight: 900; letter-spacing: -2px; min-width: 80px; }
+  .qh-progress-track { height: 8px; background: rgba(255,255,255,0.08); border-radius: 100px; overflow: hidden; margin-bottom: 14px; }
+  .qh-progress-fill { height: 100%; background: linear-gradient(to right, #E8384A, #FF5931); border-radius: 100px; }
+  .qh-done-btn {
+    width: 100%; height: 48px; border-radius: 13px;
+    background: linear-gradient(135deg, #30C85A 0%, #22A040 100%);
+    box-shadow: 0 6px 20px rgba(48,200,90,0.35);
+    font-size: 14px; font-weight: 800; color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .qh-done-btn--disabled {
+    background: rgba(255,255,255,0.08); box-shadow: none;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* ── Wheel UI ── */
+  .wheel-card {
+    background: rgba(255,184,77,0.05);
+    border: 1px solid rgba(255,184,77,0.22);
+    border-radius: 18px;
+    padding: 20px;
+    text-align: center;
+  }
+  .wheel-wrap { position: relative; width: 200px; height: 200px; margin: 0 auto 16px; }
+  .wheel-circle {
+    width: 200px; height: 200px; border-radius: 50%;
+    background: conic-gradient(
+      rgba(232,56,74,0.25) 0deg 60deg,
+      rgba(128,166,255,0.25) 60deg 120deg,
+      rgba(255,184,77,0.25) 120deg 180deg,
+      rgba(48,200,90,0.25) 180deg 240deg,
+      rgba(232,56,74,0.20) 240deg 300deg,
+      rgba(128,166,255,0.20) 300deg 360deg
+    );
+    border: 2px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wheel-center {
+    width: 70px; height: 70px; border-radius: 50%;
+    background: #0A0A0F; border: 2px solid rgba(255,184,77,0.35);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #FFB84D;
+  }
+  .wheel-labels {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+  }
+  .wheel-label-row { display: flex; justify-content: space-between; padding: 0 10px; }
+  .wl { font-size: 20px; }
+  .wheel-pointer {
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    font-size: 18px; color: #FFB84D; filter: drop-shadow(0 0 4px rgba(255,184,77,0.6));
+  }
+  .wheel-spin-btn {
+    width: 100%; height: 48px; border-radius: 13px;
+    background: rgba(255,184,77,0.12); border: 1px solid rgba(255,184,77,0.25);
+    color: #FFB84D; font-size: 15px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .wheel-result {
+    margin-top: 12px; padding: 12px; border-radius: 12px;
+    background: rgba(255,184,77,0.08); border: 1px solid rgba(255,184,77,0.18);
+  }
+  .wr-emoji { font-size: 28px; margin-bottom: 6px; }
+  .wr-text { font-size: 15px; font-weight: 700; }
+  .wr-sub { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+
+  /* ── Placeholders ── */
+  .ph-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; }
+  .ph-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .ph-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.50); }
+  .ph-sub { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 2px; }
+
+  .fade { position: absolute; bottom: 0; left: 0; right: 0; height: 60px; pointer-events: none; z-index: 20; border-radius: 0 0 52px 52px; background: linear-gradient(to top, #0A0A0F, transparent); }
+</style>
+</head>
+<body>
+
+<h1>Rest Day Challenges — TheLogger</h1>
+<p class="page-sub">Pick your challenge · Quiz from your data · Quick bodyweight hit · Spin the wheel</p>
+
+<div class="phones-row">
+
+  <!-- ══ Phone 0: Rest Day Prompt ══ -->
+  <div class="phone-wrap">
+    <div class="label">Home — Rest Day Prompt</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span>9:41</span><span>▌</span></div>
+      <div class="nav"><div class="nav-title">Home</div></div>
+      <div class="screen">
+
+        <!-- Rest day prompt -->
+        <div class="ch-card" style="background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.10);">
+          <div class="ch-header">
+            <span class="ch-streak">🔥 12 day streak</span>
+          </div>
+          <div class="ch-title">Taking a rest day?</div>
+          <div class="ch-sub">Do a quick challenge to keep your streak alive — or dismiss if you're heading to the gym.</div>
+          <div style="display:flex;gap:10px;margin-top:4px;">
+            <div style="flex:1;height:40px;border-radius:10px;background:rgba(255,184,77,0.12);border:1px solid rgba(255,184,77,0.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#FFB84D;gap:6px;">
+              🏠 Yes, rest day
+            </div>
+            <div style="flex:1;height:40px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:rgba(255,255,255,0.40);">
+              💪 No, gym today
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:10px;justify-content:center;">
+            <span style="font-size:11px;color:rgba(255,255,255,0.20);">⚠️</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.20);">No workout or challenge today = streak resets to 0</span>
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-top:4px;">Quick Start</div>
+        <div class="ph-card"><div class="ph-icon">🏋️</div><div><div class="ph-title">Push Day</div><div class="ph-sub">3 exercises · Chest, Triceps</div></div></div>
+        <div class="ph-card"><div class="ph-icon">🦵</div><div><div class="ph-title">Leg Day</div><div class="ph-sub">4 exercises · Quads, Glutes</div></div></div>
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+
+  <!-- ══ Phone 1: Challenge Picker (Home Screen) ══ -->
+  <div class="phone-wrap">
+    <div class="label">Home — Pick Your Challenge</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span>9:41</span><span>▌</span></div>
+      <div class="nav"><div class="nav-title">Home</div></div>
+      <div class="screen">
+
+        <div class="ch-card">
+          <div class="ch-header">
+            <span class="ch-badge">Rest Day</span>
+            <span class="ch-streak">🔥 12 day streak</span>
+          </div>
+          <div class="ch-title">Keep Your Streak Alive</div>
+          <div class="ch-sub">Pick a quick challenge — takes less than 3 minutes.</div>
+
+          <div class="ch-options">
+            <div class="ch-opt">
+              <div class="ch-opt-icon">🧠</div>
+              <div class="ch-opt-name">Quiz</div>
+              <div class="ch-opt-desc">5 Qs from your workout history</div>
+              <div class="ch-opt-time">~1 min</div>
+            </div>
+            <div class="ch-opt">
+              <div class="ch-opt-icon">💪</div>
+              <div class="ch-opt-name">Quick Hit</div>
+              <div class="ch-opt-desc">Bodyweight exercise challenge</div>
+              <div class="ch-opt-time">~3 min</div>
+            </div>
+            <div class="ch-opt">
+              <div class="ch-opt-icon">🎰</div>
+              <div class="ch-opt-name">Spin</div>
+              <div class="ch-opt-desc">Random challenge wheel</div>
+              <div class="ch-opt-time">???</div>
+            </div>
+          </div>
+
+          <div class="ch-reward">
+            <span>🔥</span> <span>Keeps streak</span> <span class="ch-reward-xp">+30 XP</span>
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-top:4px;">Recent Workouts</div>
+        <div class="ph-card"><div class="ph-icon" style="background:rgba(232,56,74,0.10);">💪</div><div><div class="ph-title">Push Day — Yesterday</div><div class="ph-sub">4 exercises · 12.4k lbs · 2 PRs</div></div></div>
+        <div class="ph-card"><div class="ph-icon" style="background:rgba(232,56,74,0.10);">🦵</div><div><div class="ph-title">Leg Day — 2 days ago</div><div class="ph-sub">5 exercises · 9.8k lbs</div></div></div>
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+
+  <!-- ══ Phone 2: Quiz in Progress ══ -->
+  <div class="phone-wrap">
+    <div class="label">Quiz — Know Your Numbers</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span>9:41</span><span>▌</span></div>
+      <div class="nav" style="padding-bottom:4px;"><div class="nav-title" style="font-size:20px;">Know Your Numbers</div></div>
+      <div class="screen">
+
+        <div class="quiz-card">
+          <div class="quiz-header">
+            <span class="quiz-badge">Quiz</span>
+            <span class="quiz-progress">3 of 5</span>
+          </div>
+          <div class="quiz-q">What's your Bench Press personal record?</div>
+          <div class="quiz-opts">
+            <div class="quiz-opt">
+              <div class="quiz-opt-letter">A</div>
+              185 lbs
+            </div>
+            <div class="quiz-opt quiz-opt--correct">
+              <div class="quiz-opt-letter">B</div>
+              225 lbs ✓
+            </div>
+            <div class="quiz-opt">
+              <div class="quiz-opt-letter">C</div>
+              245 lbs
+            </div>
+            <div class="quiz-opt quiz-opt--wrong">
+              <div class="quiz-opt-letter">D</div>
+              205 lbs ✗
+            </div>
+          </div>
+        </div>
+
+        <!-- Score so far -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;">
+          <div style="font-size:12px;color:rgba(255,255,255,0.3);">Score:</div>
+          <div style="display:flex;gap:6px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:#30C85A;"></div>
+            <div style="width:10px;height:10px;border-radius:50%;background:#30C85A;"></div>
+            <div style="width:10px;height:10px;border-radius:50%;background:#FF453A;"></div>
+            <div style="width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.12);"></div>
+            <div style="width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.12);"></div>
+          </div>
+        </div>
+
+        <!-- Next question hint -->
+        <div class="quiz-card" style="opacity:0.5;border-color:rgba(128,166,255,0.10);">
+          <div class="quiz-header">
+            <span class="quiz-badge" style="opacity:0.5;">Next</span>
+            <span class="quiz-progress">4 of 5</span>
+          </div>
+          <div class="quiz-q" style="filter:blur(6px);">How many total workouts have you logged?</div>
+        </div>
+
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+
+  <!-- ══ Phone 3: Quick Hit — Bodyweight Challenge ══ -->
+  <div class="phone-wrap">
+    <div class="label">Quick Hit — Pushups</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span>9:41</span><span>▌</span></div>
+      <div class="nav" style="padding-bottom:4px;"><div class="nav-title" style="font-size:20px;">Quick Hit</div></div>
+      <div class="screen">
+
+        <div class="quickhit-card">
+          <div class="qh-exercise">🫸</div>
+          <div class="qh-name">Pushups</div>
+          <div class="qh-target">Target: 50 reps · Any number of sets</div>
+
+          <div class="qh-counter-row">
+            <div class="qh-btn qh-btn--minus">−</div>
+            <div class="qh-count" style="color:#E8384A;">32</div>
+            <div class="qh-btn qh-btn--plus">+</div>
+          </div>
+
+          <div class="qh-progress-track">
+            <div class="qh-progress-fill" style="width:64%;"></div>
+          </div>
+
+          <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:14px;">32 of 50 — 18 more to go</div>
+
+          <div class="qh-done-btn qh-done-btn--disabled">
+            Complete (18 more needed)
+          </div>
+        </div>
+
+        <!-- Tip -->
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:12px;border-radius:12px;background:rgba(255,184,77,0.06);border:1px solid rgba(255,184,77,0.15);margin-top:4px;">
+          <span style="font-size:14px;">💡</span>
+          <div style="font-size:11px;color:rgba(255,255,255,0.40);line-height:1.5;">Break it into sets — do 10 at a time with 30s rest. Tap + after each mini-set.</div>
+        </div>
+
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ROW 2 -->
+<div class="section-label">Spin Wheel · Completed State</div>
+<div class="phones-row">
+
+  <!-- ══ Phone 4: Spin the Wheel ══ -->
+  <div class="phone-wrap">
+    <div class="label">Spin — Random Challenge</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span>9:41</span><span>▌</span></div>
+      <div class="nav" style="padding-bottom:4px;"><div class="nav-title" style="font-size:20px;">Spin the Wheel</div></div>
+      <div class="screen" style="align-items:center;">
+
+        <div class="wheel-card" style="width:100%;">
+          <div class="wheel-wrap">
+            <div class="wheel-pointer">▼</div>
+            <div class="wheel-circle">
+              <div class="wheel-center">SPIN</div>
+            </div>
+            <!-- Segment labels around the wheel -->
+            <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:16px;">🫸</div>
+            <div style="position:absolute;top:32%;right:14px;font-size:16px;">🧠</div>
+            <div style="position:absolute;bottom:32%;right:14px;font-size:16px;">🧘</div>
+            <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);font-size:16px;">🏋️</div>
+            <div style="position:absolute;bottom:32%;left:14px;font-size:16px;">❓</div>
+            <div style="position:absolute;top:32%;left:14px;font-size:16px;">💪</div>
+          </div>
+
+          <div class="wheel-spin-btn">🎰 Spin!</div>
+
+          <!-- After spin result -->
+          <div class="wheel-result">
+            <div class="wr-emoji">🫸</div>
+            <div class="wr-text">30 Pushups!</div>
+            <div class="wr-sub">Complete to keep your streak alive</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+
+  <!-- ══ Phone 5: Challenge Completed ══ -->
+  <div class="phone-wrap">
+    <div class="label">Challenge Completed</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span>9:41</span><span>▌</span></div>
+      <div class="nav"><div class="nav-title">Home</div></div>
+      <div class="screen">
+
+        <div class="ch-card ch-card--green">
+          <div class="ch-header">
+            <span class="ch-badge ch-badge--green">✓ Completed</span>
+            <span class="ch-streak">🔥 13 day streak!</span>
+          </div>
+          <div class="ch-title">Quiz — 4/5 Correct 🎉</div>
+          <div class="ch-sub">Streak saved! You know your numbers.</div>
+
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:12px;background:rgba(48,200,90,0.08);border:1px solid rgba(48,200,90,0.18);">
+            <span style="font-size:22px;">🔥</span>
+            <div>
+              <div style="font-size:15px;font-weight:700;color:#30C85A;">13 Day Streak</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">+30 XP earned</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-top:4px;">Quick Start</div>
+        <div class="ph-card"><div class="ph-icon">🏋️</div><div><div class="ph-title">Push Day</div><div class="ph-sub">3 exercises · Chest, Triceps</div></div></div>
+        <div class="ph-card"><div class="ph-icon">🦵</div><div><div class="ph-title">Leg Day</div><div class="ph-sub">4 exercises · Quads, Glutes</div></div></div>
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

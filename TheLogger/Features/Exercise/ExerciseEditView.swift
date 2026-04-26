@@ -24,6 +24,7 @@ struct ExerciseEditView: View {
     @State private var exerciseNameText = ""
     @State private var showingProgress = false
     @State private var showingPRCelebration = false
+    @State private var prCelebrationData: PRCelebrationData?
     @State private var currentPR: PersonalRecord?
     @FocusState private var focusedField: SetInputField?
     @FocusState private var exerciseNameFocused: Bool
@@ -37,29 +38,195 @@ struct ExerciseEditView: View {
     @State private var quickLogStripOpacity: Double = 0
     @State private var showCameraRepCounter = false  // Camera-based rep counting
     @State private var showingCameraUnsupported = false
-
+    @State private var lastCameraSetWasPR = false  // Set by checkForPR; read by camera onSetLogged closure
     var body: some View {
-        List {
-            if let ns = namespace {
+        ScrollViewReader { scrollProxy in
+            List {
+                // Note section
+                noteSection
+
+                // Cohesive sets + log section (single list row)
                 Section {
-                    exerciseDetailMatchedHeader(namespace: ns)
-                }
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            } else {
-                Section {
-                    exerciseNameRow
+                    setsAndLogSection
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 } header: {
-                    Text("Exercise Name")
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Text("SETS")
+                        .font(.system(.caption2, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.28))
+                        .kerning(0.5)
                         .textCase(nil)
                 }
-            }
 
-            // Note section - collapsed by default
-            Section {
+                // Camera + info chips + progress (rest of body)
+                exerciseInfoSections
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+            .background(AppColors.background)
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                withAnimation(.easeOut(duration: 0.28)) { keyboardVisible = true }
+                // Scroll to the editing set when keyboard appears
+                if let editingSetId = findEditingSetId() {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            scrollProxy.scrollTo("setRow-\(editingSetId)", anchor: .center)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Button { startEditingExerciseName() } label: {
+                    VStack(spacing: 1) {
+                        Text(exercise.name).font(.system(size: 18, weight: .heavy)).foregroundStyle(.primary)
+                        if let muscle = ExerciseLibrary.shared.find(name: exercise.name)?.muscleGroup.rawValue {
+                            let setCount = exercise.sets?.count ?? 0
+                            Text("\(muscle) · \(setCount) \(setCount == 1 ? "set" : "sets")")
+                                .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.white.opacity(0.30))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .alert("Rename Exercise", isPresented: $isEditingExerciseName) {
+            TextField("Exercise name", text: $exerciseNameText)
+            Button("Save") { submitExerciseName() }
+            Button("Cancel", role: .cancel) { }
+        }
+        .sheet(isPresented: $showingProgress) {
+            ExerciseProgressView(exerciseName: exercise.name)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(AppColors.background)
+        }
+        .sheet(isPresented: $showingCameraUnsupported) {
+            cameraUnsupportedSheet
+        }
+        .fullScreenCover(isPresented: $showCameraRepCounter) {
+            CameraRepCounterView(
+                exerciseName: exercise.name,
+                lastWeight: exercise.setsByOrder.last?.weight ?? 0,
+                onSetLogged: { reps, weight, tempoDown, tempoUp in
+                    logSet(reps: reps, weight: weight)
+                    // Save tempo data to the just-logged set
+                    if let lastSet = exercise.setsByOrder.last {
+                        lastSet.tempoDown = tempoDown
+                        lastSet.tempoUp = tempoUp
+                    }
+                }
+            )
+        }
+        .overlay { prCelebrationOverlay }
+        .overlay { keyboardDismissOverlay }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.28)) { keyboardVisible = false }
+        }
+        .onAppear {
+            exercise.repairSortOrderIfNeeded()
+            exerciseNameText = exercise.name
+            loadNote(); loadPR(); loadRestTimerPreference()
+            if (exercise.sets ?? []).isEmpty && workout.isActive { isAddingSet = true }
+        }
+        .onChange(of: exercise.name) { _, newValue in
+            if !isEditingExerciseName { exerciseNameText = newValue }
+        }
+        .onChange(of: isNoteExpanded) { _, expanded in
+            if expanded { noteFocused = true }
+        }
+    }
+
+    // MARK: - Overlay Helpers
+
+    @ViewBuilder
+    private var prCelebrationOverlay: some View {
+        if showingPRCelebration, let data = prCelebrationData {
+            ZStack {
+                Color.black.opacity(0.55).ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.easeOut(duration: 0.28)) { showingPRCelebration = false }
+                    }
+                ConfettiView()
+                PRCelebrationCard(data: data) {
+                    withAnimation(.easeOut(duration: 0.28)) { showingPRCelebration = false }
+                }
+                .transition(.scale(scale: 0.85).combined(with: .opacity))
+            }
+            .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder
+    private var keyboardDismissOverlay: some View {
+        if keyboardVisible {
+            Color.clear.contentShape(Rectangle())
+                .onTapGesture {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .allowsHitTesting(true).transition(.opacity)
+        }
+    }
+
+    private var cameraUnsupportedSheet: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: 12) {
+                        Image(systemName: "camera.viewfinder")
+                            .font(.system(size: 28))
+                            .foregroundStyle(AppColors.accent.opacity(0.6))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Not available for \(exercise.name)")
+                                .font(.system(.body, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text("Camera rep counting works with these exercises:")
+                                .font(.system(.subheadline))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+                Section {
+                    ForEach(ExerciseType.allCases, id: \.self) { type in
+                        Label(type.rawValue, systemImage: type.systemImage)
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(.primary)
+                            .listRowBackground(Color.white.opacity(0.06))
+                    }
+                } header: {
+                    Text("Supported Exercises")
+                        .font(.system(.caption2, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.28))
+                        .textCase(.uppercase)
+                }
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(AppColors.background)
+            .navigationTitle("Camera Tracking")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showingCameraUnsupported = false }
+                        .foregroundStyle(AppColors.accent)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationBackground(AppColors.background)
+    }
+
+    // MARK: - Note Section
+
+    private var noteSection: some View {
+        Section {
                 if isNoteExpanded {
                     VStack(alignment: .leading, spacing: 8) {
                         TextField("Add a note (e.g., grip width, tempo)", text: $noteText, axis: .vertical)
@@ -92,14 +259,7 @@ struct ExerciseEditView: View {
                         }
                     }
                     .padding(.vertical, 4)
-                    .listRowBackground(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white.opacity(0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                            )
-                    )
+                    .listRowBackground(Color.white.opacity(0.06))
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 } else {
@@ -132,636 +292,255 @@ struct ExerciseEditView: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .listRowBackground(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white.opacity(0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                            )
-                    )
+                    .listRowBackground(Color.white.opacity(0.06))
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 }
-            }
+        }
+    }
 
-            // Rest Timer section - dedicated and visible
+    // MARK: - Cohesive Sets + Log Section
+
+    @ViewBuilder
+    private var setsAndLogSection: some View {
+        let hasSets = !(exercise.sets ?? []).isEmpty
+        let shouldShowRest = workout.isActive
+            && restTimer.shouldShowFor(exerciseId: exercise.id)
+            && shouldOfferRestTimer(for: exercise.name)
+
+        VStack(spacing: 12) {
+            if hasSets {
+                unifiedSetsContainer
+                if shouldShowRest {
+                    RestTimerView(exerciseId: exercise.id)
+                }
+            } else {
+                setsEmptyState
+            }
+            quickLogArea
+        }
+    }
+
+    // MARK: - Camera + Info Chips + Progress
+
+    @ViewBuilder
+    private var exerciseInfoSections: some View {
+        // Camera rep counter (active workout, non-time-based only)
+        let exerciseIsTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+        if workout.isActive && !exerciseIsTimeBased {
             Section {
-                HStack(spacing: 12) {
-                    Image(systemName: "timer")
-                        .font(.system(.body))
-                        .foregroundStyle(AppColors.accent)
-                        .frame(width: 28)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Rest Timer")
-                            .font(.system(.body, weight: .medium))
-                            .foregroundStyle(.primary)
-
-                        Text("Persists across workouts")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-
-                    Spacer()
-
-                    Menu {
-                        Button {
-                            restTimerEnabled = nil
-                            saveRestTimerPreference()
-                        } label: {
-                            Label("Use Global Default", systemImage: restTimerEnabled == nil ? "checkmark" : "")
-                        }
-
-                        Button {
-                            restTimerEnabled = true
-                            saveRestTimerPreference()
-                        } label: {
-                            Label("Always Show", systemImage: restTimerEnabled == true ? "checkmark" : "")
-                        }
-
-                        Button {
-                            restTimerEnabled = false
-                            saveRestTimerPreference()
-                        } label: {
-                            Label("Never Show", systemImage: restTimerEnabled == false ? "checkmark" : "")
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(restTimerStatusText)
-                                .font(.system(.subheadline, weight: .medium))
-                                .foregroundStyle(AppColors.accent)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule()
-                                .fill(AppColors.accent.opacity(0.15))
-                        )
-                    }
-                }
-                .padding(.vertical, 2)
-                .listRowBackground(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white.opacity(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                        )
-                )
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-            }
-
-            Section {
-                if (exercise.sets ?? []).isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "circle.dashed")
-                            .font(.system(size: 32))
-                            .foregroundStyle(.tertiary)
-                        Text("No sets added yet")
-                            .font(.system(.subheadline, weight: .regular))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-                    .listRowBackground(Color.white.opacity(0.06))
-                    .listRowSeparator(.hidden)
-                } else {
-                    let orderedSets = exercise.setsByOrder
-                    let groups = computeSetGroups(orderedSets)
-
-                    ForEach(groups) { group in
-                        if group.isMultiSet {
-                            // Grouped card: working set + trailing drop sets in one List row
-                            VStack(spacing: 0) {
-                                ForEach(Array(group.indices.enumerated()), id: \.element) { pos, setIdx in
-                                    inlineGroupedSetRow(orderedSets[setIdx], index: setIdx, orderedSets: orderedSets)
-
-                                    // Divider between rows (not after last)
-                                    if pos < group.indices.count - 1 {
-                                        Rectangle()
-                                            .fill(SetType.dropSet.color.opacity(0.15))
-                                            .frame(height: 1)
-                                            .padding(.horizontal, 12)
-                                    }
-                                }
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(SetType.dropSet.color.opacity(0.2), lineWidth: 1)
-                            )
-                            .overlay(alignment: .leading) {
-                                // Continuous accent bar
-                                Capsule()
-                                    .fill(SetType.dropSet.color.opacity(0.5))
-                                    .frame(width: 3)
-                                    .padding(.vertical, 4)
-                            }
-                            .listRowBackground(Color.white.opacity(0.06))
-                            .listRowSeparator(.hidden)
-                        } else {
-                            // Standalone set: single row, unchanged visual
-                            inlineSetRow(orderedSets[group.indices[0]], index: group.indices[0], orderedSets: orderedSets)
-                        }
-                    }
-                    .onDelete { indexSet in
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        let currentOrderedSets = exercise.setsByOrder
-                        let currentGroups = computeSetGroups(currentOrderedSets)
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            for groupIdx in indexSet.sorted(by: >) where groupIdx < currentGroups.count {
-                                for setIdx in currentGroups[groupIdx].indices.sorted(by: >) {
-                                    exercise.removeSet(id: currentOrderedSets[setIdx].id)
-                                }
-                            }
-                        }
-                        saveChanges()
-                        PersonalRecordManager.recalculatePR(exerciseName: exercise.name, modelContext: modelContext)
-                        loadPR()
-                        if workout.isActive {
-                            workout.syncToWidget(currentExercise: exercise)
-                            let lastSet = exercise.setsByOrder.last
-                            let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                            Task {
-                                await LiveActivityManager.shared.updateActivity(
-                                    exerciseName: exercise.name,
-                                    exerciseId: exercise.id,
-                                    exerciseSets: (exercise.sets ?? []).count,
-                                    lastReps: timeBased ? 0 : (lastSet?.reps ?? 0),
-                                    lastWeight: timeBased ? 0 : (lastSet?.weight ?? 0)
-                                )
-                            }
-                        }
-                    }
-
-                    // Rest timer (shows below sets when active)
-                    if workout.isActive {
-                        RestTimerView(exerciseId: exercise.id)
-                            .listRowBackground(Color.white.opacity(0.06))
-                            .listRowSeparator(.hidden)
-                    }
-                }
-
-                if isAddingSet {
-                    // Show QuickLogStrip for adding sets — pre-fill from last set if available, else 0/0
-                    let exerciseIsTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                    let setsEmpty = (exercise.sets ?? []).isEmpty
-                    HStack(spacing: 6) {
-                        // Camera button alongside strip when adding the first set
-                        if workout.isActive && !exerciseIsTimeBased && setsEmpty {
-                            Button {
-                                if ExerciseType.from(exerciseName: exercise.name) != nil {
-                                    showCameraRepCounter = true
-                                    Analytics.send(Analytics.Signal.cameraOpened, parameters: ["exerciseName": exercise.name])
-                                } else {
-                                    showingCameraUnsupported = true
-                                }
-                            } label: {
-                                Image(systemName: "camera.viewfinder")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 36, height: 36)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(AppColors.accent.opacity(0.8)))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        QuickLogStrip(
-                            lastSet: exercise.setsByOrder.last,  // nil when no sets exist → 0/0 defaults
-                            isTimeBased: exerciseIsTimeBased,
-                            onLog: { reps, weight, duration in
-                                if exerciseIsTimeBased {
-                                    logSet(reps: 0, weight: 0, duration: duration)
-                                } else {
-                                    logSet(reps: reps, weight: weight)
-                                }
-                                // Close strip after logging
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                    isAddingSet = false
-                                }
-                            },
-                            onCustom: nil  // No custom form needed - auto-chain handles everything
-                        )
-                    }
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .bottom).combined(with: .opacity),
-                        removal: .opacity.combined(with: .move(edge: .bottom))
-                    ))
-                    .listRowBackground(Color.white.opacity(0.06))
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 10))
-                } else if (exercise.sets ?? []).isEmpty {
-                    // No sets yet — Add Set + camera button
-                    let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                    HStack(spacing: 10) {
-                        if workout.isActive && !isTimeBased {
-                            Button {
-                                if ExerciseType.from(exerciseName: exercise.name) != nil {
-                                    showCameraRepCounter = true
-                                    Analytics.send(Analytics.Signal.cameraOpened, parameters: ["exerciseName": exercise.name])
-                                } else {
-                                    showingCameraUnsupported = true
-                                }
-                            } label: {
-                                Image(systemName: "camera.viewfinder")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 44, height: 44)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(AppColors.accent.opacity(0.8)))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        Button {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                isAddingSet = true
-                            }
-                        } label: {
-                            Label("Add Set", systemImage: "plus.circle")
-                                .font(.system(.body, weight: .medium))
-                        }
-                        .buttonStyle(.borderless)
-                        .tint(AppColors.accent)
-                        .accessibilityIdentifier("addSetButton")
-                    }
-                    .listRowBackground(Color.white.opacity(0.06))
-                    .listRowSeparator(.hidden)
-                } else {
-                    // Sets exist — QuickLogStrip, hidden while rest timer is active
-                    let shouldShowRest = workout.isActive
-                        && restTimer.shouldShowFor(exerciseId: exercise.id)
-                        && shouldOfferRestTimer(for: exercise.name)
-
-                    if let lastSet = exercise.setsByOrder.last {
-                        HStack(spacing: 6) {
-                            // Camera rep counter button (only for supported exercises during active workout)
-                            let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                            if workout.isActive && !isTimeBased {
-                                Button {
-                                    if ExerciseType.from(exerciseName: exercise.name) != nil {
-                                        showCameraRepCounter = true
-                                        Analytics.send(Analytics.Signal.cameraOpened, parameters: ["exerciseName": exercise.name])
-                                    } else {
-                                        showingCameraUnsupported = true
-                                    }
-                                } label: {
-                                    Image(systemName: "camera.viewfinder")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundStyle(.white)
-                                        .frame(width: 36, height: 36)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(AppColors.accent.opacity(0.8))
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-
-                            QuickLogStrip(
-                                lastSet: lastSet,
-                                isTimeBased: ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false,
-                                onLog: { reps, weight, duration in
-                                    logSet(reps: reps, weight: weight, duration: duration)
-                                },
-                                onCustom: { openAddSetForm() }
-                            )
-                            // Force fresh init with the new lastSet whenever set count changes.
-                            // Without this, SwiftUI may reuse the QuickLogStrip instance across the
-                            // isAddingSet→sets-exist branch transition, preserving stale 0/0 state.
-                            .id(exercise.sets?.count ?? 0)
-                        }
-                        .onChange(of: shouldShowRest) { oldValue, newValue in
-                            if newValue {
-                                // Rest timer showing - hide QuickLogStrip immediately (no animation)
-                                quickLogStripOffset = 80
-                                quickLogStripOpacity = 0
-                            } else {
-                                // Rest timer dismissed - animate QuickLogStrip in with bounce
-                                withAnimation(.interpolatingSpring(stiffness: 150, damping: 12)) {
-                                    quickLogStripOffset = 0
-                                    quickLogStripOpacity = 1.0
-                                }
-                            }
-                        }
-                        .offset(y: quickLogStripOffset)
-                        .opacity(quickLogStripOpacity)
-                        .onAppear {
-                            quickLogStripOffset = shouldShowRest ? 80 : 0
-                            quickLogStripOpacity = shouldShowRest ? 0 : 1.0
-                        }
-                        .listRowBackground(Color.white.opacity(0.06))
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 10))
-                    }
-                }
-            } header: {
-                Text("Sets")
-                    .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .textCase(nil)
-            }
-
-            Section {
-                HStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        let isTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                        HStack(spacing: 6) {
-                            Image(systemName: isTimeBased ? "clock" : "number")
-                                .font(.system(.caption, weight: .medium))
-                            Text(isTimeBased ? "Total Time" : "Total Reps")
-                                .font(.system(.caption, weight: .medium))
-                        }
-                        .foregroundStyle(.secondary)
-                        Text(isTimeBased ? UnitFormatter.formatDuration(exercise.totalDurationSeconds) : "\(exercise.totalReps)")
-                            .font(.system(.title2, weight: .semibold))
-                            .foregroundStyle(.primary)
-                    }
-
-                    Spacer()
-
-                }
-                .padding(.vertical, 8)
-                .listRowBackground(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white.opacity(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
-                        )
-                )
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            } header: {
-                Text("Summary")
-                    .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .textCase(nil)
-            }
-
-            // Personal Record section
-            if let pr = currentPR {
-                Section {
-                    HStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.yellow.opacity(0.15))
-                                .frame(width: 44, height: 44)
-                            Image(systemName: "medal.fill")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundStyle(.yellow)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Personal Record")
-                                .font(.system(.caption, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                            Text(pr.displayString)
-                                .font(.system(.title3, weight: .bold))
-                                .foregroundStyle(.primary)
-                        }
-
-                        Spacer()
-
-                        if !pr.isBodyweight {
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text("Est. 1RM")
-                                    .font(.system(.caption2, weight: .medium))
-                                    .foregroundStyle(.tertiary)
-                                Text(UnitFormatter.formatWeightCompact(pr.estimated1RM))
-                                    .font(.system(.subheadline, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 8)
+                cameraCard
                     .listRowBackground(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white.opacity(0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.yellow.opacity(0.25), lineWidth: 1)
-                            )
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(AppColors.accent.opacity(0.06))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppColors.accent.opacity(0.18), lineWidth: 1))
                     )
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                } header: {
-                    Label("Personal Best", systemImage: "medal")
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .textCase(nil)
-                }
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             }
+        }
 
-            // Progress section
-            Section {
-                Button {
-                    showingProgress = true
-                } label: {
-                    HStack {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.system(.body, weight: .medium))
-                            .foregroundStyle(AppColors.accent)
-
-                        Text("View Progress")
-                            .font(.system(.body, weight: .medium))
-                            .foregroundStyle(.primary)
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .buttonStyle(.plain)
-                .listRowBackground(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white.opacity(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
-                        )
-                )
+        // Info chips: Rest Timer + PR
+        Section {
+            infoChipsRow
+                .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            }
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .scrollDismissesKeyboard(.immediately)
-        .background(AppColors.background)
-        .navigationTitle(exercise.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingProgress) {
-            ExerciseProgressView(exerciseName: exercise.name)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(AppColors.background)
-        }
-        .sheet(isPresented: $showingCameraUnsupported) {
-            NavigationStack {
-                List {
-                    Section {
-                        HStack(spacing: 12) {
-                            Image(systemName: "camera.viewfinder")
-                                .font(.system(size: 28))
-                                .foregroundStyle(.secondary)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Not available for \(exercise.name)")
-                                    .font(.system(.body, weight: .semibold))
-                                Text("Camera rep counting works with these exercises:")
-                                    .font(.system(.subheadline))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
 
-                    Section("Supported Exercises") {
-                        ForEach(ExerciseType.allCases, id: \.self) { type in
-                            Label(type.rawValue, systemImage: type.systemImage)
-                                .font(.system(.subheadline))
-                        }
-                    }
-                }
-                .scrollContentBackground(.hidden)
-                .background(AppColors.background)
-                .navigationTitle("Camera Tracking")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { showingCameraUnsupported = false }
-                    }
-                }
-            }
-            .presentationDetents([.medium, .large])
-            .presentationBackground(AppColors.background)
-        }
-        .fullScreenCover(isPresented: $showCameraRepCounter) {
-            CameraRepCounterView(
-                exerciseName: exercise.name,
-                lastWeight: exercise.setsByOrder.last?.weight ?? 0,
-                onSetLogged: { reps, weight in
-                    logSet(reps: reps, weight: weight)
-                }
-            )
-        }
-        .overlay {
-            // PR Celebration overlay (confetti + card)
-            if showingPRCelebration {
-                ZStack {
-                    Color.black.opacity(0.35)
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                    ConfettiView()
-                    PRCelebrationView()
-                        .transition(.scale.combined(with: .opacity))
-                }
-                .transition(.opacity)
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        withAnimation(.easeOut(duration: 0.28)) {
-                            showingPRCelebration = false
-                        }
-                    }
-                }
-            }
-        }
-        .overlay {
-            if keyboardVisible {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        debugLog("[ExName] overlay tap: calling resignFirstResponder, exerciseNameFocused=\(exerciseNameFocused), isEditingExerciseName=\(isEditingExerciseName)")
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        debugLog("[ExName] overlay tap: after resignFirstResponder, exerciseNameFocused=\(exerciseNameFocused)")
-                    }
-                    .allowsHitTesting(true)
-                    .transition(.opacity)
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            withAnimation(.easeOut(duration: 0.28)) { keyboardVisible = true }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-            withAnimation(.easeOut(duration: 0.28)) { keyboardVisible = false }
-            if isEditingExerciseName {
-                debugLog("[ExName] keyboardWillHide: saving and dismissing exercise name edit")
-                saveExerciseName()
-                isEditingExerciseName = false
-                exerciseNameFocused = false
-            }
-        }
-        .onAppear {
-            exerciseNameText = exercise.name
-            loadNote()
-            loadPR()
-            loadRestTimerPreference()
-            // Auto-open QuickLogStrip for new empty exercises during active workouts
-            if (exercise.sets ?? []).isEmpty && workout.isActive {
-                isAddingSet = true
-            }
-        }
-        .onChange(of: exercise.name) { oldValue, newValue in
-            if !isEditingExerciseName {
-                exerciseNameText = newValue
-            }
-        }
-        .onChange(of: exerciseNameFocused) { oldValue, newValue in
-            debugLog("[ExName] onChange(exerciseNameFocused): \(oldValue) → \(newValue), isEditingExerciseName=\(isEditingExerciseName)")
-            if !newValue && isEditingExerciseName {
-                debugLog("[ExName] onChange: saving and setting isEditingExerciseName=false")
-                saveExerciseName()
-                isEditingExerciseName = false
-            }
-        }
-        .onChange(of: isNoteExpanded) { _, expanded in
-            if expanded {
-                noteFocused = true
-            }
+        // Progress
+        Section {
+            progressRow
+                .listRowBackground(Color.white.opacity(0.06))
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
         }
     }
 
-    private var exerciseNameRow: some View {
-        HStack(spacing: 12) {
-            if isEditingExerciseName {
-                TextField("Exercise Name", text: $exerciseNameText)
-                    .font(.system(.title3, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .focused($exerciseNameFocused)
-                    .textFieldStyle(.plain)
-                    .onSubmit { submitExerciseName() }
+    private var cameraCard: some View {
+        Button {
+            if ExerciseType.from(exerciseName: exercise.name) != nil {
+                showCameraRepCounter = true
+                Analytics.send(Analytics.Signal.cameraOpened, parameters: ["exerciseName": exercise.name])
             } else {
-                Text(exercise.name)
-                    .font(.system(.title3, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .contentShape(Rectangle())
-                    .onTapGesture { startEditingExerciseName() }
+                showingCameraUnsupported = true
             }
-            Spacer()
-            if !isEditingExerciseName {
-                Button {
-                    startEditingExerciseName()
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.system(.caption, weight: .medium))
+        } label: {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle().fill(AppColors.accent.opacity(0.15)).frame(width: 44, height: 44)
+                    Image(systemName: "camera.viewfinder").font(.system(size: 20, weight: .semibold)).foregroundStyle(AppColors.accent)
                 }
-                .tint(AppColors.accent)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Camera Rep Counter").font(.system(.subheadline, weight: .bold)).foregroundStyle(.primary)
+                    Text("Auto-count reps using your camera").font(.system(.caption, weight: .regular)).foregroundStyle(Color.white.opacity(0.45))
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(.caption, weight: .semibold)).foregroundStyle(AppColors.accent.opacity(0.6))
             }
+            .padding(.vertical, 10).padding(.horizontal, 4)
         }
-        .padding(.vertical, 4)
+        .buttonStyle(.plain)
     }
 
-    // MARK: - Set Grouping (working set + trailing drop sets = one List row)
+    private var infoChipsRow: some View {
+        HStack(spacing: 10) {
+            restTimerChip
+            prChip
+        }
+    }
+
+    private var restTimerChip: some View {
+        Menu {
+            Button { restTimerEnabled = nil; saveRestTimerPreference() } label: { Label("Use Global Default", systemImage: restTimerEnabled == nil ? "checkmark" : "") }
+            Button { restTimerEnabled = true; saveRestTimerPreference() } label: { Label("Always Show", systemImage: restTimerEnabled == true ? "checkmark" : "") }
+            Button { restTimerEnabled = false; saveRestTimerPreference() } label: { Label("Never Show", systemImage: restTimerEnabled == false ? "checkmark" : "") }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "timer").font(.system(size: 12, weight: .semibold)).foregroundStyle(AppColors.accent)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("REST TIMER").font(.system(size: 9, weight: .semibold)).foregroundStyle(Color.white.opacity(0.30)).kerning(0.4)
+                    Text(restTimerStatusText).font(.system(.caption, weight: .semibold)).foregroundStyle(.primary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9)).foregroundStyle(Color.white.opacity(0.25))
+            }
+            .padding(.horizontal, 12).padding(.vertical, 10).frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.06)).overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.09), lineWidth: 1)))
+        }
+    }
+
+    @ViewBuilder
+    private var prChip: some View {
+        if let pr = currentPR {
+            HStack(spacing: 6) {
+                Text("🏆").font(.system(size: 14))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("CURRENT PR").font(.system(size: 9, weight: .semibold)).foregroundStyle(AppColors.accentGold.opacity(0.5)).kerning(0.4)
+                    Text(pr.isBodyweight ? "BW × \(pr.reps)" : "\(UnitFormatter.formatWeightCompact(pr.weight, showUnit: false)) × \(pr.reps)")
+                        .font(.system(.caption, weight: .bold)).foregroundStyle(AppColors.accentGold)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 10).frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 12).fill(AppColors.accentGold.opacity(0.06)).overlay(RoundedRectangle(cornerRadius: 12).stroke(AppColors.accentGold.opacity(0.18), lineWidth: 1)))
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "medal").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.white.opacity(0.20))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("PERSONAL RECORD").font(.system(size: 9, weight: .semibold)).foregroundStyle(Color.white.opacity(0.20)).kerning(0.4)
+                    Text("Not set yet").font(.system(.caption, weight: .medium)).foregroundStyle(Color.white.opacity(0.30))
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 10).frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.04)).overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.07), lineWidth: 1)))
+        }
+    }
+
+    private var progressRow: some View {
+        Button { showingProgress = true } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(.subheadline))
+                    .foregroundStyle(AppColors.accent)
+                Text("View Progress")
+                    .font(.system(.subheadline))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var setsEmptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "circle.dashed")
+                .font(.system(size: 32))
+                .foregroundStyle(.tertiary)
+            Text("No sets added yet")
+                .font(.system(.subheadline, weight: .regular))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+    }
+
+    @ViewBuilder
+    private var quickLogArea: some View {
+        let hasSets = !(exercise.sets ?? []).isEmpty
+        let exerciseIsTimeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+        let shouldShowRest = workout.isActive
+            && restTimer.shouldShowFor(exerciseId: exercise.id)
+            && shouldOfferRestTimer(for: exercise.name)
+
+        if isAddingSet {
+            QuickLogStrip(
+                lastSet: exercise.setsByOrder.last,
+                isTimeBased: exerciseIsTimeBased,
+                setCount: exercise.sets?.count ?? 0,
+                onLog: { reps, weight, duration, setType in
+                    if exerciseIsTimeBased {
+                        logSet(reps: 0, weight: 0, duration: duration, setType: setType)
+                    } else {
+                        logSet(reps: reps, weight: weight, setType: setType)
+                    }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        isAddingSet = false
+                    }
+                },
+                onCustom: nil
+            )
+            .transition(.asymmetric(
+                insertion: .move(edge: .bottom).combined(with: .opacity),
+                removal: .opacity.combined(with: .move(edge: .bottom))
+            ))
+        } else if !hasSets {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    isAddingSet = true
+                }
+            } label: {
+                Label("Add Set", systemImage: "plus.circle")
+                    .font(.system(.body, weight: .semibold))
+                    .foregroundStyle(AppColors.accent)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(AppColors.accent.opacity(0.10))
+                            .overlay(RoundedRectangle(cornerRadius: 12)
+                                .stroke(AppColors.accent.opacity(0.22), lineWidth: 1))
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("addSetButton")
+        } else if !shouldShowRest, let lastSet = exercise.setsByOrder.last {
+                QuickLogStrip(
+                    lastSet: lastSet,
+                    isTimeBased: exerciseIsTimeBased,
+                    setCount: exercise.sets?.count ?? 0,
+                    onLog: { reps, weight, duration, setType in
+                        logSet(reps: reps, weight: weight, duration: duration, setType: setType)
+                    },
+                    onCustom: { openAddSetForm() }
+                )
+                .id(exercise.sets?.count ?? 0)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                    removal: .opacity
+                ))
+        }
+    }
+
+    // MARK: - Set Grouping (working set + trailing drop sets)
 
     private struct SetGroup: Identifiable {
-        let id: UUID           // first set's ID (stable across re-renders)
-        let indices: [Int]     // indices into orderedSets
+        let id: UUID
+        let indices: [Int]
         var isMultiSet: Bool { indices.count > 1 }
     }
 
@@ -784,41 +563,57 @@ struct ExerciseEditView: View {
         return groups
     }
 
-    @ViewBuilder
-    private func inlineSetRow(_ set: WorkoutSet, index: Int, orderedSets: [WorkoutSet]) -> some View {
-        InlineSetRowView(
-            set: set,
-            setNumber: index + 1,
-            exerciseName: exercise.name,
-            currentWorkout: workout,
-            modelContext: modelContext,
-            onUpdate: { newReps, newWeight in
-                if !(ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false) {
-                    set.reps = newReps
-                    set.weight = newWeight
+    // MARK: - Unified Sets Container (inline editing, mockup container style)
+
+    private var unifiedSetsContainer: some View {
+        let orderedSets = exercise.setsByOrder
+        let groups = computeSetGroups(orderedSets)
+
+        return VStack(spacing: 0) {
+            ForEach(Array(groups.enumerated()), id: \.element.id) { groupIdx, group in
+                if group.isMultiSet {
+                    // Drop set group: accent bar + grouped rows
+                    VStack(spacing: 0) {
+                        ForEach(Array(group.indices.enumerated()), id: \.element) { pos, setIdx in
+                            makeSetRow(orderedSets[setIdx], index: setIdx)
+                            if pos < group.indices.count - 1 {
+                                Rectangle()
+                                    .fill(SetType.dropSet.color.opacity(0.15))
+                                    .frame(height: 1)
+                                    .padding(.horizontal, 12)
+                            }
+                        }
+                    }
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(SetType.dropSet.color.opacity(0.5))
+                            .frame(width: 3)
+                            .padding(.vertical, 4)
+                    }
+                } else {
+                    makeSetRow(orderedSets[group.indices[0]], index: group.indices[0])
                 }
-                saveChanges()
-                loadPR()
-            },
-            onPRSet: {
-                DispatchQueue.main.async { loadPR() }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                    showingPRCelebration = true
+
+                if groupIdx < groups.count - 1 {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.05))
+                        .frame(height: 1)
                 }
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
             }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
         )
-        .id(set.id)
-        .transition(.asymmetric(
-            insertion: .opacity.combined(with: .move(edge: .bottom)),
-            removal: .opacity
-        ))
-        .listRowBackground(Color.white.opacity(0.06))
-        .listRowSeparator(.hidden)
     }
 
     @ViewBuilder
-    private func inlineGroupedSetRow(_ set: WorkoutSet, index: Int, orderedSets: [WorkoutSet]) -> some View {
+    private func makeSetRow(_ set: WorkoutSet, index: Int) -> some View {
         InlineSetRowView(
             set: set,
             setNumber: index + 1,
@@ -840,86 +635,60 @@ struct ExerciseEditView: View {
                 }
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
             },
-            onDelete: {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                    exercise.removeSet(id: set.id)
-                }
-                saveChanges()
-                PersonalRecordManager.recalculatePR(exerciseName: exercise.name, modelContext: modelContext)
-                loadPR()
-                if workout.isActive {
-                    workout.syncToWidget(currentExercise: exercise)
-                    let lastSet = exercise.setsByOrder.last
-                    let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
-                    Task {
-                        await LiveActivityManager.shared.updateActivity(
-                            exerciseName: exercise.name,
-                            exerciseId: exercise.id,
-                            exerciseSets: (exercise.sets ?? []).count,
-                            lastReps: timeBased ? 0 : (lastSet?.reps ?? 0),
-                            lastWeight: timeBased ? 0 : (lastSet?.weight ?? 0)
-                        )
-                    }
-                }
-            },
+            onDelete: { deleteSet(set) },
             isInsideGroup: true
         )
         .id(set.id)
-        .transition(.asymmetric(
-            insertion: .push(from: .bottom).combined(with: .opacity),
-            removal: .opacity
-        ))
     }
 
-    @ViewBuilder
-    private func exerciseDetailMatchedHeader(namespace: Namespace.ID) -> some View {
-        HStack(spacing: 12) {
-            if isEditingExerciseName {
-                TextField("Exercise Name", text: $exerciseNameText)
-                    .font(.system(.headline, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .focused($exerciseNameFocused)
-                    .textFieldStyle(.plain)
-                    .onSubmit { submitExerciseName() }
-            } else {
-                Text(exercise.name)
-                    .font(.system(.headline, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .contentShape(Rectangle())
-                    .onTapGesture { startEditingExerciseName() }
-                    .matchedGeometryEffect(id: "title-\(exercise.id)", in: namespace)
-            }
-            Spacer(minLength: 0)
-            if !isEditingExerciseName {
-                Button {
-                    startEditingExerciseName()
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.system(.caption, weight: .medium))
-                }
-                .tint(.accentColor)
+    /// Find the ID string of the set currently being keyboard-edited (for scroll-to)
+    private func findEditingSetId() -> String? {
+        // We can't directly query InlineSetRowView's state from here,
+        // but we know the last set or any set the user tapped will be editing.
+        // Use the last set in the list as a reasonable scroll target.
+        return exercise.setsByOrder.last?.id.uuidString
+    }
+
+    private func deleteSet(_ set: WorkoutSet) {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            exercise.removeSet(id: set.id)
+        }
+        saveChanges()
+        PersonalRecordManager.recalculatePR(exerciseName: exercise.name, modelContext: modelContext)
+        loadPR()
+        if workout.isActive {
+            workout.syncToWidget(currentExercise: exercise)
+            let lastSet = exercise.setsByOrder.last
+            let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
+            Task {
+                await LiveActivityManager.shared.updateActivity(
+                    exerciseName: exercise.name,
+                    exerciseId: exercise.id,
+                    exerciseSets: (exercise.sets ?? []).count,
+                    lastReps: timeBased ? 0 : (lastSet?.reps ?? 0),
+                    lastWeight: timeBased ? 0 : (lastSet?.weight ?? 0)
+                )
             }
         }
-        .padding(.vertical, 14)
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.06))
-                .shadow(color: Color.primary.opacity(0.06), radius: 8, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-                )
-                .matchedGeometryEffect(id: "card-\(exercise.id)", in: namespace)
-        )
     }
 
+    private func findBestSetIndex(_ sets: [WorkoutSet]) -> Int? {
+        var bestScore = 0.0
+        var bestIdx: Int? = nil
+        for (i, s) in sets.enumerated() {
+            guard s.type.countsForPR, s.reps > 0 else { continue }
+            let score = s.weight > 0 ? s.weight * (1.0 + Double(s.reps) / 30.0) : Double(s.reps)
+            if score > bestScore { bestScore = score; bestIdx = i }
+        }
+        return bestIdx
+    }
+
+
+
     private func startEditingExerciseName() {
-        debugLog("[ExName] startEditingExerciseName")
         exerciseNameText = exercise.name
         isEditingExerciseName = true
-        exerciseNameFocused = true
     }
 
     private func saveExerciseName() {
@@ -935,18 +704,7 @@ struct ExerciseEditView: View {
     }
 
     private func submitExerciseName() {
-        debugLog("[ExName] submitExerciseName called (from .onSubmit / Done button)")
         saveExerciseName()
-        // Defer focus change to next run loop — setting @FocusState during
-        // .onSubmit gets batched with other state changes, so the keyboard
-        // never actually dismisses. The onChange(of: exerciseNameFocused)
-        // handler then removes the TextField after focus is confirmed lost.
-        debugLog("[ExName] scheduling Task to set exerciseNameFocused=false")
-        Task { @MainActor in
-            debugLog("[ExName] Task executing: setting exerciseNameFocused=false (currently \(exerciseNameFocused))")
-            exerciseNameFocused = false
-            debugLog("[ExName] Task done: exerciseNameFocused is now \(exerciseNameFocused)")
-        }
     }
 
     private func saveChanges() {
@@ -958,7 +716,7 @@ struct ExerciseEditView: View {
     }
 
     /// Log a set with all side effects (widget sync, live activity, PR check, rest offer)
-    private func logSet(reps: Int, weight: Double, duration: Int? = nil) {
+    private func logSet(reps: Int, weight: Double, duration: Int? = nil, setType: SetType = .working) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         let timeBased = ExerciseLibrary.shared.find(name: exercise.name)?.isTimeBased ?? false
 
@@ -967,6 +725,10 @@ struct ExerciseEditView: View {
                 exercise.addSet(reps: 0, weight: 0, durationSeconds: d)
             } else {
                 exercise.addSet(reps: reps, weight: weight)
+            }
+            // Apply the selected set type to the just-added set
+            if let lastSet = exercise.setsByOrder.last {
+                lastSet.type = setType
             }
         }
         saveChanges()
@@ -1077,6 +839,7 @@ struct ExerciseEditView: View {
                 modelContext.insert(newMemory)
                 try modelContext.save()
             }
+            Analytics.send(Analytics.Signal.exerciseNoteEdited, parameters: ["exerciseName": exercise.name])
         } catch {
             debugLog("Error saving note: \(error)")
         }
@@ -1153,6 +916,13 @@ struct ExerciseEditView: View {
 
     private func checkForPR(weight: Double, reps: Int) {
         debugLog("[PR] checkForPR called - exercise=\(exercise.name), weight=\(weight), reps=\(reps)")
+
+        // Capture previous PR before it gets overwritten
+        let previousPR = PersonalRecordManager.getPR(for: exercise.name, modelContext: modelContext)
+        let prevWeight = previousPR?.weight
+        let prevReps = previousPR?.reps
+        let prev1RM = previousPR?.estimated1RM
+
         let isNewPR = PersonalRecordManager.checkAndSavePR(
             exerciseName: exercise.name,
             weight: weight,
@@ -1161,17 +931,28 @@ struct ExerciseEditView: View {
             modelContext: modelContext
         )
         debugLog("[PR] checkAndSavePR returned isNewPR=\(isNewPR)")
+        lastCameraSetWasPR = isNewPR
 
         if isNewPR {
-            // Reload PR and show celebration
             loadPR()
+
+            // Build celebration data
+            let est1RM = weight > 0 ? weight * (1.0 + Double(reps) / 30.0) : 0
+            prCelebrationData = PRCelebrationData(
+                exerciseName: exercise.name,
+                weight: weight,
+                reps: reps,
+                estimated1RM: est1RM,
+                previousWeight: prevWeight,
+                previousReps: prevReps,
+                previous1RM: prev1RM,
+                isBodyweight: weight == 0
+            )
+
             withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                 showingPRCelebration = true
             }
-
-            // Haptic feedback for PR
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
     }
 }

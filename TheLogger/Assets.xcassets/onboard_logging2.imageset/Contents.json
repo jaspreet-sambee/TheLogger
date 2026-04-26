@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "onboard_logging2.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Home Screen Redesign Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d0d14;
+    font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+    gap: 48px;
+  }
+
+  h1 {
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .phones-row {
+    display: flex;
+    gap: 48px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .phone-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* ── iPhone shell ── */
+  .iphone {
+    width: 375px;
+    height: 812px;
+    background: #0a0a0f;
+    border-radius: 52px;
+    border: 1px solid rgba(255,255,255,0.12);
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 30px 80px rgba(0,0,0,0.8),
+      0 0 60px rgba(232,56,74,0.06);
+  }
+
+  /* ambient background glow */
+  .iphone::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(232,56,74,0.10) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Status bar */
+  .status-bar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px 0;
+    height: 44px;
+  }
+  .status-time {
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+  }
+  .status-icons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .status-icons svg { fill: rgba(255,255,255,0.8); }
+
+  /* Dynamic island */
+  .dynamic-island {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 34px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 20;
+  }
+
+  /* Scroll content */
+  .screen-content {
+    position: relative;
+    z-index: 1;
+    padding: 8px 0 40px;
+    height: calc(812px - 44px - 83px);
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 8px;
+  }
+  .greeting {
+    font-size: 22px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+  .subgreeting {
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.4);
+    margin-top: 3px;
+  }
+  .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e8384a 0%, #922030 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: white;
+    flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    position: relative;
+  }
+  .avatar-badge {
+    position: absolute; bottom: -2px; right: -2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #e8384a; border: 2px solid #0a0a0f;
+    font-size: 8px; font-weight: 700; color: white;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Inline stats row ── */
+  .inline-stats {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 20px 14px;
+  }
+  .stat-pill {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600;
+    color: rgba(255,255,255,0.55);
+  }
+  .stat-pill .val { color: rgba(255,255,255,0.85); }
+  .week-dots { display: flex; gap: 4px; align-items: center; }
+  .week-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.18); }
+  .week-dot.active { background: #e8384a; }
+  .dot-divider { width: 1px; height: 12px; background: rgba(255,255,255,0.12); }
+
+  /* ── Quick Start hero card ── */
+  .quick-start-card {
+    margin: 4px 16px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    overflow: hidden;
+    position: relative;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .quick-start-card::before {
+    content: '';
+    position: absolute; top: -40px; right: -30px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(232,56,74,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .qs-inner { padding: 16px 16px 16px; position: relative; z-index: 1; }
+  .qs-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 10px;
+  }
+
+  /* ── Template pills ── */
+  .template-pills { display: flex; gap: 7px; overflow: hidden; margin-bottom: 16px; }
+  .pill {
+    padding: 7px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
+  }
+  .pill.selected { background: rgba(232,56,74,0.18); color: #ff6b7a; border: 1px solid rgba(232,56,74,0.35); }
+  .pill.unselected { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.38); border: 1px solid rgba(255,255,255,0.08); }
+  .pill.new-pill { background: transparent; color: rgba(255,255,255,0.25); border: 1px dashed rgba(255,255,255,0.15); }
+
+  /* ── Exercise preview ── */
+  .template-exercises { margin: 0 0 14px; }
+  .tmpl-ex-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .tmpl-ex-row:last-child { border-bottom: none; }
+  .tmpl-ex-name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.65); }
+  .tmpl-sets    { font-size: 12px; font-weight: 400; color: rgba(255,255,255,0.22); }
+
+  /* CTA button */
+  .cta-btn {
+    width: 100%; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, #e8384a 0%, #ff5a30 100%);
+    display: flex; align-items: center; justify-content: center;
+    gap: 9px; font-size: 16px; font-weight: 700; color: white; letter-spacing: -0.2px;
+    position: relative;
+    box-shadow: 0 8px 24px rgba(232,56,74,0.45), 0 2px 8px rgba(232,56,74,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .cta-btn::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 50%;
+    border-radius: 14px 14px 0 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.12), transparent);
+  }
+
+  /* ── Active workout hero ── */
+  .active-hero {
+    margin: 4px 16px 10px;
+    border-radius: 20px;
+    background: rgba(232,56,74,0.06);
+    border: 1px solid rgba(232,56,74,0.28);
+    padding: 18px 18px 16px;
+    position: relative; overflow: hidden;
+  }
+  .active-hero::before {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(232,56,74,0.15) 0%, transparent 65%);
+    pointer-events: none;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1.0; } }
+  .active-indicator { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .active-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #e8384a;
+    box-shadow: 0 0 8px rgba(232,56,74,0.8);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .active-workout-name { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.7); }
+  .timer-display {
+    font-size: 62px; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: -2px; line-height: 1;
+    background: linear-gradient(135deg, #e8384a 0%, #ff7042 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin: 6px 0 16px;
+  }
+  .resume-btn {
+    width: 100%; height: 48px; border-radius: 13px; background: #e8384a;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; font-size: 15px; font-weight: 700; color: white;
+    box-shadow: 0 6px 20px rgba(232,56,74,0.4);
+  }
+
+  /* ── Recent workouts ── */
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 20px 8px;
+  }
+  .section-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: rgba(255,255,255,0.3);
+  }
+  .section-action { font-size: 13px; font-weight: 600; color: #e8384a; }
+
+  .workout-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 20px; position: relative;
+  }
+  .workout-row::after {
+    content: ''; position: absolute; bottom: 0; left: 20px; right: 20px;
+    height: 1px; background: rgba(255,255,255,0.05);
+  }
+  .workout-row:last-child::after { display: none; }
+  .row-accent {
+    width: 3px; height: 36px; border-radius: 2px; flex-shrink: 0;
+    background: linear-gradient(to bottom, #e8384a, rgba(232,56,74,0.2));
+  }
+  .row-info { flex: 1; }
+  .row-name-line { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+  .row-name { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.88); }
+  /* PR badge on row */
+  .pr-badge-row {
+    display: flex; align-items: center; gap: 3px;
+    padding: 2px 7px; border-radius: 999px;
+    background: rgba(255,196,40,0.12);
+    border: 1px solid rgba(255,196,40,0.22);
+    font-size: 10px; font-weight: 700;
+    color: #ffc428;
+  }
+  .row-meta { font-size: 12px; color: rgba(255,255,255,0.35); font-weight: 400; }
+  .row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .row-date { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.4); }
+  .row-duration { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.22); }
+
+  /* ── PR Highlights card ── */
+  .pr-card {
+    margin: 4px 16px 8px;
+    border-radius: 18px;
+    background: rgba(255,196,40,0.05);
+    border: 1px solid rgba(255,196,40,0.14);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .pr-card::before {
+    content: '';
+    position: absolute; top: -30px; right: -20px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(255,196,40,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .pr-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .pr-card-title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; color: rgba(255,196,40,0.8);
+  }
+  .pr-card-sub { font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 500; }
+  .pr-rows { display: flex; flex-direction: column; gap: 10px; }
+  .pr-row { display: flex; align-items: center; justify-content: space-between; }
+  .pr-exercise { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); }
+  .pr-right { display: flex; align-items: center; gap: 8px; }
+  .pr-weight {
+    font-size: 15px; font-weight: 800; color: #ffc428;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.3px;
+  }
+  .pr-delta {
+    font-size: 11px; font-weight: 600; color: rgba(255,196,40,0.55);
+  }
+  .pr-date { font-size: 11px; color: rgba(255,255,255,0.28); font-weight: 500; }
+
+  /* ── Tab bar ── */
+  .tab-bar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 83px;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: flex-start; justify-content: space-around; padding: 10px 0 0;
+  }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .tab-icon { font-size: 22px; opacity: 0.35; }
+  .tab-icon.active { opacity: 1; filter: drop-shadow(0 0 6px rgba(232,56,74,0.7)); }
+  .tab-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.35); letter-spacing: 0.02em; }
+  .tab-label.active { color: #e8384a; font-weight: 600; }
+
+  /* ── Labels ── */
+  .variant-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.4);
+    margin-bottom: 8px;
+  }
+
+  .design-note {
+    font-size: 11px; color: rgba(255,255,255,0.25); text-align: center;
+    max-width: 780px; line-height: 1.7;
+  }
+  .design-note strong { color: rgba(255,255,255,0.5); }
+</style>
+</head>
+<body>
+
+<h1>TheLogger — Home Screen Premium Redesign</h1>
+
+<div class="phones-row">
+
+  <!-- ── PHONE 1: Idle, no active workout ── -->
+  <div class="phone-wrapper">
+    <div class="variant-badge">Idle — recent PRs</div>
+    <div class="iphone">
+      <div class="dynamic-island"></div>
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.4C10.4 2.4 12.6 3.4 14.1 5L15.5 3.5C13.6 1.4 11 0 8 0S2.4 1.4.5 3.5L1.9 5C3.4 3.4 5.6 2.4 8 2.4z"/><path d="M8 5.6c1.5 0 2.9.6 3.9 1.6l1.4-1.5C11.8 4.2 10 3.4 8 3.4S4.2 4.2 2.7 5.7l1.4 1.5C5.1 6.2 6.5 5.6 8 5.6z"/><circle cx="8" cy="10" r="2"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+
+      <div class="screen-content">
+        <!-- Header -->
+        <div class="header">
+          <div>
+            <div class="greeting">Good morning, J</div>
+            <div class="subgreeting">Ready to work out?</div>
+          </div>
+          <div class="avatar">J<div class="avatar-badge">4</div></div>
+        </div>
+
+        <!-- Inline stats -->
+        <div class="inline-stats">
+          <div class="stat-pill">🔥 <span class="val">7</span> streak</div>
+          <div class="dot-divider"></div>
+          <div class="stat-pill">
+            <div class="week-dots">
+              <div class="week-dot active"></div><div class="week-dot active"></div>
+              <div class="week-dot active"></div><div class="week-dot"></div>
+              <div class="week-dot"></div><div class="week-dot"></div><div class="week-dot"></div>
+            </div>
+            &nbsp;<span class="val">3</span>/4 this week
+          </div>
+        </div>
+
+        <!-- Quick Start card -->
+        <div class="quick-start-card">
+          <div class="qs-inner">
+            <div class="qs-label">Quick Start</div>
+            <!-- Template pills -->
+            <div class="template-pills">
+              <div class="pill selected">Log Day A</div>
+              <div class="pill unselected">Pull Day</div>
+              <div class="pill unselected">Push Day</div>
+              <div class="pill new-pill">＋ New</div>
+            </div>
+
+            <!-- Exercise list — minimal -->
+            <div class="template-exercises">
+              <div class="tmpl-ex-row">
+                <span class="tmpl-ex-name">Barbell Squat</span>
+                <span class="tmpl-sets">5 sets</span>
+              </div>
+              <div class="tmpl-ex-row">
+                <span class="tmpl-ex-name">Bench Press</span>
+                <span class="tmpl-sets">4 sets</span>
+              </div>
+              <div class="tmpl-ex-row">
+                <span class="tmpl-ex-name">Overhead Press</span>
+                <span class="tmpl-sets">3 sets</span>
+              </div>
+              <div class="tmpl-ex-row">
+                <span class="tmpl-ex-name">Tricep Pushdown</span>
+                <span class="tmpl-sets">3 sets</span>
+              </div>
+              <div class="tmpl-ex-row">
+                <span class="tmpl-ex-name">Barbell Row</span>
+                <span class="tmpl-sets">3 sets</span>
+              </div>
+            </div>
+            <div class="cta-btn">▶&nbsp; Start Log Day A</div>
+          </div>
+        </div>
+
+        <!-- PR Highlights -->
+        <div class="pr-card">
+          <div class="pr-card-header">
+            <div class="pr-card-title">🏆 Personal Records</div>
+            <div class="pr-card-sub">This week · 3 PRs</div>
+          </div>
+          <div class="pr-rows">
+            <div class="pr-row">
+              <div>
+                <div class="pr-exercise">Bench Press</div>
+                <div class="pr-date">Yesterday · Pull Day</div>
+              </div>
+              <div class="pr-right">
+                <div class="pr-weight">225 lbs</div>
+                <div class="pr-delta">+10 lbs</div>
+              </div>
+            </div>
+            <div class="pr-row">
+              <div>
+                <div class="pr-exercise">Barbell Squat</div>
+                <div class="pr-date">Mon · Log Day A</div>
+              </div>
+              <div class="pr-right">
+                <div class="pr-weight">315 lbs</div>
+                <div class="pr-delta">+5 lbs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent workouts -->
+        <div class="section-header">
+          <span class="section-title">Recent</span>
+          <span class="section-action">View all →</span>
+        </div>
+
+        <div class="workout-row">
+          <div class="row-accent"></div>
+          <div class="row-info">
+            <div class="row-name-line">
+              <span class="row-name">Pull Day</span>
+              <span class="pr-badge-row">🏆 2 PRs</span>
+            </div>
+            <div class="row-meta">6 exercises · 12,400 lbs</div>
+          </div>
+          <div class="row-right">
+            <div class="row-date">Yesterday</div>
+            <div class="row-duration">58m</div>
+          </div>
+        </div>
+
+        <div class="workout-row">
+          <div class="row-accent" style="background: linear-gradient(to bottom, rgba(232,56,74,0.35), rgba(232,56,74,0.08));"></div>
+          <div class="row-info">
+            <div class="row-name-line">
+              <span class="row-name">Log Day A</span>
+              <span class="pr-badge-row">🏆 1 PR</span>
+            </div>
+            <div class="row-meta">5 exercises · 9,840 lbs</div>
+          </div>
+          <div class="row-right">
+            <div class="row-date">Mon</div>
+            <div class="row-duration">45m</div>
+          </div>
+        </div>
+
+        <div class="workout-row">
+          <div class="row-accent" style="background: linear-gradient(to bottom, rgba(232,56,74,0.18), rgba(232,56,74,0.04));"></div>
+          <div class="row-info">
+            <div class="row-name-line">
+              <span class="row-name">Push Day</span>
+            </div>
+            <div class="row-meta">7 exercises · 11,200 lbs</div>
+          </div>
+          <div class="row-right">
+            <div class="row-date">Sat</div>
+            <div class="row-duration">1h 4m</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-label active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-label">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-label">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PHONE 2: Active workout ── -->
+  <div class="phone-wrapper">
+    <div class="variant-badge">Active workout</div>
+    <div class="iphone">
+      <div class="dynamic-island"></div>
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-icons">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.4C10.4 2.4 12.6 3.4 14.1 5L15.5 3.5C13.6 1.4 11 0 8 0S2.4 1.4.5 3.5L1.9 5C3.4 3.4 5.6 2.4 8 2.4z"/><path d="M8 5.6c1.5 0 2.9.6 3.9 1.6l1.4-1.5C11.8 4.2 10 3.4 8 3.4S4.2 4.2 2.7 5.7l1.4 1.5C5.1 6.2 6.5 5.6 8 5.6z"/><circle cx="8" cy="10" r="2"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg>
+        </div>
+      </div>
+
+      <div class="screen-content">
+        <div class="header">
+          <div>
+            <div class="greeting">Good morning, J</div>
+            <div class="subgreeting">Keep it up!</div>
+          </div>
+          <div class="avatar">J<div class="avatar-badge">4</div></div>
+        </div>
+
+        <div class="inline-stats">
+          <div class="stat-pill">🔥 <span class="val">7</span> streak</div>
+          <div class="dot-divider"></div>
+          <div class="stat-pill">
+            <div class="week-dots">
+              <div class="week-dot active"></div><div class="week-dot active"></div>
+              <div class="week-dot active"></div><div class="week-dot active"></div>
+              <div class="week-dot"></div><div class="week-dot"></div><div class="week-dot"></div>
+            </div>
+            &nbsp;<span class="val">4</span>/4 this week ✓
+          </div>
+        </div>
+
+        <!-- Active workout hero -->
+        <div class="active-hero">
+          <div class="active-indicator">
+            <div class="active-dot"></div>
+            <div class="active-workout-name">Log Day A</div>
+          </div>
+          <div class="timer-display">24:17</div>
+          <div class="resume-btn">▶&nbsp; Resume Workout</div>
+        </div>
+
+        <!-- PR card — shows PRs hit SO FAR in this session -->
+        <div class="pr-card">
+          <div class="pr-card-header">
+            <div class="pr-card-title">🏆 New PRs This Session</div>
+            <div class="pr-card-sub">2 so far</div>
+          </div>
+          <div class="pr-rows">
+            <div class="pr-row">
+              <div>
+                <div class="pr-exercise">Bench Press</div>
+                <div class="pr-date">Set 3 · 24 min ago</div>
+              </div>
+              <div class="pr-right">
+                <div class="pr-weight">225 lbs</div>
+                <div class="pr-delta">+10 lbs</div>
+              </div>
+            </div>
+            <div class="pr-row">
+              <div>
+                <div class="pr-exercise">Incline DB Press</div>
+                <div class="pr-date">Set 2 · 18 min ago</div>
+              </div>
+              <div class="pr-right">
+                <div class="pr-weight">90 lbs</div>
+                <div class="pr-delta">+5 lbs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Start dimmed -->
+        <div class="quick-start-card" style="opacity: 0.45;">
+          <div class="qs-inner">
+            <div class="qs-label">Quick Start</div>
+            <div class="template-pills">
+              <div class="pill selected">Log Day A</div>
+              <div class="pill unselected">Pull Day</div>
+              <div class="pill unselected">Push Day</div>
+            </div>
+            <div class="cta-btn" style="box-shadow: none;">▶&nbsp; Start Log Day A</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-label active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-label">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-label">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /phones-row -->
+
+<div class="design-note">
+  <strong>PR treatment:</strong> A gold-tinted card shows recent PRs with exercise name, weight hit, and delta (+10 lbs) ·
+  Workout rows get a 🏆 badge when that session had PRs ·
+  When a workout is active, the PR card updates live to show PRs hit so far in the current session ·
+  Gold ambient glow in top-right of PR card to distinguish it from the red Quick Start card
+</div>
+
+</body>
+</html>

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Onboarding v2 (prototype)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --accent:#e8384a;--gold:#ffb84d;--blue:#80a6ff;--teal:#4dc7b8;--purple:#af82ff;--green:#6dd66d;
+  --bg:#0a0a0f;--text:#fff;--sub:rgba(255,255,255,.42);
+  --card:rgba(255,255,255,.055);--border:rgba(255,255,255,.08);
+  --pw:393px;--ph:852px;
+}
+html,body{background:#060608;color:var(--text);font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:36px 20px 56px;}
+.pg-label{color:rgba(255,255,255,.2);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:6px;}
+.pg-sub{color:rgba(255,255,255,.12);font-size:10px;margin-bottom:22px;}
+
+/* ═══════════════════════════════════════ PHONE + SLIDER (bulletproof nav) ═══════════════════════════════════════ */
+.phone{
+  width:var(--pw);height:var(--ph);border-radius:54px;overflow:hidden;position:relative;
+  border:1.5px solid rgba(255,255,255,.10);
+  box-shadow:0 0 0 6px rgba(255,255,255,.02),0 48px 110px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.06);
+  background:#000;
+}
+.di{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:126px;height:37px;background:#000;border-radius:20px;z-index:100;pointer-events:none;}
+
+/* Slider — all screens live here, side by side */
+.slider{display:flex;height:100%;transition:transform .42s cubic-bezier(.25,.46,.45,.94);will-change:transform;}
+.screen{flex:0 0 var(--pw);height:100%;position:relative;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Dot indicator — overlayed on phone */
+.dots{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:60;}
+.dot{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.22);transition:width .35s cubic-bezier(.34,1.56,.64,1),background .25s;cursor:pointer;}
+.dot.on{width:22px;background:#fff;}
+
+/* ═══════════════════════════════════════ SHARED ELEMENTS ═══════════════════════════════════════ */
+.kicker{font-size:11px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:8px;}
+.headline{font-size:28px;font-weight:800;letter-spacing:-.5px;line-height:1.1;margin-bottom:8px;}
+.headline em{font-style:normal;}
+.sub{font-size:13px;color:var(--sub);line-height:1.5;margin-bottom:16px;}
+.btn-continue{
+  width:100%;padding:16px;border:none;border-radius:15px;
+  background:linear-gradient(135deg,var(--accent),#ff5a30);
+  color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;
+  box-shadow:0 6px 22px rgba(232,56,74,.28);
+  position:relative;overflow:hidden;transition:transform .12s;
+}
+.btn-continue::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(to bottom,rgba(255,255,255,.10),transparent);}
+.btn-continue:active{transform:scale(.97);}
+.btn-gold{background:linear-gradient(135deg,#f0b833,#d48820);color:#1a1000;box-shadow:0 6px 22px rgba(212,136,32,.28);}
+.btn-teal{background:linear-gradient(135deg,#4dc7b8,#2fa697);box-shadow:0 6px 22px rgba(77,199,184,.28);}
+.btn-purple{background:linear-gradient(135deg,#af82ff,#7e57d3);box-shadow:0 6px 22px rgba(175,130,255,.28);}
+.btn-blue{background:linear-gradient(135deg,#80a6ff,#5d80e0);box-shadow:0 6px 22px rgba(128,166,255,.28);}
+.btn-secondary{
+  width:100%;padding:14px;border:1.5px solid rgba(255,255,255,.12);border-radius:15px;
+  background:transparent;color:rgba(255,255,255,.55);font-family:inherit;font-size:15px;
+  font-weight:600;cursor:pointer;margin-top:10px;
+}
+.btn-glass{
+  width:100%;padding:16px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.20);
+  backdrop-filter:blur(16px);border-radius:15px;color:#fff;font-family:inherit;font-size:16px;
+  font-weight:700;cursor:pointer;
+}
+.privacy-note{font-size:11px;color:rgba(255,255,255,.22);text-align:center;margin-top:10px;line-height:1.5;}
+
+/* Particles */
+.particles{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+.p{position:absolute;border-radius:50%;background:rgba(255,255,255,.06);animation:pdrift linear infinite;}
+@keyframes pdrift{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}85%{opacity:.15}100%{opacity:0;transform:translate(var(--dx),var(--dy))}}
+
+/* ═══════════════════════════════════════ SHARED: FEATURE SCREEN (screenshot-driven) ═══════════════════════════════════════ */
+.feat{padding:54px 22px 22px;display:flex;flex-direction:column;z-index:1;}
+.feat-hero{flex:1;display:flex;align-items:flex-start;justify-content:center;margin:6px 0 14px;position:relative;}
+
+/* The phone-frame now holds REAL app screenshots — sized to be the hero element */
+.ss-frame{
+  width:260px;height:540px;border-radius:30px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 3px rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.65);
+  flex-shrink:0;
+}
+.ss-frame img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;}
+.ss-frame::after{
+  content:'';position:absolute;inset:0;border-radius:30px;pointer-events:none;
+  background:linear-gradient(165deg,rgba(255,255,255,.06),transparent 35%);
+}
+
+/* Two frames side-by-side (for progress screen) */
+.ss-duo{display:flex;gap:10px;align-items:flex-start;justify-content:center;}
+.ss-duo .ss-frame{width:160px;height:340px;border-radius:22px;}
+.ss-duo .ss-frame::after{border-radius:22px;}
+.ss-duo .ss-frame:first-child{transform:translateY(10px) rotate(-2deg);}
+.ss-duo .ss-frame:last-child{transform:translateY(-6px) rotate(2.5deg);}
+
+/* Tilted hero frame for share screen */
+.ss-tilt{transform:rotate(-3deg);}
+.ss-tilt-bg{position:absolute;width:220px;height:480px;border-radius:26px;background:linear-gradient(135deg,rgba(175,130,255,.18),rgba(77,199,184,.10));transform:rotate(6deg) translate(14px,10px);z-index:0;border:1px solid rgba(255,255,255,.06);}
+
+/* Badge overlay on a frame (e.g. "🎬 Share") */
+.frame-badge{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;
+  display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:16px;
+  backdrop-filter:blur(10px);font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+}
+
+/* Bullet cards */
+.bullets{display:flex;flex-direction:column;gap:7px;width:100%;margin-bottom:10px;}
+.bullet{display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:13px;background:var(--card);border:1px solid var(--border);}
+.bullet-icon{width:30px;height:30px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.bi-red{background:rgba(232,56,74,.10);}
+.bi-gold{background:rgba(255,184,77,.10);}
+.bi-blue{background:rgba(128,166,255,.10);}
+.bi-teal{background:rgba(77,199,184,.10);}
+.bi-purple{background:rgba(175,130,255,.10);}
+.bi-green{background:rgba(109,214,109,.10);}
+.bullet-title{font-size:13px;font-weight:600;color:rgba(255,255,255,.88);}
+.bullet-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:1px;}
+
+/* Chip row (alternative to bullets for more compact screens) */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.chip{padding:6px 11px;border-radius:10px;background:var(--card);border:1px solid var(--border);font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;}
+.chip-dot{width:5px;height:5px;border-radius:50%;}
+
+/* Unique-feature ribbon (first 3 screens) */
+.ribbon{position:absolute;top:12px;right:14px;z-index:20;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px);font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.75);}
+.ribbon-dot{width:5px;height:5px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);}
+
+/* ═══════════════════════════════════════ S0 — VIDEO HERO (Camera = unique #1) ═══════════════════════════════════════ */
+#s0{background:#000;}
+.vid-wrap{position:absolute;inset:0;overflow:hidden;background:#0a0a14;}
+.vid-wrap video{width:100%;height:100%;object-fit:cover;object-position:center top;}
+.vid-top-fade{position:absolute;top:0;left:0;right:0;height:220px;background:linear-gradient(to bottom,rgba(0,0,0,.75),transparent);z-index:2;}
+.vid-bot-fade{position:absolute;bottom:0;left:0;right:0;height:420px;background:linear-gradient(to top,rgba(0,0,0,.98) 0%,rgba(0,0,0,.70) 45%,transparent 100%);z-index:2;}
+.vid-tag{
+  position:absolute;top:62px;left:50%;transform:translateX(-50%);z-index:10;
+  display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:18px;
+  background:rgba(77,199,184,.14);border:1px solid rgba(77,199,184,.36);backdrop-filter:blur(10px);
+}
+.vid-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal);animation:blink 1.4s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.vid-tag-text{font-size:11px;font-weight:800;color:var(--teal);letter-spacing:.7px;text-transform:uppercase;}
+.vid-content{position:absolute;bottom:0;left:0;right:0;padding:0 26px 68px;z-index:10;display:flex;flex-direction:column;align-items:flex-start;}
+.vid-eyebrow{font-size:11px;font-weight:700;color:rgba(255,255,255,.40);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
+.vid-headline{font-size:40px;font-weight:900;letter-spacing:-.8px;line-height:1.0;margin-bottom:12px;}
+.vid-headline em{color:var(--teal);font-style:normal;}
+.vid-sub{font-size:14px;color:rgba(255,255,255,.62);line-height:1.5;margin-bottom:20px;font-weight:500;}
+
+/* Hero rep HUD */
+.rep-hud{position:absolute;top:120px;right:24px;z-index:11;padding:10px 14px;border-radius:16px;background:rgba(0,0,0,.65);backdrop-filter:blur(14px);border:1px solid rgba(77,199,184,.24);display:flex;align-items:center;gap:10px;}
+.rep-hud-label{font-size:9px;font-weight:800;color:var(--teal);letter-spacing:1.3px;text-transform:uppercase;}
+.rep-hud-num{font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1;}
+
+/* Unique-feature counter for hero ("1 of 3 unique") */
+.unique-hero{position:absolute;top:64px;left:24px;z-index:11;font-size:9px;font-weight:800;color:rgba(255,255,255,.45);letter-spacing:1.5px;}
+
+/* ═══════════════════════════════════════ S6 — SETUP ═══════════════════════════════════════ */
+#s6{background:#0a0a0f;padding:48px 22px 24px;}
+.setup-head{font-size:26px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px;margin-top:6px;}
+.setup-sub{font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.5;}
+.sec-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.32);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:7px;margin-top:4px;}
+.name-field{width:100%;padding:13px 15px;background:var(--card);border:1.5px solid var(--border);border-radius:13px;color:var(--text);font-family:inherit;font-size:15px;outline:none;margin-bottom:16px;transition:border-color .2s;}
+.name-field:focus{border-color:rgba(232,56,74,.38);}
+.name-field::placeholder{color:rgba(255,255,255,.18);}
+.unit-row{display:flex;gap:10px;width:100%;margin-bottom:16px;}
+.unit-card{flex:1;padding:14px 10px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;text-align:center;cursor:pointer;transition:all .25s cubic-bezier(.34,1.56,.64,1);}
+.unit-card.on{background:rgba(232,56,74,.12);border-color:rgba(232,56,74,.44);box-shadow:0 0 14px rgba(232,56,74,.12);}
+.unit-big{font-size:22px;font-weight:900;}
+.unit-small{font-size:11px;color:var(--sub);margin-top:2px;}
+.goal-row{display:flex;gap:6px;width:100%;margin-bottom:16px;}
+.goal-btn{flex:1;padding:11px 0;background:var(--card);border:1.5px solid var(--border);border-radius:11px;color:var(--sub);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .22s cubic-bezier(.34,1.56,.64,1);}
+.goal-btn.on{background:rgba(128,166,255,.12);border-color:rgba(128,166,255,.44);color:var(--text);box-shadow:0 0 10px rgba(128,166,255,.10);}
+.rest-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:13px;margin-bottom:16px;}
+.rest-label{font-size:13px;font-weight:500;color:rgba(255,255,255,.7);}
+.toggle{width:44px;height:26px;border-radius:13px;background:rgba(255,255,255,.10);position:relative;cursor:pointer;transition:background .2s;}
+.toggle.on{background:#34c759;}
+.toggle-thumb{position:absolute;top:2px;width:22px;height:22px;border-radius:11px;background:#fff;transition:left .2s;}
+.toggle.on .toggle-thumb{left:20px;}
+.toggle:not(.on) .toggle-thumb{left:2px;}
+
+/* ═══════════════════════════════════════ S7 — READY ═══════════════════════════════════════ */
+#s7{background:radial-gradient(circle at 50% 30%,#180a10 0%,#0a0a0f 70%);padding:60px 22px 24px;}
+.ready-head{font-size:30px;font-weight:900;text-align:center;letter-spacing:-.6px;line-height:1.1;margin-bottom:8px;}
+.ready-head em{color:var(--accent);font-style:normal;}
+.ready-sub{font-size:13px;color:var(--sub);text-align:center;margin-bottom:18px;line-height:1.5;}
+.home-preview{display:flex;justify-content:center;margin:0 auto 14px;}
+.home-preview .ss-frame{width:220px;height:460px;border-radius:26px;}
+.home-preview .ss-frame::after{border-radius:26px;}
+
+/* ═══════════════════════════════════════ NAV CONTROLS ═══════════════════════════════════════ */
+.nav{display:flex;gap:12px;align-items:center;margin-top:20px;}
+.nav button{padding:10px 18px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);color:rgba(255,255,255,.55);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+.nav button:hover:not(:disabled){background:rgba(255,255,255,.09);color:#fff;}
+.nav button:disabled{opacity:.35;cursor:not-allowed;}
+.nav-lbl{font-size:12px;color:rgba(255,255,255,.28);min-width:50px;text-align:center;font-variant-numeric:tabular-nums;}
+.hint{font-size:10px;color:rgba(255,255,255,.18);margin-top:10px;letter-spacing:.5px;}
+
+/* Unique badge */
+.unique-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.unique-pill-dot{width:5px;height:5px;border-radius:50%;}
+</style>
+</head>
+<body>
+
+<div class="pg-label">TheLogger — Onboarding v2</div>
+<div class="pg-sub">8 screens · Real app screenshots · 3 unique features front-loaded</div>
+
+<div class="phone">
+  <div class="di"></div>
+  <div class="dots" id="dots"></div>
+
+  <div class="slider" id="slider">
+
+    <!-- ═══ S0 — CAMERA HERO (unique #1) ═══ -->
+    <div class="screen" id="s0">
+      <div class="vid-wrap"><video autoplay muted loop playsinline src="Squat_Rep_Counter.MP4"></video></div>
+      <div class="vid-top-fade"></div>
+      <div class="vid-bot-fade"></div>
+      <div class="unique-hero">1 OF 3 UNIQUE</div>
+      <div class="vid-tag"><div class="vid-tag-dot"></div><span class="vid-tag-text">AI Rep Counter</span></div>
+      <div class="rep-hud"><div><div class="rep-hud-label">Reps</div><div class="rep-hud-num" id="heroRep">0</div></div></div>
+      <div class="vid-content">
+        <div class="vid-eyebrow">On-device · No internet needed</div>
+        <div class="vid-headline">Your phone<br>counts the <em>reps.</em></div>
+        <div class="vid-sub">Point your camera and lift. TheLogger tracks every rep — no wearable, no account, no cloud.</div>
+        <button class="btn-glass" onclick="next()">See everything →</button>
+      </div>
+    </div>
+
+    <!-- ═══ S1 — SHAREABLE SUMMARIES (unique #2) ═══ -->
+    <div class="screen feat" id="s1">
+      <div class="particles" id="ptcls1"></div>
+      <div class="unique-pill" style="background:rgba(175,130,255,.12);color:var(--purple);"><span class="unique-pill-dot" style="background:var(--purple);"></span>2 of 3 unique</div>
+      <div class="kicker" style="color:var(--purple);">Share the moment</div>
+      <div class="headline">Workout cards<br>worth <em style="color:var(--purple)">posting.</em></div>
+
+      <div class="feat-hero">
+        <div class="ss-tilt-bg"></div>
+        <div class="ss-frame ss-tilt">
+          <img src="assets/onboarding/onboard_share.png" alt="Share card">
+          <div class="frame-badge" style="background:rgba(175,130,255,.18);border:1px solid rgba(175,130,255,.35);color:var(--purple);">🎬 Share</div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <div class="chip"><span class="chip-dot" style="background:var(--purple);"></span>8 film filters</div>
+        <div class="chip"><span class="chip-dot" style="background:var(--gold);"></span>PR cards</div>
+        <div class="chip"><span class="chip-dot" style="background:var(--teal);"></span>Weekly recaps</div>
+        <div class="chip"><span class="chip-dot" style="background:var(--blue);"></span>Stories-ready</div>
+      </div>
+
+      <button class="btn-continue btn-purple" onclick="next()">Continue</button>
+    </div>
+
+    <!-- ═══ S2 — DAILY CHALLENGES (unique #3) ═══ -->
+    <div class="screen feat" id="s2">
+      <div class="particles" id="ptcls2"></div>
+      <div class="unique-pill" style="background:rgba(128,166,255,.12);color:var(--blue);"><span class="unique-pill-dot" style="background:var(--blue);"></span>3 of 3 unique</div>
+      <div class="kicker" style="color:var(--blue);">Daily drive</div>
+      <div class="headline">Every day has<br>a <em style="color:var(--blue)">target.</em></div>
+
+      <div class="feat-hero">
+        <div class="ss-frame">
+          <img src="assets/onboarding/onboard_challenge.png" alt="Daily challenge">
+          <div class="frame-badge" style="background:rgba(128,166,255,.18);border:1px solid rgba(128,166,255,.35);color:var(--blue);">🎯 Today</div>
+        </div>
+      </div>
+
+      <div class="bullets">
+        <div class="bullet"><div class="bullet-icon bi-blue">🏋️</div><div><div class="bullet-title">Gym-day challenges</div><div class="bullet-sub">Volume targets, PR attempts, variety</div></div></div>
+        <div class="bullet"><div class="bullet-icon bi-green">🧘</div><div><div class="bullet-title">Rest-day challenges</div><div class="bullet-sub">Bodyweight reps, mobility, quizzes</div></div></div>
+        <div class="bullet"><div class="bullet-icon bi-gold">🔥</div><div><div class="bullet-title">Keeps your streak</div><div class="bullet-sub">A rest day still counts if you show up</div></div></div>
+      </div>
+
+      <button class="btn-continue btn-blue" onclick="next()">Continue</button>
+    </div>
+
+    <!-- ═══ S3 — FAST LOGGING ═══ -->
+    <div class="screen feat" id="s3">
+      <div class="particles" id="ptcls3"></div>
+      <div class="kicker" style="color:var(--accent);">Fast tracking</div>
+      <div class="headline">Log sets in<br><em style="color:var(--accent)">seconds.</em></div>
+
+      <div class="feat-hero">
+        <div class="ss-frame">
+          <img src="assets/onboarding/onboard_logging2.png" alt="Fast logging">
+        </div>
+      </div>
+
+      <div class="chips">
+        <div class="chip"><span class="chip-dot" style="background:var(--accent);"></span>Pre-filled</div>
+        <div class="chip"><span class="chip-dot" style="background:var(--gold);"></span>Templates</div>
+        <div class="chip"><span class="chip-dot" style="background:var(--blue);"></span>Supersets</div>
+        <div class="chip"><span class="chip-dot" style="background:var(--teal);"></span>139 exercises</div>
+        <div class="chip"><span class="chip-dot" style="background:var(--green);"></span>Overload advisor</div>
+      </div>
+
+      <button class="btn-continue" onclick="next()">Continue</button>
+    </div>
+
+    <!-- ═══ S4 — REST TIMER ═══ -->
+    <div class="screen feat" id="s4">
+      <div class="particles" id="ptcls4"></div>
+      <div class="kicker" style="color:var(--gold);">Stay in flow</div>
+      <div class="headline">Rest auto-starts.<br>Zero <em style="color:var(--gold)">taps.</em></div>
+
+      <div class="feat-hero">
+        <div class="ss-frame">
+          <img src="assets/onboarding/onboard_timer.png" alt="Rest timer">
+        </div>
+      </div>
+
+      <div class="bullets">
+        <div class="bullet"><div class="bullet-icon bi-gold">⏱</div><div><div class="bullet-title">Auto-starts after every set</div><div class="bullet-sub">Your rest duration, saved per exercise</div></div></div>
+        <div class="bullet"><div class="bullet-icon bi-blue">🔒</div><div><div class="bullet-title">Lock screen countdown</div><div class="bullet-sub">Live Activity + Dynamic Island</div></div></div>
+      </div>
+
+      <button class="btn-continue btn-gold" onclick="next()">Continue</button>
+    </div>
+
+    <!-- ═══ S5 — PRs + PROGRESS (two frames) ═══ -->
+    <div class="screen feat" id="s5">
+      <div class="particles" id="ptcls5"></div>
+      <div class="kicker" style="color:var(--teal);">Celebrate + measure</div>
+      <div class="headline">Crush records.<br>Track <em style="color:var(--teal)">progress.</em></div>
+
+      <div class="feat-hero">
+        <div class="ss-duo">
+          <div class="ss-frame">
+            <img src="assets/onboarding/onboard_pr.png" alt="PR celebration">
+            <div class="frame-badge" style="background:rgba(255,184,77,.18);border:1px solid rgba(255,184,77,.35);color:var(--gold);">🏆 PR</div>
+          </div>
+          <div class="ss-frame">
+            <img src="assets/onboarding/onboard_stats.png" alt="Stats">
+            <div class="frame-badge" style="background:rgba(77,199,184,.18);border:1px solid rgba(77,199,184,.35);color:var(--teal);">📊 Stats</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bullets">
+        <div class="bullet"><div class="bullet-icon bi-gold">🏆</div><div><div class="bullet-title">Auto-detects PRs</div><div class="bullet-sub">Epley 1RM across all rep ranges · confetti celebration</div></div></div>
+        <div class="bullet"><div class="bullet-icon bi-teal">📈</div><div><div class="bullet-title">Streaks · volume · achievements</div><div class="bullet-sub">Weekly ring, muscle balance, 30+ badges</div></div></div>
+      </div>
+
+      <button class="btn-continue btn-teal" onclick="next()">Continue</button>
+    </div>
+
+    <!-- ═══ S6 — SETUP ═══ -->
+    <div class="screen" id="s6">
+      <div class="setup-head">Quick setup</div>
+      <div class="setup-sub">Three taps and you're in.</div>
+
+      <div class="sec-lbl">Your name (optional)</div>
+      <input class="name-field" type="text" placeholder="What should we call you?">
+
+      <div class="sec-lbl">Units</div>
+      <div class="unit-row">
+        <div class="unit-card on" onclick="this.classList.add('on');this.nextElementSibling.classList.remove('on')"><div class="unit-big">lbs</div><div class="unit-small">Imperial</div></div>
+        <div class="unit-card" onclick="this.classList.add('on');this.previousElementSibling.classList.remove('on')"><div class="unit-big">kg</div><div class="unit-small">Metric</div></div>
+      </div>
+
+      <div class="sec-lbl">Weekly training goal</div>
+      <div class="goal-row">
+        <button class="goal-btn" onclick="selGoal(this)">2×</button>
+        <button class="goal-btn" onclick="selGoal(this)">3×</button>
+        <button class="goal-btn on" onclick="selGoal(this)">4×</button>
+        <button class="goal-btn" onclick="selGoal(this)">5×</button>
+        <button class="goal-btn" onclick="selGoal(this)">6×</button>
+      </div>
+
+      <div class="sec-lbl">Rest timer</div>
+      <div class="rest-toggle">
+        <span class="rest-label">Auto-start between sets</span>
+        <div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></div>
+      </div>
+
+      <div style="flex:1;min-height:0;"></div>
+      <button class="btn-continue" onclick="next()">Continue</button>
+    </div>
+
+    <!-- ═══ S7 — READY ═══ -->
+    <div class="screen" id="s7">
+      <div class="particles" id="ptcls7"></div>
+      <div class="ready-head">Your gym journal<br>is <em>ready.</em></div>
+      <div class="ready-sub">Everything you need to build the habit.<br>All on your device. No account.</div>
+
+      <div class="home-preview">
+        <div class="ss-frame"><img src="assets/onboarding/onboard_home.png" alt="Home preview"></div>
+      </div>
+
+      <div style="flex:1;min-height:0;"></div>
+      <button class="btn-continue btn-gold" onclick="finish('start')">Start First Workout</button>
+      <button class="btn-secondary" onclick="finish('explore')">Explore First</button>
+      <div class="privacy-note">Everything stays on your device.<br>No account, no tracking.</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="nav">
+  <button onclick="prev()" id="prevBtn" disabled>← Back</button>
+  <span class="nav-lbl" id="ctrlLbl">1 / 8</span>
+  <button onclick="next()" id="nextBtn">Next →</button>
+</div>
+<div class="hint">Keyboard: ← →  ·  Swipe on phone  ·  Tap dots</div>
+
+<script>
+const TOTAL = 8;
+let step = 0;
+const slider = document.getElementById('slider');
+const dotsEl = document.getElementById('dots');
+
+function goTo(n) {
+  if (n < 0 || n >= TOTAL) return;
+  step = n;
+  slider.style.transform = `translateX(-${n * 100}%)`;
+  document.querySelectorAll('.screen').forEach((s, i) => s.classList.toggle('active', i === n));
+  updateDots();
+  updateCtrl();
+}
+function next() { if (step < TOTAL - 1) goTo(step + 1); }
+function prev() { if (step > 0) goTo(step - 1); }
+
+function updateDots() {
+  dotsEl.innerHTML = '';
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === step ? ' on' : '');
+    d.onclick = () => goTo(i);
+    dotsEl.appendChild(d);
+  }
+}
+function updateCtrl() {
+  document.getElementById('prevBtn').disabled = step === 0;
+  document.getElementById('nextBtn').disabled = step === TOTAL - 1;
+  document.getElementById('ctrlLbl').textContent = `${step + 1} / ${TOTAL}`;
+}
+function selGoal(el) {
+  el.parentElement.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+}
+function finish(which) {
+  alert(which === 'start' ? '🎉 Start First Workout tapped' : '👀 Explore tapped');
+}
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') next();
+  else if (e.key === 'ArrowLeft') prev();
+});
+
+// Touch swipe nav (on the phone)
+let touchX = 0;
+const phone = document.querySelector('.phone');
+phone.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, {passive: true});
+phone.addEventListener('touchend', e => {
+  const dx = (e.changedTouches[0].clientX - touchX);
+  if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); }
+});
+
+// Particles
+function buildP(id) {
+  const c = document.getElementById(id); if (!c) return;
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div'); p.className = 'p';
+    const s = 2 + Math.random() * 3, dur = 12 + Math.random() * 14;
+    p.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*393}px;top:${Math.random()*852}px;--dx:${(Math.random()-.5)*120}px;--dy:${(Math.random()-.5)*120}px;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;`;
+    c.appendChild(p);
+  }
+}
+['ptcls1','ptcls2','ptcls3','ptcls4','ptcls5','ptcls7'].forEach(buildP);
+
+// Hero rep counter ticking
+(function tickHero(){
+  const el = document.getElementById('heroRep');
+  if (!el) return;
+  let n = 0;
+  setInterval(() => { n = (n % 8) + 1; el.textContent = n; }, 900);
+})();
+
+goTo(0);
+</script>
+
+</body>
+</html>

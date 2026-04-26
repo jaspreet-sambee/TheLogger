@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheLogger — Workout End Summary</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#0d0d14;
+  font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+  padding:40px 20px 60px; gap:48px;
+}
+h1 { color:rgba(255,255,255,0.4); font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; }
+.phones-row { display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+.phone-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; }
+.label { font-size:11px; font-weight:600; color:rgba(255,255,255,0.3); letter-spacing:.06em; text-transform:uppercase; }
+
+.iphone {
+  width:375px; height:812px; background:#0a0a0f;
+  border-radius:52px; border:1px solid rgba(255,255,255,0.1);
+  overflow:hidden; position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.05), 0 30px 80px rgba(0,0,0,0.8);
+}
+.iphone::before {
+  content:''; position:absolute; top:-40px; left:50%; transform:translateX(-50%);
+  width:300px; height:300px;
+  background:radial-gradient(circle,rgba(255,196,40,0.10) 0%,transparent 70%);
+  pointer-events:none; z-index:0;
+}
+.di { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:120px; height:34px; background:#000; border-radius:20px; z-index:20; }
+.sb { position:relative; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:14px 28px 0; height:44px; }
+.sb-time { font-size:15px; font-weight:600; color:rgba(255,255,255,0.9); }
+.sb-icons { display:flex; gap:6px; align-items:center; }
+.sb-icons svg { fill:rgba(255,255,255,0.8); }
+.screen { position:relative; z-index:1; height:calc(812px - 44px - 83px); overflow:hidden; display:flex; flex-direction:column; align-items:center; padding:20px 20px 16px; }
+.tab-bar {
+  position:absolute; bottom:0; left:0; right:0; height:83px;
+  background:rgba(10,10,15,0.92); backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,0.07);
+  display:flex; align-items:flex-start; justify-content:space-around; padding:10px 0 0;
+}
+.tab-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.tab-icon { font-size:22px; opacity:0.3; }
+.tab-icon.active { opacity:1; filter:drop-shadow(0 0 6px rgba(232,56,74,0.7)); }
+.tab-lbl { font-size:10px; font-weight:500; color:rgba(255,255,255,0.3); }
+.tab-lbl.active { color:#e8384a; font-weight:600; }
+
+/* Summary content */
+.checkmark {
+  width:72px; height:72px; border-radius:50%;
+  background:rgba(255,196,40,0.12); border:2px solid rgba(255,196,40,0.4);
+  display:flex; align-items:center; justify-content:center;
+  font-size:34px; margin-bottom:14px;
+  box-shadow:0 0 32px rgba(255,196,40,0.25), 0 0 64px rgba(255,196,40,0.10);
+}
+.summary-title { font-size:24px; font-weight:800; color:rgba(255,255,255,0.95); letter-spacing:-0.4px; margin-bottom:4px; text-align:center; }
+.summary-sub { font-size:14px; color:rgba(255,255,255,0.38); margin-bottom:20px; text-align:center; }
+.affirmation { font-size:15px; color:rgba(255,255,255,0.55); text-align:center; font-style:italic; margin-bottom:20px; padding:0 20px; line-height:1.5; }
+
+/* PR card */
+.pr-card {
+  width:100%;
+  border-radius:18px;
+  background:rgba(255,196,40,0.05); border:1px solid rgba(255,196,40,0.18);
+  padding:14px 16px; margin-bottom:16px; position:relative; overflow:hidden;
+}
+.pr-card::before {
+  content:''; position:absolute; top:-30px; right:-20px;
+  width:120px; height:120px;
+  background:radial-gradient(circle,rgba(255,196,40,0.15) 0%,transparent 70%);
+  pointer-events:none;
+}
+.pr-card-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.pr-card-title { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:rgba(255,196,40,0.8); }
+.pr-card-count { font-size:11px; color:rgba(255,255,255,0.35); }
+.pr-rows { display:flex; flex-direction:column; gap:9px; }
+.pr-row { display:flex; justify-content:space-between; align-items:center; }
+.pr-ex { font-size:14px; font-weight:600; color:rgba(255,255,255,0.85); }
+.pr-right { display:flex; align-items:center; gap:8px; }
+.pr-val { font-size:15px; font-weight:800; color:#ffc428; }
+.pr-delta { font-size:11px; font-weight:600; color:rgba(255,196,40,0.5); }
+
+/* Stats grid */
+.stats-grid { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+.stat-block {
+  border-radius:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  padding:14px 14px 12px; text-align:center;
+}
+.stat-block.highlight { background:rgba(232,56,74,0.06); border-color:rgba(232,56,74,0.2); }
+.stat-val { font-size:32px; font-weight:800; letter-spacing:-1px; line-height:1; margin-bottom:4px; }
+.stat-val.red { color:#e8384a; }
+.stat-val.gold { color:#ffc428; }
+.stat-val.white { color:rgba(255,255,255,0.85); }
+.stat-lbl { font-size:11px; color:rgba(255,255,255,0.35); font-weight:500; }
+
+/* Buttons */
+.done-btn {
+  width:100%; height:52px; border-radius:14px;
+  background:linear-gradient(135deg,#e8384a 0%,#ff5a30 100%);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; font-weight:700; color:white; letter-spacing:-0.2px;
+  position:relative; margin-bottom:10px;
+  box-shadow:0 8px 24px rgba(232,56,74,0.4), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.done-btn::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:50%;
+  border-radius:14px 14px 0 0;
+  background:linear-gradient(to bottom,rgba(255,255,255,0.12),transparent);
+}
+.share-btn {
+  width:100%; height:44px; border-radius:13px;
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+  display:flex; align-items:center; justify-content:center;
+  gap:8px; font-size:14px; font-weight:600; color:rgba(255,255,255,0.6);
+}
+</style>
+</head>
+<body>
+<h1>Group 3 — Workout End Summary</h1>
+<div class="phones-row">
+
+  <!-- Phone 1: With PRs -->
+  <div class="phone-wrap">
+    <div class="label">With PRs 🏆</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div class="sb"><span class="sb-time">9:41</span><div class="sb-icons"><svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg></div></div>
+      <div class="screen">
+        <div class="checkmark">✓</div>
+        <div class="summary-title">Log Day A</div>
+        <div class="summary-sub">Wed, Mar 26 · 48 minutes</div>
+        <div class="affirmation">⭐️ Personal best on Bench Press — you're getting stronger every session.</div>
+        <div class="pr-card">
+          <div class="pr-card-hdr">
+            <div class="pr-card-title">🏆 Personal Records</div>
+            <div class="pr-card-count">3 this workout</div>
+          </div>
+          <div class="pr-rows">
+            <div class="pr-row"><div class="pr-ex">Bench Press</div><div class="pr-right"><div class="pr-val">225 lbs</div><div class="pr-delta">+10 lbs</div></div></div>
+            <div class="pr-row"><div class="pr-ex">Incline DB Press</div><div class="pr-right"><div class="pr-val">90 lbs</div><div class="pr-delta">+5 lbs</div></div></div>
+            <div class="pr-row"><div class="pr-ex">Cable Fly</div><div class="pr-right"><div class="pr-val">50 lbs</div><div class="pr-delta">+2.5 lbs</div></div></div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-block highlight"><div class="stat-val red">48m</div><div class="stat-lbl">duration</div></div>
+          <div class="stat-block"><div class="stat-val white">12,840</div><div class="stat-lbl">lbs volume</div></div>
+          <div class="stat-block"><div class="stat-val white">5</div><div class="stat-lbl">exercises</div></div>
+          <div class="stat-block"><div class="stat-val white">16</div><div class="stat-lbl">sets</div></div>
+        </div>
+        <div class="done-btn">Done</div>
+        <div class="share-btn">🖼 Save Workout Card</div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-lbl active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phone 2: No PRs -->
+  <div class="phone-wrap">
+    <div class="label">No PRs — clean session</div>
+    <div class="iphone" style="box-shadow:0 0 0 1px rgba(255,255,255,0.05), 0 30px 80px rgba(0,0,0,0.8), 0 0 60px rgba(232,56,74,0.06);">
+      <div class="di"></div>
+      <div class="sb"><span class="sb-time">9:41</span><div class="sb-icons"><svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="rgba(255,255,255,0.8)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="rgba(255,255,255,0.4)"/></svg></div></div>
+      <div class="screen">
+        <div class="checkmark" style="background:rgba(232,56,74,0.10);border-color:rgba(232,56,74,0.35);box-shadow:0 0 32px rgba(232,56,74,0.2);">✓</div>
+        <div class="summary-title">Pull Day</div>
+        <div class="summary-sub">Tue, Mar 25 · 1h 2m</div>
+        <div class="affirmation">Consistency is what separates the good from the great. See you next session.</div>
+        <div class="stats-grid" style="margin-top:8px;">
+          <div class="stat-block highlight"><div class="stat-val red">1h 2m</div><div class="stat-lbl">duration</div></div>
+          <div class="stat-block"><div class="stat-val white">14,200</div><div class="stat-lbl">lbs volume</div></div>
+          <div class="stat-block"><div class="stat-val white">6</div><div class="stat-lbl">exercises</div></div>
+          <div class="stat-block"><div class="stat-val white">19</div><div class="stat-lbl">sets</div></div>
+        </div>
+        <!-- Progress vs last time -->
+        <div style="width:100%; border-radius:18px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:14px 16px; margin-bottom:16px;">
+          <div style="font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:rgba(255,255,255,0.28); margin-bottom:10px;">vs Last Pull Day</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:13px; color:rgba(255,255,255,0.6);">Volume</span>
+              <span style="font-size:13px; font-weight:700; color:#4dc7b8;">↑ +840 lbs</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:13px; color:rgba(255,255,255,0.6);">Duration</span>
+              <span style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.5);">— same</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:13px; color:rgba(255,255,255,0.6);">Sets</span>
+              <span style="font-size:13px; font-weight:700; color:#4dc7b8;">↑ +2</span>
+            </div>
+          </div>
+        </div>
+        <div class="done-btn">Done</div>
+        <div class="share-btn">🖼 Save Workout Card</div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon active">🏠</div><div class="tab-lbl active">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">📊</div><div class="tab-lbl">Stats</div></div>
+        <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-lbl">Profile</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

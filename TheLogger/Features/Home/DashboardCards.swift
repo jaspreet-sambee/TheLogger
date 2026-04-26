@@ -25,17 +25,31 @@ struct WeeklyStatsCard: View {
         }
     }
 
+    private var weekDateRange: String {
+        let cal = Calendar.current
+        let now = Date()
+        guard let interval = cal.dateInterval(of: .weekOfYear, for: now) else { return "" }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        let endDate = interval.end.addingTimeInterval(-1)
+        return "\(fmt.string(from: interval.start))–\(fmt.string(from: endDate))"
+    }
+
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("THIS WEEK")
-                    .font(.system(.caption2, weight: .bold))
-                    .foregroundStyle(.secondary)
+                Text("Weekly Overview")
+                    .font(.system(.body, weight: .semibold))
+                    .foregroundStyle(.primary)
                 Spacer()
+                Text(weekDateRange)
+                    .font(.system(.caption2, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.22))
                 if onTap != nil {
                     Image(systemName: "chevron.right")
                         .font(.system(.caption2, weight: .semibold))
                         .foregroundStyle(.tertiary)
+                        .padding(.leading, 2)
                 }
             }
 
@@ -55,7 +69,7 @@ struct WeeklyStatsCard: View {
                     value: "\(stats.totalSets)",
                     label: "Sets",
                     delta: stats.setsDelta.map { $0 >= 0 ? "+\($0)" : "\($0)" },
-                    color: AppColors.accentGold
+                    color: Color(red: 1.0, green: 0.45, blue: 0.25)   // warm coral-orange
                 )
 
                 Divider()
@@ -66,7 +80,7 @@ struct WeeklyStatsCard: View {
                     value: "\(stats.totalReps)",
                     label: "Reps",
                     delta: stats.repsDelta.map { $0 >= 0 ? "+\($0)" : "\($0)" },
-                    color: AppColors.accentBlue
+                    color: Color(red: 1.0, green: 0.70, blue: 0.40)   // soft warm amber
                 )
 
                 Divider()
@@ -77,12 +91,12 @@ struct WeeklyStatsCard: View {
                     value: "\(stats.workoutCount)",
                     label: "Workouts",
                     delta: stats.workoutCountDelta.map { $0 >= 0 ? "+\($0)" : "\($0)" },
-                    color: AppColors.accentTeal
+                    color: Color(red: 0.95, green: 0.55, blue: 0.50)  // muted rose-salmon
                 )
             }
         }
         .padding(16)
-        .cardStyle(borderColor: AppColors.accent)
+        .tintedCardStyle(tint: AppColors.accent, secondaryTint: Color(red: 1.0, green: 0.35, blue: 0.19))
     }
 
     private func statColumn(value: String, label: String, delta: String?, color: Color) -> some View {
@@ -93,19 +107,24 @@ struct WeeklyStatsCard: View {
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
 
-            Text(label)
-                .font(.system(.caption2, weight: .medium))
-                .foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 5, height: 5)
+                Text(label)
+                    .font(.system(.caption2, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.45))
+            }
 
             if let delta = delta {
                 Text(delta)
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(delta.hasPrefix("+") ? AppColors.accentGold : (delta.hasPrefix("-") ? .red : .secondary))
+                    .foregroundStyle(delta.hasPrefix("+") ? Color(red: 0.20, green: 0.78, blue: 0.35) : (delta.hasPrefix("-") ? Color(red: 1.0, green: 0.23, blue: 0.19) : .secondary))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
                     .background(
                         Capsule()
-                            .fill(delta.hasPrefix("+") ? AppColors.accentGold.opacity(0.12) : (delta.hasPrefix("-") ? Color.red.opacity(0.12) : Color.clear))
+                            .fill(delta.hasPrefix("+") ? Color(red: 0.20, green: 0.78, blue: 0.35).opacity(0.12) : (delta.hasPrefix("-") ? Color(red: 1.0, green: 0.23, blue: 0.19).opacity(0.12) : Color.clear))
                     )
             }
         }
@@ -150,9 +169,9 @@ struct MuscleGroupBreakdownCard: View {
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("MUSCLE GROUPS")
-                    .font(.system(.caption2, weight: .bold))
-                    .foregroundStyle(.secondary)
+                Text("Muscle Groups")
+                    .font(.system(.body, weight: .semibold))
+                    .foregroundStyle(.primary)
                 Spacer()
                 if onTap != nil {
                     Image(systemName: "chevron.right")
@@ -186,11 +205,15 @@ struct MuscleGroupBreakdownCard: View {
 
                         GeometryReader { geo in
                             Capsule()
-                                .fill(AppColors.accent.opacity(0.2))
+                                .fill(AppColors.accent.opacity(0.15))
                                 .frame(height: 8)
                                 .overlay(alignment: .leading) {
                                     Capsule()
-                                        .fill(AppColors.accent)
+                                        .fill(LinearGradient(
+                                            colors: [AppColors.accent, AppColors.accent.opacity(0.5)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ))
                                         .frame(width: max(8, geo.size.width * CGFloat(item.count) / CGFloat(maxCount)), height: 8)
                                 }
                         }
@@ -205,7 +228,7 @@ struct MuscleGroupBreakdownCard: View {
             }
         }
         .padding(16)
-        .cardStyle(borderColor: AppColors.accent)
+        .tintedCardStyle(tint: AppColors.accentBlue, secondaryTint: AppColors.accentTeal)
     }
 }
 
@@ -229,9 +252,9 @@ struct VolumeTrendCard: View {
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("VOLUME TREND")
-                    .font(.system(.caption2, weight: .bold))
-                    .foregroundStyle(.secondary)
+                Text("Volume Trend")
+                    .font(.system(.body, weight: .semibold))
+                    .foregroundStyle(.primary)
                 Spacer()
                 if onTap != nil {
                     Image(systemName: "chevron.right")
@@ -297,7 +320,7 @@ struct VolumeTrendCard: View {
             }
         }
         .padding(16)
-        .cardStyle(borderColor: AppColors.accent)
+        .tintedCardStyle(tint: AppColors.accent)
     }
 }
 
@@ -338,9 +361,9 @@ struct StreakCalendarCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("STREAK")
-                        .font(.system(.caption2, weight: .bold))
-                        .foregroundStyle(.secondary)
+                    Text("Streak")
+                        .font(.system(.body, weight: .semibold))
+                        .foregroundStyle(.primary)
                     HStack(spacing: 6) {
                         Image(systemName: "flame.fill")
                             .foregroundStyle(streakData.current > 0 ? AppColors.accent : .secondary)
@@ -353,8 +376,8 @@ struct StreakCalendarCard: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("BEST")
-                        .font(.system(.caption2, weight: .bold))
+                    Text("Best")
+                        .font(.system(.caption, weight: .medium))
                         .foregroundStyle(.secondary)
                     Text("\(streakData.bestEver) day\(streakData.bestEver == 1 ? "" : "s")")
                         .font(.system(.subheadline, weight: .semibold))
@@ -401,7 +424,7 @@ struct StreakCalendarCard: View {
             }
         }
         .padding(16)
-        .cardStyle(borderColor: AppColors.accent)
+        .tintedCardStyle(tint: Color(red: 1.0, green: 0.35, blue: 0.19), secondaryTint: AppColors.accent)
     }
 
     fileprivate func dotColor(count: Int, isFuture: Bool) -> Color {
@@ -425,13 +448,13 @@ struct WeeklyRecapCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("WEEKLY RECAP")
-                        .font(.system(.caption2, weight: .bold))
-                        .foregroundStyle(.secondary)
+                    Text("Weekly Recap")
+                        .font(.system(.body, weight: .semibold))
+                        .foregroundStyle(.primary)
 
                     Text(weekRangeString())
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(.tertiary)
+                        .font(.system(.caption2, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.22))
                 }
 
                 Spacer()
@@ -480,20 +503,20 @@ struct WeeklyRecapCard: View {
             .buttonStyle(.plain)
         }
         .padding(16)
-        .cardStyle(borderColor: AppColors.accent)
+        .tintedCardStyle(tint: AppColors.accent, secondaryTint: AppColors.accentGold)
     }
 
     private func miniStat(value: String, label: String, icon: String) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(AppColors.accent.opacity(0.7))
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                 Text(label)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
             }
         }

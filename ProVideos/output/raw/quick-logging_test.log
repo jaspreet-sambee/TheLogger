@@ -1,0 +1,185 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -project /Users/jaspreet/Documents/MyApps/TheLogger/TheLogger.xcodeproj -scheme TheLogger -destination "platform=iOS Simulator,id=96461655-8A4E-4D86-85AA-F2398742FEDB" "-only-testing:TheLoggerUITests/DemoScenarios/testQuicklogStripDemo" -parallel-testing-enabled NO -enableCodeCoverage NO
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  TelemetryDeck: https://github.com/TelemetryDeck/SwiftSDK @ 2.11.0
+  RevenueCat: https://github.com/RevenueCat/purchases-ios @ 5.66.0
+
+2026-03-31 21:44:23.915007-0400 TheLoggerUITests-Runner[59059:5597206] [Default] Running tests...
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-03-31 21:44:27.632.
+Test Suite 'TheLoggerUITests.xctest' started at 2026-03-31 21:44:27.632.
+Test Suite 'DemoScenarios' started at 2026-03-31 21:44:27.632.
+Test Case '-[TheLoggerUITests.DemoScenarios testQuicklogStripDemo]' started.
+    t =     0.00s Start Test at 2026-03-31 21:44:27.633
+    t =     0.23s Set Up
+    t =     0.23s     Open com.thelogger.app
+    t =     0.23s         Launch com.thelogger.app
+    t =     2.56s             Setting up automation session
+    t =     3.59s             Wait for com.thelogger.app to idle
+    t =     4.57s     Unable to monitor event loop
+    t =     7.58s Waiting 5.0s for "startWorkoutButton" Button to exist
+    t =     8.61s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkoutButton" Button`
+    t =     8.61s         Checking existence of `"startWorkoutButton" Button`
+    t =     8.62s         Capturing element debug description
+    t =     9.65s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkoutButton" Button`
+    t =     9.65s         Checking existence of `"startWorkoutButton" Button`
+    t =     9.65s         Capturing element debug description
+    t =    10.59s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkoutButton" Button`
+    t =    10.59s         Checking existence of `"startWorkoutButton" Button`
+    t =    10.59s         Capturing element debug description
+    t =    11.62s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkoutButton" Button`
+    t =    11.62s         Checking existence of `"startWorkoutButton" Button`
+    t =    11.62s         Capturing element debug description
+    t =    12.59s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkoutButton" Button`
+    t =    12.59s         Checking existence of `"startWorkoutButton" Button`
+    t =    12.59s         Capturing element debug description
+    t =    12.59s     Checking existence of `"startWorkoutButton" Button`
+    t =    13.59s     Checking existence of `"startWorkoutButton" Button` (retry 1)
+    t =    14.60s     Checking existence of `"startWorkoutButton" Button` (retry 2)
+    t =    14.60s Collecting debug information to assist test failure triage
+    t =    14.60s Waiting 3.0s for "addExerciseButton" Button to exist
+    t =    15.63s     Checking `Expect predicate `existsNoRetry == 1` for object "addExerciseButton" Button`
+    t =    15.63s         Checking existence of `"addExerciseButton" Button`
+    t =    15.63s         Capturing element debug description
+    t =    16.67s     Checking `Expect predicate `existsNoRetry == 1` for object "addExerciseButton" Button`
+    t =    16.68s         Checking existence of `"addExerciseButton" Button`
+    t =    16.68s         Capturing element debug description
+    t =    17.60s     Checking `Expect predicate `existsNoRetry == 1` for object "addExerciseButton" Button`
+    t =    17.61s         Checking existence of `"addExerciseButton" Button`
+    t =    17.61s         Capturing element debug description
+    t =    17.61s     Checking existence of `"addExerciseButton" Button`
+    t =    18.62s     Checking existence of `"addExerciseButton" Button` (retry 1)
+    t =    19.63s     Checking existence of `"addExerciseButton" Button` (retry 2)
+    t =    19.63s Collecting debug information to assist test failure triage
+    t =    19.63s Waiting 3.0s for "exerciseSearchField" TextField to exist
+    t =    20.66s     Checking `Expect predicate `existsNoRetry == 1` for object "exerciseSearchField" TextField`
+    t =    20.66s         Checking existence of `"exerciseSearchField" TextField`
+    t =    20.67s         Capturing element debug description
+    t =    21.70s     Checking `Expect predicate `existsNoRetry == 1` for object "exerciseSearchField" TextField`
+    t =    21.71s         Checking existence of `"exerciseSearchField" TextField`
+    t =    21.71s         Capturing element debug description
+    t =    22.64s     Checking `Expect predicate `existsNoRetry == 1` for object "exerciseSearchField" TextField`
+    t =    22.64s         Checking existence of `"exerciseSearchField" TextField`
+    t =    22.64s         Capturing element debug description
+    t =    22.64s     Checking existence of `"exerciseSearchField" TextField`
+    t =    23.65s     Checking existence of `"exerciseSearchField" TextField` (retry 1)
+    t =    24.65s     Checking existence of `"exerciseSearchField" TextField` (retry 2)
+    t =    24.65s Collecting debug information to assist test failure triage
+    t =    24.66s Waiting 3.0s for "exerciseResult_Bench Press" Button to exist
+    t =    25.69s     Checking `Expect predicate `existsNoRetry == 1` for object "exerciseResult_Bench Press" Button`
+    t =    25.69s         Checking existence of `"exerciseResult_Bench Press" Button`
+    t =    25.69s         Capturing element debug description
+    t =    26.73s     Checking `Expect predicate `existsNoRetry == 1` for object "exerciseResult_Bench Press" Button`
+    t =    26.73s         Checking existence of `"exerciseResult_Bench Press" Button`
+    t =    26.73s         Capturing element debug description
+    t =    27.66s     Checking `Expect predicate `existsNoRetry == 1` for object "exerciseResult_Bench Press" Button`
+    t =    27.66s         Checking existence of `"exerciseResult_Bench Press" Button`
+    t =    27.66s         Capturing element debug description
+    t =    27.67s     Checking existence of `"exerciseResult_Bench Press" Button`
+    t =    28.67s     Checking existence of `"exerciseResult_Bench Press" Button` (retry 1)
+    t =    29.68s     Checking existence of `"exerciseResult_Bench Press" Button` (retry 2)
+    t =    29.68s Collecting debug information to assist test failure triage
+    t =    29.68s Waiting 2.0s for Button (First Match) to exist
+    t =    30.71s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    30.71s         Checking existence of `Button (First Match)`
+    t =    30.71s         Capturing element debug description
+    t =    31.69s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    31.69s         Checking existence of `Button (First Match)`
+    t =    31.69s         Capturing element debug description
+    t =    31.69s     Checking existence of `Button (First Match)`
+    t =    32.69s     Checking existence of `Button (First Match)` (retry 1)
+    t =    33.70s     Checking existence of `Button (First Match)` (retry 2)
+    t =    33.70s Collecting debug information to assist test failure triage
+    t =    34.71s Waiting 3.0s for Button (First Match) to exist
+    t =    35.74s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    35.74s         Checking existence of `Button (First Match)`
+    t =    35.74s         Capturing element debug description
+    t =    36.78s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    36.78s         Checking existence of `Button (First Match)`
+    t =    36.78s         Capturing element debug description
+    t =    37.71s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    37.72s         Checking existence of `Button (First Match)`
+    t =    37.72s         Capturing element debug description
+    t =    37.72s     Checking existence of `Button (First Match)`
+    t =    38.72s     Checking existence of `Button (First Match)` (retry 1)
+    t =    39.73s     Checking existence of `Button (First Match)` (retry 2)
+    t =    39.73s Collecting debug information to assist test failure triage
+    t =    40.74s Waiting 3.0s for "quickLogCommitButton" Button to exist
+    t =    41.77s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    41.77s         Checking existence of `"quickLogCommitButton" Button`
+    t =    41.77s         Capturing element debug description
+    t =    42.80s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    42.80s         Checking existence of `"quickLogCommitButton" Button`
+    t =    42.81s         Capturing element debug description
+    t =    43.74s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    43.74s         Checking existence of `"quickLogCommitButton" Button`
+    t =    43.74s         Capturing element debug description
+    t =    43.74s     Checking existence of `"quickLogCommitButton" Button`
+    t =    44.75s     Checking existence of `"quickLogCommitButton" Button` (retry 1)
+    t =    45.76s     Checking existence of `"quickLogCommitButton" Button` (retry 2)
+    t =    45.76s Collecting debug information to assist test failure triage
+    t =    45.76s Waiting 3.0s for "quickLogCommitButton" Button to exist
+    t =    46.79s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    46.79s         Checking existence of `"quickLogCommitButton" Button`
+    t =    46.79s         Capturing element debug description
+    t =    47.81s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    47.82s         Checking existence of `"quickLogCommitButton" Button`
+    t =    47.82s         Capturing element debug description
+    t =    48.76s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    48.76s         Checking existence of `"quickLogCommitButton" Button`
+    t =    48.77s         Capturing element debug description
+    t =    48.77s     Checking existence of `"quickLogCommitButton" Button`
+    t =    49.77s     Checking existence of `"quickLogCommitButton" Button` (retry 1)
+    t =    50.78s     Checking existence of `"quickLogCommitButton" Button` (retry 2)
+    t =    50.78s Collecting debug information to assist test failure triage
+    t =    50.78s Waiting 3.0s for "quickLogCommitButton" Button to exist
+    t =    51.81s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    51.81s         Checking existence of `"quickLogCommitButton" Button`
+    t =    51.81s         Capturing element debug description
+    t =    52.85s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    52.85s         Checking existence of `"quickLogCommitButton" Button`
+    t =    52.85s         Capturing element debug description
+    t =    53.78s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    53.79s         Checking existence of `"quickLogCommitButton" Button`
+    t =    53.79s         Capturing element debug description
+    t =    53.79s     Checking existence of `"quickLogCommitButton" Button`
+    t =    54.80s     Checking existence of `"quickLogCommitButton" Button` (retry 1)
+    t =    55.80s     Checking existence of `"quickLogCommitButton" Button` (retry 2)
+    t =    55.80s Collecting debug information to assist test failure triage
+    t =    55.80s Waiting 3.0s for "quickLogCommitButton" Button to exist
+    t =    56.83s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    56.83s         Checking existence of `"quickLogCommitButton" Button`
+    t =    56.83s         Capturing element debug description
+    t =    57.86s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    57.86s         Checking existence of `"quickLogCommitButton" Button`
+    t =    57.86s         Capturing element debug description
+    t =    58.81s     Checking `Expect predicate `existsNoRetry == 1` for object "quickLogCommitButton" Button`
+    t =    58.81s         Checking existence of `"quickLogCommitButton" Button`
+    t =    58.81s         Capturing element debug description
+    t =    58.81s     Checking existence of `"quickLogCommitButton" Button`
+    t =    59.82s     Checking existence of `"quickLogCommitButton" Button` (retry 1)
+    t =    60.82s     Checking existence of `"quickLogCommitButton" Button` (retry 2)
+    t =    60.82s Collecting debug information to assist test failure triage
+    t =    63.83s Tear Down
+    t =    63.92s Checking for crash reports corresponding to unexpected termination of com.thelogger.app
+Test Case '-[TheLoggerUITests.DemoScenarios testQuicklogStripDemo]' passed (83.939 seconds).
+Test Suite 'DemoScenarios' passed at 2026-03-31 21:45:51.572.
+	 Executed 1 test, with 0 failures (0 unexpected) in 83.939 (83.940) seconds
+Test Suite 'TheLoggerUITests.xctest' passed at 2026-03-31 21:45:51.573.
+	 Executed 1 test, with 0 failures (0 unexpected) in 83.939 (83.940) seconds
+Test Suite 'Selected tests' passed at 2026-03-31 21:45:51.573.
+	 Executed 1 test, with 0 failures (0 unexpected) in 83.939 (83.941) seconds
+2026-03-31 21:45:51.963 xcodebuild[59030:5596732] [MT] IDETestOperationsObserverDebug: 94.098 elapsed -- Testing started completed.
+2026-03-31 21:45:51.964 xcodebuild[59030:5596732] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-03-31 21:45:51.964 xcodebuild[59030:5596732] [MT] IDETestOperationsObserverDebug: 94.098 sec, +94.098 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/jaspreet/Library/Developer/Xcode/DerivedData/TheLogger-gjxssrqutzkxvbeydaucloowttoi/Logs/Test/Test-TheLogger-2026.03.31_21-44-16--0400.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

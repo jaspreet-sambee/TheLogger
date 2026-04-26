@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stats Dashboard · TheLogger Mockups</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #060608; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; padding: 48px 40px 80px; color: #fff; }
+
+  .page-header { margin-bottom: 44px; }
+  .page-header h1 { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.28); margin-bottom: 4px; }
+  .page-header p  { font-size: 12px; color: rgba(255,255,255,.16); }
+
+  .section       { margin-bottom: 72px; }
+  .section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.2); margin-bottom: 22px; }
+
+  .phones-row { display: flex; gap: 44px; align-items: flex-start; flex-wrap: wrap; }
+
+  .phone-wrap  { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .phone-label { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.2); text-align: center; }
+
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; margin-bottom: 10px; }
+  .tag--main  { background: rgba(232,56,74,.14); color: #E8384A; border: 1px solid rgba(232,56,74,.26); }
+  .tag--sheet { background: rgba(255,184,77,.1); color: #FFB84D; border: 1px solid rgba(255,184,77,.2); }
+  .tag--full  { background: rgba(77,199,184,.1); color: #4DC7B8; border: 1px solid rgba(77,199,184,.2); }
+  .tag--new   { background: rgba(128,166,255,.12); color: #80A6FF; border: 1px solid rgba(128,166,255,.22); }
+
+  /* iPhone */
+  .iphone { width:390px; height:844px; background:#0A0A0F; border-radius:52px; border:1px solid rgba(255,255,255,.07); overflow:hidden; box-shadow:0 40px 80px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.05); display:flex; flex-direction:column; position:relative; }
+  .di { width:126px; height:36px; background:#000; border-radius:0 0 22px 22px; margin:0 auto; flex-shrink:0; }
+  .status-bar { display:flex; align-items:center; justify-content:space-between; padding:6px 24px 0; flex-shrink:0; }
+  .status-time { font-size:15px; font-weight:600; }
+  .status-icons { display:flex; gap:5px; align-items:center; font-size:11px; color:rgba(255,255,255,.75); }
+
+  /* Nav */
+  .nav-large { padding:4px 20px 10px; flex-shrink:0; }
+  .nav-large-title { font-size:34px; font-weight:700; letter-spacing:-.5px; }
+  .nav-inline { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-bottom:1px solid rgba(255,255,255,.07); flex-shrink:0; }
+  .nav-inline-title { font-size:17px; font-weight:600; text-align:center; flex:1; }
+  .nav-done { font-size:15px; font-weight:600; color:#E8384A; }
+  .nav-placeholder { width:40px; }
+
+  /* Sheet */
+  .sheet-grab { width:36px; height:4px; background:rgba(255,255,255,.18); border-radius:2px; margin:10px auto 0; flex-shrink:0; }
+  .sheet-bg { flex:1; display:flex; flex-direction:column; background:#1C1C1E; border-radius:16px 16px 0 0; margin-top:6px; overflow:hidden; }
+
+  /* Scroll */
+  .scroll-area { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+  .sc { padding:6px 16px 32px; display:flex; flex-direction:column; gap:12px; }
+  .sp { padding:0 20px 32px; }
+
+  /* Period chips */
+  .period-row { display:flex; gap:7px; overflow:hidden; flex-shrink:0; }
+  .chip { padding:8px 14px; border-radius:100px; font-size:13px; font-weight:600; white-space:nowrap; flex-shrink:0; }
+  .chip--on  { background:#E8384A; color:#fff; }
+  .chip--off { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.5); }
+
+  /* Cards */
+  .card { background:rgba(232,56,74,.04); border:1px solid rgba(232,56,74,.18); border-radius:18px; padding:16px; flex-shrink:0; }
+  .card--gold   { background:rgba(255,184,77,.05); border-color:rgba(255,184,77,.22); }
+  .card--blue   { background:rgba(128,166,255,.04); border-color:rgba(128,166,255,.18); }
+  .card--teal   { background:rgba(77,199,184,.04); border-color:rgba(77,199,184,.18); }
+  .card--subtle { background:rgba(255,255,255,.03); border-color:rgba(255,255,255,.09); }
+  .card-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .card-lbl { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.28); }
+  .chevron { font-size:12px; color:rgba(255,255,255,.22); }
+
+  /* Weekly 4-col */
+  .stats4 { display:flex; }
+  .s4col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .s4div { width:1px; height:44px; background:rgba(255,255,255,.08); align-self:center; }
+  .s4val { font-size:20px; font-weight:800; letter-spacing:-.3px; }
+  .s4lbl { font-size:10px; color:rgba(255,255,255,.42); font-weight:500; }
+  .s4delta { font-size:10px; font-weight:700; padding:1px 5px; border-radius:100px; }
+  .d-pos { color:rgb(51,199,89); background:rgba(51,199,89,.12); }
+  .d-neg { color:#FF453A; background:rgba(255,69,58,.12); }
+
+  /* Streak */
+  .day-labels { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px; }
+  .dlbl { font-size:9px; color:rgba(255,255,255,.22); text-align:center; font-weight:500; }
+  .heatmap { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .dot { border-radius:50%; aspect-ratio:1; }
+  .dot-e { background:rgba(255,255,255,.08); }
+  .dot-h { background:rgba(232,56,74,.45); }
+  .dot-f { background:#E8384A; }
+  .dot-t { background:#E8384A; box-shadow:0 0 0 2px rgba(232,56,74,.35); }
+
+  /* Muscle bars */
+  .mrow { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .mrow:last-child { margin-bottom:0; }
+  .mico  { font-size:11px; width:18px; text-align:center; flex-shrink:0; }
+  .mname { font-size:11px; font-weight:500; width:70px; flex-shrink:0; }
+  .mtrack { flex:1; height:8px; background:rgba(232,56,74,.12); border-radius:100px; overflow:hidden; }
+  .mfill  { height:100%; background:linear-gradient(to right,#E8384A,rgba(232,56,74,.45)); border-radius:100px; }
+  .mct   { font-size:11px; font-weight:700; color:rgba(255,255,255,.4); width:22px; text-align:right; flex-shrink:0; }
+
+  /* Fade */
+  .fade { position:absolute; bottom:0; left:0; right:0; height:70px; pointer-events:none; z-index:20; border-radius:0 0 52px 52px; }
+
+  /* Weekly Recap */
+  .wrow { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-top:1px solid rgba(255,255,255,.07); }
+  .wrow:first-child { border-top:none; }
+  .wlbl { font-size:13px; font-weight:500; }
+  .wnum { font-size:15px; font-weight:700; color:#E8384A; }
+  .wunit { font-size:10px; color:rgba(255,255,255,.38); }
+  .cmprow { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-top:1px solid rgba(255,255,255,.07); }
+  .cmprow:first-child { border-top:none; }
+  .cmplbl { font-size:14px; font-weight:500; }
+  .cmpdelta { display:flex; align-items:center; gap:4px; font-size:14px; font-weight:600; }
+  .cup { color:#FFB84D; } .cdn { color:#FF453A; }
+
+  /* Tip */
+  .tipcard { padding:12px 14px; border-radius:14px; background:rgba(255,184,77,.06); border:1px solid rgba(255,184,77,.2); margin-top:12px; }
+
+  /* 2×2 grid */
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .g2card { padding:14px; border-radius:14px; }
+  .g2lbl { font-size:10px; color:rgba(255,255,255,.42); font-weight:500; margin-bottom:4px; display:flex; align-items:center; gap:4px; }
+  .g2val { font-size:24px; font-weight:800; letter-spacing:-.5px; }
+  .g2unit { font-size:10px; color:rgba(255,255,255,.38); margin-left:2px; }
+
+  .prbadge { display:flex; align-items:center; gap:10px; padding:14px 16px; border-radius:14px; background:rgba(255,184,77,.1); border:1px solid rgba(255,184,77,.28); }
+
+  /* ── ACHIEVEMENT BADGE TILES ── */
+  .ach-tiles { display:flex; gap:8px; margin:10px 0 12px; }
+  .ach-tile {
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:10px 6px; border-radius:12px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+  }
+  .ach-tile--gold {
+    background:rgba(255,184,77,.1); border-color:rgba(255,184,77,.3);
+  }
+  .ach-tile--dim {
+    opacity:0.55;
+  }
+  .ach-badge { font-size:22px; line-height:1; }
+  .ach-tile-name { font-size:9px; font-weight:600; color:rgba(255,255,255,.6); text-align:center; }
+  .ach-tile-status { font-size:8px; font-weight:700; padding:2px 6px; border-radius:100px; }
+  .ach-status--done { background:rgba(51,199,89,.15); color:rgb(51,199,89); }
+  .ach-status--prog { background:rgba(255,184,77,.15); color:#FFB84D; }
+  .ach-status--lock { background:rgba(255,255,255,.08); color:rgba(255,255,255,.35); }
+
+  /* ── COMPARISON BARS (detail sheet) ── */
+  .cbar-section { margin-bottom:14px; }
+  .cbar-label { font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:rgba(255,255,255,.28); margin-bottom:10px; }
+  .cbar-row { margin-bottom:12px; }
+  .cbar-row:last-child { margin-bottom:0; }
+  .cbar-meta { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+  .cbar-name { font-size:12px; font-weight:600; }
+  .cbar-vals { font-size:11px; color:rgba(255,255,255,.4); }
+  .cbar-track { height:8px; background:rgba(255,255,255,.06); border-radius:100px; overflow:hidden; margin-bottom:3px; position:relative; }
+  .cbar-fill-a { height:100%; border-radius:100px; } /* this week */
+  .cbar-fill-b { height:8px; border-radius:100px; background:rgba(255,255,255,.15); }  /* last week — shifted down */
+  .cbar-pair { display:flex; flex-direction:column; gap:3px; }
+
+  /* Hero big number (detail sheet) */
+  .hero-num { font-size:52px; font-weight:800; letter-spacing:-2px; line-height:1; }
+  .hero-unit { font-size:18px; font-weight:600; color:rgba(255,255,255,.5); margin-left:4px; }
+  .hero-delta { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:100px; font-size:13px; font-weight:700; }
+
+  /* Stat mini grid (2 col, in detail sheet) */
+  .stat-mini-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .smg-cell { padding:12px; border-radius:12px; }
+  .smg-lbl { font-size:10px; color:rgba(255,255,255,.4); font-weight:500; margin-bottom:4px; }
+  .smg-val { font-size:22px; font-weight:800; letter-spacing:-.5px; }
+  .smg-unit { font-size:10px; color:rgba(255,255,255,.38); }
+  .smg-delta { font-size:10px; font-weight:700; padding:1px 6px; border-radius:100px; display:inline-block; margin-top:4px; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Stats Dashboard · UI Mockups</h1>
+  <p>Main view + all 5 detail sheets · achievements redesigned</p>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ROW 1: Main Dashboard · Weekly Stats (redesigned) · Streak
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Main Dashboard &amp; First Two Detail Sheets</div>
+  <div class="phones-row">
+
+    <!-- ══ Phone 1: Main Dashboard ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--main">Stats Tab</span>
+      <div class="phone-label">Main view · achievements featured</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><span>●●●</span><span>WiFi</span><span>▌</span></div></div>
+        <div class="nav-large"><div class="nav-large-title">Stats</div></div>
+        <div class="scroll-area">
+          <div class="sc">
+
+            <!-- Period selector -->
+            <div class="period-row">
+              <div class="chip chip--on">This Week</div>
+              <div class="chip chip--off">Last Week</div>
+              <div class="chip chip--off">This Month</div>
+              <div class="chip chip--off">All Time</div>
+            </div>
+
+            <!-- Weekly Stats -->
+            <div class="card" style="cursor:pointer;">
+              <div class="card-hdr">
+                <span class="card-lbl">Weekly Overview</span>
+                <div style="display:flex;align-items:center;gap:5px;">
+                  <span style="font-size:10px;color:rgba(255,255,255,.18);">Mar 22–28</span>
+                  <span class="chevron">›</span>
+                </div>
+              </div>
+              <div class="stats4">
+                <div class="s4col"><div class="s4val" style="color:#E8384A;">12.4k</div><div class="s4lbl">Volume</div><div class="s4delta d-pos">+18%</div></div>
+                <div class="s4div"></div>
+                <div class="s4col"><div class="s4val" style="color:#FFB84D;">48</div><div class="s4lbl">Sets</div><div class="s4delta d-pos">+6</div></div>
+                <div class="s4div"></div>
+                <div class="s4col"><div class="s4val" style="color:#80A6FF;">420</div><div class="s4lbl">Reps</div><div class="s4delta d-pos">+32</div></div>
+                <div class="s4div"></div>
+                <div class="s4col"><div class="s4val" style="color:#4DC7B8;">4</div><div class="s4lbl">Workouts</div><div class="s4delta d-pos">+1</div></div>
+              </div>
+            </div>
+
+            <!-- ★ ACHIEVEMENTS — featured card, right after weekly stats ★ -->
+            <div class="card card--gold" style="cursor:pointer;box-shadow:0 0 28px rgba(255,184,77,.07);">
+              <div class="card-hdr">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <!-- Progress ring -->
+                  <svg width="34" height="34" viewBox="0 0 34 34" style="flex-shrink:0;">
+                    <circle cx="17" cy="17" r="13" fill="none" stroke="rgba(255,184,77,.2)" stroke-width="3.5"/>
+                    <circle cx="17" cy="17" r="13" fill="none" stroke="#FFB84D" stroke-width="3.5" stroke-linecap="round"
+                      stroke-dasharray="81.7" stroke-dashoffset="54" transform="rotate(-90 17 17)"/>
+                    <text x="17" y="21" font-size="8" font-weight="700" fill="#FFB84D" text-anchor="middle" font-family="-apple-system,sans-serif">33%</text>
+                  </svg>
+                  <div>
+                    <div style="font-size:15px;font-weight:700;">Achievements</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,.42);">14 of 42 unlocked</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:3px;">
+                  <span style="font-size:13px;color:#E8384A;font-weight:500;">View All</span>
+                  <span class="chevron">›</span>
+                </div>
+              </div>
+
+              <!-- Badge tiles -->
+              <div class="ach-tiles">
+                <div class="ach-tile ach-tile--gold">
+                  <div class="ach-badge">🔥</div>
+                  <div class="ach-tile-name">On Fire</div>
+                  <div class="ach-tile-status ach-status--done">Unlocked</div>
+                </div>
+                <div class="ach-tile ach-tile--gold">
+                  <div class="ach-badge">💪</div>
+                  <div class="ach-tile-name">Iron Will</div>
+                  <div class="ach-tile-status ach-status--done">Unlocked</div>
+                </div>
+                <div class="ach-tile">
+                  <div class="ach-badge">🏆</div>
+                  <div class="ach-tile-name">Century</div>
+                  <div class="ach-tile-status ach-status--prog">73%</div>
+                </div>
+                <div class="ach-tile ach-tile--dim">
+                  <div class="ach-badge">⚡</div>
+                  <div class="ach-tile-name">Streak 30</div>
+                  <div class="ach-tile-status ach-status--lock">Locked</div>
+                </div>
+              </div>
+
+              <!-- Next to unlock -->
+              <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;background:rgba(255,184,77,.08);border:1px solid rgba(255,184,77,.14);">
+                <span style="font-size:13px;">🏆</span>
+                <div style="flex:1;">
+                  <div style="font-size:11px;font-weight:600;">Century Club</div>
+                  <div style="height:4px;background:rgba(255,255,255,.1);border-radius:100px;margin-top:4px;overflow:hidden;">
+                    <div style="width:73%;height:100%;background:linear-gradient(to right,#FFB84D,#FF9500);border-radius:100px;"></div>
+                  </div>
+                </div>
+                <div style="font-size:10px;color:#FFB84D;font-weight:700;text-align:right;">27 more<br><span style="color:rgba(255,255,255,.35);font-weight:500;">workouts</span></div>
+              </div>
+            </div>
+
+            <!-- Streak -->
+            <div class="card" style="cursor:pointer;">
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px;">
+                <div>
+                  <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:4px;">Streak</div>
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <span style="font-size:18px;">🔥</span>
+                    <span style="font-size:20px;font-weight:800;">12 days</span>
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:4px;">Best</div>
+                  <div style="font-size:16px;font-weight:700;color:#FFB84D;">18 days</div>
+                </div>
+                <span class="chevron" style="margin-left:8px;">›</span>
+              </div>
+              <div class="day-labels"><div class="dlbl">S</div><div class="dlbl">M</div><div class="dlbl">T</div><div class="dlbl">W</div><div class="dlbl">T</div><div class="dlbl">F</div><div class="dlbl">S</div></div>
+              <div class="heatmap">
+                <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-h"></div><div class="dot dot-e"></div>
+                <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-h"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-h"></div>
+                <div class="dot dot-f"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-f"></div>
+                <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-t"></div>
+              </div>
+            </div>
+
+          </div><!-- /sc -->
+        </div><!-- /scroll-area -->
+        <div class="fade" style="background:linear-gradient(to top,#0A0A0F,transparent);"></div>
+      </div>
+    </div>
+
+    <!-- ══ Phone 2: Weekly Stats Detail — REDESIGNED ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--sheet">Detail Sheet · Redesigned</span>
+      <div class="phone-label">Tap "Weekly Overview"</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-bg">
+          <div class="sheet-grab"></div>
+          <div class="nav-inline">
+            <div class="nav-placeholder"></div>
+            <div class="nav-inline-title">This Week</div>
+            <div class="nav-placeholder"></div>
+          </div>
+          <div class="scroll-area">
+            <div class="sp" style="padding-top:20px;">
+
+              <!-- HERO: big volume number -->
+              <div style="margin-bottom:22px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:10px;">Total Volume</div>
+                <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px;">
+                  <span class="hero-num" style="color:#E8384A;">12,450</span>
+                  <span class="hero-unit">lbs</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="hero-delta d-pos" style="font-size:13px;font-weight:700;padding:5px 12px;border-radius:100px;display:inline-flex;align-items:center;gap:4px;">
+                    <span style="font-size:14px;">↑</span> +18% from last week
+                  </span>
+                </div>
+                <div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:8px;">Mar 22 – 28, 2026</div>
+              </div>
+
+              <!-- COMPARISON BARS -->
+              <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:14px;">
+                <div class="cbar-label">This Week vs Last Week</div>
+
+                <!-- Volume -->
+                <div class="cbar-row">
+                  <div class="cbar-meta">
+                    <span class="cbar-name">Volume</span>
+                    <span class="cbar-vals">12.4k <span style="color:rgba(255,255,255,.25);">/ 10.5k lbs</span></span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:3px;">
+                    <div style="height:8px;background:rgba(232,56,74,.12);border-radius:100px;overflow:hidden;">
+                      <div style="width:100%;height:100%;background:linear-gradient(to right,#E8384A,#FF5931);border-radius:100px;"></div>
+                    </div>
+                    <div style="height:8px;background:rgba(255,255,255,.07);border-radius:100px;overflow:hidden;">
+                      <div style="width:85%;height:100%;background:rgba(255,255,255,.18);border-radius:100px;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sets -->
+                <div class="cbar-row" style="margin-top:12px;">
+                  <div class="cbar-meta">
+                    <span class="cbar-name">Sets</span>
+                    <span class="cbar-vals">48 <span style="color:rgba(255,255,255,.25);">/ 42</span></span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:3px;">
+                    <div style="height:8px;background:rgba(255,184,77,.12);border-radius:100px;overflow:hidden;">
+                      <div style="width:100%;height:100%;background:linear-gradient(to right,#FFB84D,#FF9500);border-radius:100px;"></div>
+                    </div>
+                    <div style="height:8px;background:rgba(255,255,255,.07);border-radius:100px;overflow:hidden;">
+                      <div style="width:88%;height:100%;background:rgba(255,255,255,.18);border-radius:100px;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Reps -->
+                <div class="cbar-row" style="margin-top:12px;">
+                  <div class="cbar-meta">
+                    <span class="cbar-name">Reps</span>
+                    <span class="cbar-vals">420 <span style="color:rgba(255,255,255,.25);">/ 388</span></span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:3px;">
+                    <div style="height:8px;background:rgba(128,166,255,.12);border-radius:100px;overflow:hidden;">
+                      <div style="width:100%;height:100%;background:linear-gradient(to right,#80A6FF,#5B8AFF);border-radius:100px;"></div>
+                    </div>
+                    <div style="height:8px;background:rgba(255,255,255,.07);border-radius:100px;overflow:hidden;">
+                      <div style="width:92%;height:100%;background:rgba(255,255,255,.18);border-radius:100px;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Workouts -->
+                <div class="cbar-row" style="margin-top:12px;">
+                  <div class="cbar-meta">
+                    <span class="cbar-name">Workouts</span>
+                    <span class="cbar-vals">4 <span style="color:rgba(255,255,255,.25);">/ 3</span></span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:3px;">
+                    <div style="height:8px;background:rgba(77,199,184,.12);border-radius:100px;overflow:hidden;">
+                      <div style="width:100%;height:100%;background:linear-gradient(to right,#4DC7B8,#2FB8A8);border-radius:100px;"></div>
+                    </div>
+                    <div style="height:8px;background:rgba(255,255,255,.07);border-radius:100px;overflow:hidden;">
+                      <div style="width:75%;height:100%;background:rgba(255,255,255,.18);border-radius:100px;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Legend -->
+                <div style="display:flex;gap:16px;margin-top:12px;">
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <div style="width:14px;height:4px;border-radius:2px;background:#E8384A;"></div>
+                    <span style="font-size:10px;color:rgba(255,255,255,.4);">This week</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <div style="width:14px;height:4px;border-radius:2px;background:rgba(255,255,255,.3);"></div>
+                    <span style="font-size:10px;color:rgba(255,255,255,.4);">Last week</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- STAT MINI GRID -->
+              <div class="stat-mini-grid">
+                <div class="smg-cell card">
+                  <div class="smg-lbl">⚖️ Volume</div>
+                  <span class="smg-val" style="color:#E8384A;">12.4k</span><span class="smg-unit"> lbs</span>
+                  <div class="smg-delta d-pos">+18%</div>
+                </div>
+                <div class="smg-cell card card--gold">
+                  <div class="smg-lbl">📦 Sets</div>
+                  <span class="smg-val">48</span>
+                  <div class="smg-delta d-pos">+6</div>
+                </div>
+                <div class="smg-cell card card--blue">
+                  <div class="smg-lbl">🔄 Reps</div>
+                  <span class="smg-val">420</span>
+                  <div class="smg-delta d-pos">+32</div>
+                </div>
+                <div class="smg-cell card card--teal">
+                  <div class="smg-lbl">⏱ Duration</div>
+                  <span class="smg-val">248</span><span class="smg-unit"> min</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Phone 3: Streak Detail ══ -->
+    <div class="phone-wrap">
+      <span class="tag tag--sheet">Detail Sheet</span>
+      <div class="phone-label">Tap "Streak"</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-bg">
+          <div class="sheet-grab"></div>
+          <div class="nav-inline">
+            <div class="nav-placeholder"></div>
+            <div class="nav-inline-title">Streak History</div>
+            <div class="nav-placeholder"></div>
+          </div>
+          <div class="scroll-area">
+            <div class="sp" style="padding-top:8px;">
+              <div class="card" style="display:flex;gap:0;padding:20px 16px;margin-bottom:14px;">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                  <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><span style="font-size:22px;">🔥</span><span style="font-size:48px;font-weight:800;letter-spacing:-2px;line-height:1;">12</span></div>
+                  <div style="font-size:11px;color:rgba(255,255,255,.42);">Current streak</div>
+                </div>
+                <div style="width:1px;background:rgba(255,255,255,.1);"></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                  <span style="font-size:48px;font-weight:800;letter-spacing:-2px;color:#FFB84D;line-height:1;">18</span>
+                  <div style="font-size:11px;color:rgba(255,255,255,.42);">Best ever</div>
+                </div>
+              </div>
+              <div class="card" style="margin-bottom:14px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:10px;">Last 13 Weeks</div>
+                <div class="day-labels"><div class="dlbl">S</div><div class="dlbl">M</div><div class="dlbl">T</div><div class="dlbl">W</div><div class="dlbl">T</div><div class="dlbl">F</div><div class="dlbl">S</div></div>
+                <div class="heatmap">
+                  <div class="dot dot-e"></div><div class="dot dot-h"></div><div class="dot dot-e"></div><div class="dot dot-h"></div><div class="dot dot-e"></div><div class="dot dot-e"></div><div class="dot dot-e"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-e"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div>
+                  <div class="dot dot-h"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-h"></div><div class="dot dot-e"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-h"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-e"></div>
+                  <div class="dot dot-h"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-h"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-f"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-f"></div><div class="dot dot-e"></div>
+                  <div class="dot dot-f"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-f"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-h"></div><div class="dot dot-e"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-h"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-h"></div>
+                  <div class="dot dot-f"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-t"></div>
+                </div>
+              </div>
+              <div class="card" style="display:flex;gap:0;padding:16px;">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                  <div style="font-size:28px;font-weight:800;color:#E8384A;">52</div>
+                  <div style="font-size:11px;font-weight:600;">Training days</div>
+                  <div style="font-size:10px;color:rgba(255,255,255,.38);">last 90 days</div>
+                </div>
+                <div style="width:1px;background:rgba(255,255,255,.1);"></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                  <div style="font-size:28px;font-weight:800;color:#4DC7B8;">3</div>
+                  <div style="font-size:11px;font-weight:600;">Goal weeks</div>
+                  <div style="font-size:10px;color:rgba(255,255,255,.38);">consecutive</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     ROW 2: Muscle Groups · Volume Trend · Weekly Recap
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Remaining Detail Sheets + Full Weekly Recap</div>
+  <div class="phones-row">
+
+    <!-- Phone 4: Muscle Groups -->
+    <div class="phone-wrap">
+      <span class="tag tag--sheet">Detail Sheet</span>
+      <div class="phone-label">Tap "Muscle Groups"</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-bg">
+          <div class="sheet-grab"></div>
+          <div class="nav-inline"><div class="nav-placeholder"></div><div class="nav-inline-title">Muscle Groups</div><div class="nav-placeholder"></div></div>
+          <div class="scroll-area">
+            <div class="sp" style="padding-top:8px;">
+              <div class="card" style="margin-bottom:14px;">
+                <div style="margin-bottom:14px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:15px;color:#E8384A;width:24px;">💪</span><span style="font-size:14px;font-weight:600;flex:1;">Chest</span><span style="font-size:15px;font-weight:800;color:#E8384A;">18 sets</span></div><div style="height:12px;background:rgba(232,56,74,.12);border-radius:100px;overflow:hidden;"><div style="height:100%;width:100%;background:linear-gradient(to right,#E8384A,rgba(232,56,74,.45));border-radius:100px;"></div></div><div style="font-size:9px;color:rgba(255,255,255,.26);margin-top:3px;">sets targeted this week</div></div>
+                <div style="margin-bottom:14px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:15px;color:#E8384A;width:24px;">🏋️</span><span style="font-size:14px;font-weight:600;flex:1;">Back</span><span style="font-size:15px;font-weight:800;color:#E8384A;">14 sets</span></div><div style="height:12px;background:rgba(232,56,74,.12);border-radius:100px;overflow:hidden;"><div style="height:100%;width:78%;background:linear-gradient(to right,#E8384A,rgba(232,56,74,.45));border-radius:100px;"></div></div><div style="font-size:9px;color:rgba(255,255,255,.26);margin-top:3px;">sets targeted this week</div></div>
+                <div style="margin-bottom:14px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:15px;color:#E8384A;width:24px;">🔺</span><span style="font-size:14px;font-weight:600;flex:1;">Shoulders</span><span style="font-size:15px;font-weight:800;color:#E8384A;">10 sets</span></div><div style="height:12px;background:rgba(232,56,74,.12);border-radius:100px;overflow:hidden;"><div style="height:100%;width:56%;background:linear-gradient(to right,#E8384A,rgba(232,56,74,.45));border-radius:100px;"></div></div><div style="font-size:9px;color:rgba(255,255,255,.26);margin-top:3px;">sets targeted this week</div></div>
+                <div style="margin-bottom:14px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:15px;color:#E8384A;width:24px;">💪</span><span style="font-size:14px;font-weight:600;flex:1;">Arms</span><span style="font-size:15px;font-weight:800;color:#E8384A;">8 sets</span></div><div style="height:12px;background:rgba(232,56,74,.12);border-radius:100px;overflow:hidden;"><div style="height:100%;width:44%;background:linear-gradient(to right,#E8384A,rgba(232,56,74,.45));border-radius:100px;"></div></div><div style="font-size:9px;color:rgba(255,255,255,.26);margin-top:3px;">sets targeted this week</div></div>
+                <div style="margin-bottom:14px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:15px;color:#E8384A;width:24px;">🦵</span><span style="font-size:14px;font-weight:600;flex:1;">Legs</span><span style="font-size:15px;font-weight:800;color:#E8384A;">6 sets</span></div><div style="height:12px;background:rgba(232,56,74,.12);border-radius:100px;overflow:hidden;"><div style="height:100%;width:33%;background:linear-gradient(to right,#E8384A,rgba(232,56,74,.45));border-radius:100px;"></div></div><div style="font-size:9px;color:rgba(255,255,255,.26);margin-top:3px;">sets targeted this week</div></div>
+                <div><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:15px;color:#E8384A;width:24px;">⭕</span><span style="font-size:14px;font-weight:600;flex:1;">Core</span><span style="font-size:15px;font-weight:800;color:#E8384A;">4 sets</span></div><div style="height:12px;background:rgba(232,56,74,.12);border-radius:100px;overflow:hidden;"><div style="height:100%;width:22%;background:linear-gradient(to right,#E8384A,rgba(232,56,74,.45));border-radius:100px;"></div></div><div style="font-size:9px;color:rgba(255,255,255,.26);margin-top:3px;">sets targeted this week</div></div>
+              </div>
+              <div class="tipcard">
+                <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;"><span style="font-size:12px;color:#FFB84D;">💡</span><span style="font-size:11px;font-weight:700;color:#FFB84D;">Tip</span></div>
+                <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5;">Your most trained group is <strong style="color:rgba(255,255,255,.7);">Chest</strong>. Consider adding some <strong style="color:rgba(255,255,255,.7);">legs</strong> and <strong style="color:rgba(255,255,255,.7);">core</strong> work for a balanced training week.</div>
+              </div>
+            </div>
+          </div>
+          <div class="fade" style="background:linear-gradient(to top,#1C1C1E,transparent);border-radius:0 0 52px 52px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone 5: Volume Trend -->
+    <div class="phone-wrap">
+      <span class="tag tag--sheet">Detail Sheet</span>
+      <div class="phone-label">Tap "Volume Trend"</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="sheet-bg">
+          <div class="sheet-grab"></div>
+          <div class="nav-inline"><div class="nav-placeholder"></div><div class="nav-inline-title">Volume Trend</div><div class="nav-placeholder"></div></div>
+          <div class="scroll-area">
+            <div class="sp" style="padding-top:8px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:14px;border-radius:14px;background:rgba(255,184,77,.08);border:1px solid rgba(255,184,77,.2);margin-bottom:14px;">
+                <div style="width:32px;height:32px;border-radius:8px;background:rgba(255,184,77,.15);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">📈</div>
+                <div style="font-size:14px;font-weight:500;">Trending up <strong style="color:#FFB84D;">51%</strong> over 4 weeks.</div>
+              </div>
+              <div class="card" style="margin-bottom:14px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:12px;">Volume Over Time</div>
+                <svg width="100%" height="150" viewBox="0 0 330 150" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="ag2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E8384A" stop-opacity=".32"/><stop offset="100%" stop-color="#E8384A" stop-opacity=".02"/></linearGradient>
+                    <linearGradient id="lg2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#E8384A"/><stop offset="100%" stop-color="#FF5931"/></linearGradient>
+                  </defs>
+                  <line x1="30" y1="125" x2="330" y2="125" stroke="rgba(255,255,255,.06)" stroke-width="0.5"/>
+                  <line x1="30" y1="90"  x2="330" y2="90"  stroke="rgba(255,255,255,.06)" stroke-width="0.5"/>
+                  <line x1="30" y1="55"  x2="330" y2="55"  stroke="rgba(255,255,255,.06)" stroke-width="0.5"/>
+                  <line x1="30" y1="20"  x2="330" y2="20"  stroke="rgba(255,255,255,.06)" stroke-width="0.5"/>
+                  <text x="0" y="130" font-size="9" fill="rgba(255,255,255,.3)" font-family="-apple-system,sans-serif">7k</text>
+                  <text x="0" y="58"  font-size="9" fill="rgba(255,255,255,.3)" font-family="-apple-system,sans-serif">11k</text>
+                  <text x="0" y="23"  font-size="9" fill="rgba(255,255,255,.3)" font-family="-apple-system,sans-serif">14k</text>
+                  <path d="M 60,112 L 150,94 L 240,72 L 330,40 L 330,130 L 60,130 Z" fill="url(#ag2)"/>
+                  <polyline points="60,112 150,94 240,72 330,40" fill="none" stroke="url(#lg2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="60"  cy="112" r="4" fill="#E8384A"/>
+                  <circle cx="150" cy="94"  r="4" fill="#E8384A"/>
+                  <circle cx="240" cy="72"  r="4" fill="#E8384A"/>
+                  <circle cx="330" cy="40"  r="5" fill="#FF5931"/>
+                  <text x="60"  y="148" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle" font-family="-apple-system,sans-serif">Mar 3</text>
+                  <text x="150" y="148" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle" font-family="-apple-system,sans-serif">Mar 10</text>
+                  <text x="240" y="148" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle" font-family="-apple-system,sans-serif">Mar 17</text>
+                  <text x="330" y="148" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle" font-family="-apple-system,sans-serif">Mar 24</text>
+                </svg>
+              </div>
+              <div class="card">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:10px;">Weekly Breakdown</div>
+                <div class="wrow"><span class="wlbl">Mar 3</span><div style="display:flex;align-items:center;gap:5px;"><span class="wnum">8.2k</span><span class="wunit">lbs</span></div></div>
+                <div class="wrow"><span class="wlbl">Mar 10</span><div style="display:flex;align-items:center;gap:5px;"><span class="wnum">9.8k</span><span class="wunit">lbs</span><span style="font-size:10px;font-weight:700;color:#FFB84D;">↑</span></div></div>
+                <div class="wrow"><span class="wlbl">Mar 17</span><div style="display:flex;align-items:center;gap:5px;"><span class="wnum">11.1k</span><span class="wunit">lbs</span><span style="font-size:10px;font-weight:700;color:#FFB84D;">↑</span></div></div>
+                <div class="wrow"><span class="wlbl" style="font-weight:700;color:#E8384A;">Mar 24</span><div style="display:flex;align-items:center;gap:5px;"><span class="wnum" style="font-size:17px;">12.4k</span><span class="wunit">lbs</span><span style="font-size:12px;font-weight:700;color:#FFB84D;">↑</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone 6: Weekly Recap -->
+    <div class="phone-wrap">
+      <span class="tag tag--full">Full Recap</span>
+      <div class="phone-label">Tap "View Full Recap"</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          <div class="nav-inline" style="border-bottom:none;padding-top:14px;"><div class="nav-placeholder"></div><div class="nav-inline-title">Weekly Recap</div><div class="nav-done">Done</div></div>
+          <div class="scroll-area">
+            <div class="sp">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0 14px;">
+                <svg width="80" height="80" viewBox="0 0 80 80">
+                  <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,184,77,.18)" stroke-width="5"/>
+                  <circle cx="40" cy="40" r="32" fill="none" stroke="#FFB84D" stroke-width="5" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+                  <text x="40" y="45" font-size="16" font-weight="700" fill="#FFB84D" text-anchor="middle" font-family="-apple-system,sans-serif">4/4</text>
+                </svg>
+                <div style="font-size:14px;font-weight:600;color:#FFB84D;">Goal reached! 🎉</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.38);">Mar 22 – Mar 28</div>
+              </div>
+              <div class="grid2" style="margin-bottom:12px;">
+                <div class="g2card card"><div class="g2lbl"><span style="color:#E8384A;">⚖️</span> Volume</div><span class="g2val">12.4k</span><span class="g2unit">lbs</span></div>
+                <div class="g2card card card--gold"><div class="g2lbl"><span style="color:#FFB84D;">📦</span> Sets</div><span class="g2val">48</span><span class="g2unit">total</span></div>
+                <div class="g2card card card--blue"><div class="g2lbl"><span style="color:#80A6FF;">🔄</span> Reps</div><span class="g2val">420</span><span class="g2unit">total</span></div>
+                <div class="g2card card card--teal"><div class="g2lbl"><span style="color:#4DC7B8;">⏱</span> Duration</div><span class="g2val">248</span><span class="g2unit">min</span></div>
+              </div>
+              <div class="prbadge" style="margin-bottom:12px;"><span style="font-size:22px;">🥇</span><div><div style="font-size:14px;font-weight:600;margin-bottom:2px;">2 Personal Records This Week</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Keep pushing your limits!</div></div></div>
+              <div class="card" style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:5px;"><span>🔥</span><span style="font-size:15px;font-weight:800;">12 days</span></div><div style="font-size:13px;font-weight:600;color:#FFB84D;">Best: 18</div></div>
+                <div class="day-labels"><div class="dlbl">S</div><div class="dlbl">M</div><div class="dlbl">T</div><div class="dlbl">W</div><div class="dlbl">T</div><div class="dlbl">F</div><div class="dlbl">S</div></div>
+                <div class="heatmap">
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-h"></div><div class="dot dot-e"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-h"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-h"></div>
+                  <div class="dot dot-f"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-f"></div>
+                  <div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-e"></div><div class="dot dot-f"></div><div class="dot dot-t"></div>
+                </div>
+              </div>
+              <div class="card" style="margin-bottom:12px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:10px;">4-Week Volume</div>
+                <div style="display:flex;align-items:flex-end;gap:8px;height:70px;">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;"><div style="flex:1;width:100%;display:flex;align-items:flex-end;"><div style="width:100%;height:56%;background:linear-gradient(to top,#E8384A,rgba(232,56,74,.5));border-radius:4px 4px 0 0;"></div></div><div style="font-size:8px;color:rgba(255,255,255,.32);">Mar 3</div></div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;"><div style="flex:1;width:100%;display:flex;align-items:flex-end;"><div style="width:100%;height:67%;background:linear-gradient(to top,#E8384A,rgba(232,56,74,.5));border-radius:4px 4px 0 0;"></div></div><div style="font-size:8px;color:rgba(255,255,255,.32);">Mar 10</div></div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;"><div style="flex:1;width:100%;display:flex;align-items:flex-end;"><div style="width:100%;height:80%;background:linear-gradient(to top,#E8384A,rgba(232,56,74,.5));border-radius:4px 4px 0 0;"></div></div><div style="font-size:8px;color:rgba(255,255,255,.32);">Mar 17</div></div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;"><div style="flex:1;width:100%;display:flex;align-items:flex-end;"><div style="width:100%;height:100%;background:linear-gradient(to top,#FF5931,#E8384A);border-radius:4px 4px 0 0;"></div></div><div style="font-size:8px;color:rgba(255,255,255,.32);">Mar 24</div></div>
+                </div>
+              </div>
+              <div class="card card--subtle">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:10px;">vs Last Week</div>
+                <div class="cmprow"><span class="cmplbl">Volume</span><div class="cmpdelta cup"><span style="font-size:11px;">↑</span> +18%</div></div>
+                <div class="cmprow"><span class="cmplbl">Sets</span><div class="cmpdelta cup"><span style="font-size:11px;">↑</span> +6</div></div>
+                <div class="cmprow"><span class="cmplbl">Reps</span><div class="cmpdelta cup"><span style="font-size:11px;">↑</span> +32</div></div>
+                <div class="cmprow"><span class="cmplbl">Workouts</span><div class="cmpdelta cup"><span style="font-size:11px;">↑</span> +1</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="fade" style="background:linear-gradient(to top,#0A0A0F,transparent);"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     ROW 3: Dashboard scrolled (Muscle Groups + Achievements context)
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Dashboard Scrolled · Lower Half</div>
+  <div class="phones-row">
+
+    <div class="phone-wrap">
+      <span class="tag tag--main">Stats Tab</span>
+      <div class="phone-label">Scrolled past achievements</div>
+      <div class="iphone">
+        <div class="di"></div>
+        <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><span>●●●</span><span>WiFi</span><span>▌</span></div></div>
+        <div style="height:1px;background:rgba(255,255,255,.06);flex-shrink:0;margin-top:6px;"></div>
+        <div class="scroll-area">
+          <div class="sc" style="padding-top:10px;">
+
+            <!-- Muscle Groups card (visible after scrolling past achievements) -->
+            <div class="card" style="cursor:pointer;">
+              <div class="card-hdr"><span class="card-lbl">Muscle Groups</span><span class="chevron">›</span></div>
+              <div class="mrow"><span class="mico">💪</span><span class="mname">Chest</span><div class="mtrack"><div class="mfill" style="width:100%;"></div></div><span class="mct">18</span></div>
+              <div class="mrow"><span class="mico">🏋️</span><span class="mname">Back</span><div class="mtrack"><div class="mfill" style="width:78%;"></div></div><span class="mct">14</span></div>
+              <div class="mrow"><span class="mico">🔺</span><span class="mname">Shoulders</span><div class="mtrack"><div class="mfill" style="width:56%;"></div></div><span class="mct">10</span></div>
+              <div class="mrow"><span class="mico">💪</span><span class="mname">Arms</span><div class="mtrack"><div class="mfill" style="width:44%;"></div></div><span class="mct">8</span></div>
+              <div class="mrow"><span class="mico">🦵</span><span class="mname">Legs</span><div class="mtrack"><div class="mfill" style="width:33%;"></div></div><span class="mct">6</span></div>
+            </div>
+
+            <!-- Volume trend (mini) -->
+            <div class="card" style="cursor:pointer;">
+              <div class="card-hdr"><span class="card-lbl">Volume Trend</span><span class="chevron">›</span></div>
+              <svg width="100%" height="72" viewBox="0 0 340 72" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="ag3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E8384A" stop-opacity=".28"/><stop offset="100%" stop-color="#E8384A" stop-opacity=".02"/></linearGradient>
+                  <linearGradient id="lg3" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#E8384A"/><stop offset="100%" stop-color="#FF5931"/></linearGradient>
+                </defs>
+                <path d="M 20,56 L 120,42 L 220,26 L 320,10 L 320,65 L 20,65 Z" fill="url(#ag3)"/>
+                <polyline points="20,56 120,42 220,26 320,10" fill="none" stroke="url(#lg3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="20" cy="56" r="3" fill="#E8384A"/><circle cx="120" cy="42" r="3" fill="#E8384A"/>
+                <circle cx="220" cy="26" r="3" fill="#E8384A"/><circle cx="320" cy="10" r="3.5" fill="#FF5931"/>
+                <text x="20" y="72" font-size="8" fill="rgba(255,255,255,.3)" text-anchor="middle" font-family="-apple-system,sans-serif">Mar 3</text>
+                <text x="320" y="72" font-size="8" fill="rgba(255,255,255,.3)" text-anchor="middle" font-family="-apple-system,sans-serif">Mar 24</text>
+              </svg>
+            </div>
+
+            <!-- Weekly Recap card -->
+            <div class="card">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+                <div>
+                  <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:3px;">Weekly Recap</div>
+                  <div style="font-size:12px;color:rgba(255,255,255,.38);">Mar 22 – Mar 28</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:100px;background:rgba(255,184,77,.15);">
+                  <span style="font-size:10px;color:#FFB84D;">🥇</span>
+                  <span style="font-size:11px;font-weight:600;color:#FFB84D;">2 PRs</span>
+                </div>
+              </div>
+              <div style="display:flex;gap:16px;margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:4px;"><span style="font-size:10px;color:rgba(232,56,74,.7);">🏋️</span><div><div style="font-size:12px;font-weight:700;">4</div><div style="font-size:9px;color:rgba(255,255,255,.4);">workouts</div></div></div>
+                <div style="display:flex;align-items:center;gap:4px;"><span style="font-size:10px;color:rgba(232,56,74,.7);">📦</span><div><div style="font-size:12px;font-weight:700;">48</div><div style="font-size:9px;color:rgba(255,255,255,.4);">sets</div></div></div>
+                <div style="display:flex;align-items:center;gap:4px;"><span style="font-size:10px;color:rgba(232,56,74,.7);">⚖️</span><div><div style="font-size:12px;font-weight:700;">12.4k</div><div style="font-size:9px;color:rgba(255,255,255,.4);">lbs</div></div></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:5px;padding:10px;border-radius:10px;background:rgba(232,56,74,.1);border:1px solid rgba(232,56,74,.2);">
+                <span style="font-size:14px;font-weight:500;color:#E8384A;">View Full Recap</span>
+                <span style="font-size:11px;color:#E8384A;">›</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="fade" style="background:linear-gradient(to top,#0A0A0F,transparent);"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

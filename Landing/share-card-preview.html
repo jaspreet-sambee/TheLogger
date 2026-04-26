@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Share Card Editor — Improved UX · TheLogger</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0A0A11;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    padding: 48px 40px 80px;
+    color: #fff;
+  }
+
+  /* Page headers */
+  .section-header { margin-bottom: 36px; }
+  .section-header h1 { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.28); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 4px; }
+  .section-header p  { font-size: 12px; color: rgba(255,255,255,0.16); }
+
+  .improvement-tag {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 6px; margin-bottom: 10px;
+  }
+  .tag--fix    { background: rgba(255,80,80,0.18); color: #FF7070; border: 1px solid rgba(255,80,80,0.3); }
+  .tag--ux     { background: rgba(80,160,255,0.15); color: #70AAFF; border: 1px solid rgba(80,160,255,0.25); }
+  .tag--new    { background: rgba(48,200,90,0.15); color: #5DDB7A; border: 1px solid rgba(48,200,90,0.25); }
+
+  .phones-row { display: flex; gap: 44px; align-items: flex-start; flex-wrap: wrap; }
+
+  /* ── iPhone Shell ── */
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .phone-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,0.22); text-align: center; }
+  .iphone {
+    width: 390px; height: 844px;
+    background: #1C1C1E;
+    border-radius: 52px;
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06);
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+
+  /* Dynamic Island */
+  .di { width: 126px; height: 36px; background: #000; border-radius: 0 0 22px 22px; margin: 0 auto; flex-shrink: 0; }
+
+  /* ── Sheet chrome ── */
+  .sheet-grab { width: 36px; height: 4px; background: rgba(255,255,255,0.18); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
+
+  /* Nav bar — two-line principal title */
+  .sheet-nav {
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px 18px 10px; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+    position: relative;
+  }
+  .nav-title-stack { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .nav-title  { font-size: 16px; font-weight: 700; color: #fff; }
+  .nav-sub    { font-size: 11px; font-weight: 500; }
+  .nav-sub--normal { color: rgba(255,255,255,0.42); }
+  .nav-sub--warn   { color: #FF453A; }   /* red when 1 card left */
+
+  .sheet-scroll { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 0; }
+
+  /* ── Card Preview ── */
+  .card-preview-wrap { padding: 12px 60px 0; flex-shrink: 0; }
+  /* 9:16  →  270 × 480 */
+  .share-card {
+    width: 270px; height: 480px; border-radius: 14px; overflow: hidden;
+    position: relative; box-shadow: 0 14px 36px rgba(0,0,0,0.65);
+  }
+  .card-bg    { position: absolute; inset: 0; z-index: 1; }
+  .card-grain { position: absolute; inset: 0; z-index: 2; opacity: 0.055; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .card-skel  { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; padding-bottom: 120px; }
+  .card-vignette { position: absolute; inset: 0; z-index: 3; background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 38%, rgba(0,0,0,0.65) 100%); }
+  .card-stats {
+    position: absolute; bottom: 24px; left: 14px; right: 14px; z-index: 10;
+    background: rgba(16,14,12,0.84); border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 11px; padding: 10px 13px 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .cs-exercise { font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 2px; }
+  .cs-weight   { font-size: 19px; font-weight: 900; letter-spacing: -.5px; margin-bottom: 2px; }
+  .cs-1rm      { font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+  .cs-pr-pill  { display: inline-flex; align-items: center; gap: 4px; border-radius: 5px; padding: 3px 7px; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+  .card-brand  { position: absolute; bottom: 8px; right: 14px; font-size: 7px; font-weight: 500; color: rgba(255,255,255,0.26); z-index: 11; }
+
+  /* ── Improvement 2: Inline photo swap row ── */
+  .photo-swap-row {
+    display: flex; align-items: center; gap: 0; margin: 10px 14px 0;
+    background: rgba(255,255,255,0.07); border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
+    flex-shrink: 0; position: relative;
+  }
+  .swap-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 4px; cursor: pointer;
+  }
+  .swap-btn-icon { font-size: 15px; }
+  .swap-btn-label { font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.6); }
+  .swap-divider { width: 1px; height: 28px; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+  .swap-reset {
+    font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35);
+    padding: 0 12px; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* ── Filter strip ── */
+  .strip-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); letter-spacing: .06em; text-transform: uppercase; padding: 8px 14px 3px; flex-shrink: 0; }
+  .filter-strip { display: flex; gap: 7px; padding: 2px 14px 4px; overflow: hidden; flex-shrink: 0; }
+  .ft { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+  .ft-thumb {
+    width: 38px; height: 66px; border-radius: 7px;
+    border: 1.5px solid rgba(255,255,255,0.1); overflow: hidden; position: relative;
+  }
+  .ft-thumb--sel { border-color: #fff; transform: scale(1.06); }
+  .ft-name { font-size: 7px; font-weight: 600; color: rgba(255,255,255,0.3); }
+  .ft-name--sel { color: #fff; font-weight: 700; }
+
+  /* Filter color sims */
+  .fts-cin  { background: linear-gradient(175deg, #1A1F22, #080A0C); }
+  .fts-cin::after  { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(40,80,70,.3),rgba(220,120,40,.12)); }
+  .fts-por  { background: linear-gradient(175deg, #2C2018, #140F08); }
+  .fts-por::after  { content:''; position:absolute; inset:0; background:rgba(255,200,100,.1); }
+  .fts-ble  { background: linear-gradient(175deg, #2A2828, #0F0E0E); }
+  .fts-chr  { background: linear-gradient(175deg, #1C2025, #0E1018); }
+  .fts-chr::after  { content:''; position:absolute; inset:0; background:rgba(100,140,180,.1); }
+  .fts-moo  { background: linear-gradient(175deg, #0F1222, #060810); }
+  .fts-moo::after  { content:''; position:absolute; inset:0; background:rgba(60,60,160,.15); }
+  .fts-gol  { background: linear-gradient(175deg, #241806, #100A01); }
+  .fts-gol::after  { content:''; position:absolute; inset:0; background:rgba(255,180,20,.18); }
+  .fts-gri  { background: linear-gradient(175deg, #2A2A2A, #0F0F0F); }
+  .fts-vel  { background: linear-gradient(175deg, #0A1A24, #030C10); }
+  .fts-vel::after  { content:''; position:absolute; inset:0; background:rgba(0,180,255,.2); }
+
+  /* Skel inside filter thumb */
+  .ft-skel { position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; opacity:0.55; }
+
+  /* ── Background picker ── */
+  .bg-strip { display: flex; gap: 7px; padding: 2px 14px 4px; flex-shrink: 0; }
+  .bg-item  { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .bg-swatch { width: 48px; height: 34px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,0.1); overflow:hidden; position:relative; }
+  .bg-swatch--sel { border-color: #fff; transform: scale(1.06); }
+  .bg-lbl   { font-size: 8px; font-weight: 600; color: rgba(255,255,255,0.3); }
+  .bg-lbl--sel { color: #fff; }
+  .bgs-dark { background: #000; }
+  .bgs-light { background: linear-gradient(135deg, #F0EDE8, #E8E4DE); }
+  .bgs-blur { background: linear-gradient(175deg, #1A1F22, #0E1215); }
+  .bgs-glow { background: #000; }
+  .bgs-glow::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 130% 80% at 50% 0%, rgba(234,147,48,.48), transparent 65%); }
+
+  /* ── Stat chips ── */
+  .chips-row { display: flex; gap: 5px; padding: 2px 14px 4px; flex-shrink: 0; }
+  .chip { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 100px; font-size: 10px; font-weight: 700; }
+  .chip--on  { background: #E8384A; color: #fff; }
+  .chip--off { background: rgba(232,56,74,.1); border: 1px solid rgba(232,56,74,.32); color: #E8384A; }
+  .chip-chk  { font-size: 8px; }
+
+  /* ── Improvement 5: 3-button CTA row ── */
+  .cta-row { display: flex; gap: 8px; padding: 6px 14px 20px; flex-shrink: 0; }
+  .btn-skip {
+    flex: 0 0 68px; padding: 13px 0; border-radius: 12px; text-align: center;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+    font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.45);
+  }
+  .btn-save {
+    flex: 1; padding: 13px 0; border-radius: 12px; text-align: center;
+    background: rgba(232,56,74,.12); border: 1px solid rgba(232,56,74,.28);
+    font-size: 13px; font-weight: 700; color: #E8384A;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .btn-share {
+    flex: 1.4; padding: 13px 0; border-radius: 12px; text-align: center;
+    background: #E8384A;
+    font-size: 13px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 5px 16px rgba(232,56,74,.38);
+  }
+  /* Loading state */
+  .btn-share--loading { background: rgba(232,56,74,.6); box-shadow: none; }
+  .btn-save--loading  { opacity: 0.5; }
+
+  /* Spinner (CSS only) */
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; animation: spin 0.7s linear infinite;
+  }
+  .spinner--accent { border: 2px solid rgba(232,56,74,0.25); border-top-color: #E8384A; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Improvement 5: Saved toast ── */
+  .toast-overlay {
+    position: absolute; bottom: 98px; left: 0; right: 0; display: flex; justify-content: center; z-index: 30;
+  }
+  .toast {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(40,40,50,0.94); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 100px;
+    padding: 9px 16px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+  .toast-check { color: #30D158; font-size: 15px; }
+
+  /* Section divider between row groups */
+  .phones-section { margin-top: 72px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     SECTION 1: BEFORE vs AFTER comparison
+══════════════════════════════════════════════════════ -->
+<div class="section-header">
+  <h1>Share Card Editor · UX Improvements</h1>
+  <p>Before / after comparison + new states</p>
+</div>
+
+<div class="phones-row">
+
+  <!-- ══ BEFORE (existing design) ══ -->
+  <div class="phone-wrap">
+    <div style="margin-bottom:4px"><span class="improvement-tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.35);border-color:rgba(255,255,255,0.1)">Before</span></div>
+    <div class="phone-label">Old editor — no PR badge,<br>dialog trigger, 2-button CTA</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div style="flex:1;display:flex;flex-direction:column;background:#1C1C1E;border-radius:16px 16px 0 0;margin-top:4px;overflow:hidden;">
+        <div class="sheet-grab"></div>
+        <!-- old nav: single title -->
+        <div style="display:flex;align-items:center;justify-content:center;padding:10px 18px 10px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;">
+          <span style="font-size:16px;font-weight:700;">Share Your Set</span>
+          <!-- no subtitle -->
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          <!-- card preview with floating camera icon overlay (old) -->
+          <div style="padding:12px 60px 0;flex-shrink:0;position:relative;">
+            <div class="share-card">
+              <div class="card-bg" style="background:linear-gradient(165deg,#12181C,#080A0C);">
+                <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 38%,rgba(200,90,30,.1) 0%,transparent 65%);"></div>
+              </div>
+              <div class="card-grain"></div>
+              <div class="card-skel">
+                <svg width="170" height="200" viewBox="0 0 240 290" fill="none" style="opacity:.55;filter:drop-shadow(0 0 10px rgba(234,147,48,.5))">
+                  <circle cx="120" cy="42" r="22" stroke="#EA9430" stroke-width="2.5"/>
+                  <line x1="120" y1="64" x2="120" y2="128" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="54" y1="92" x2="186" y2="92" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="54" y1="92" x2="30" y2="44" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="30" y1="44" x2="22" y2="24" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="186" y1="92" x2="210" y2="44" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="210" y1="44" x2="218" y2="24" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="84" y1="128" x2="156" y2="128" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="84" y1="128" x2="68" y2="208" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="68" y1="208" x2="54" y2="256" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="156" y1="128" x2="172" y2="208" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="172" y1="208" x2="186" y2="256" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="0" y1="22" x2="240" y2="22" stroke="rgba(234,147,48,.45)" stroke-width="4" stroke-linecap="round"/>
+                  <rect x="4" y="10" width="14" height="24" rx="3" stroke="rgba(234,147,48,.38)" stroke-width="2" fill="none"/>
+                  <rect x="222" y="10" width="14" height="24" rx="3" stroke="rgba(234,147,48,.38)" stroke-width="2" fill="none"/>
+                  <circle cx="54" cy="92" r="5" fill="#EA9430" opacity=".9"/><circle cx="186" cy="92" r="5" fill="#EA9430" opacity=".9"/>
+                  <circle cx="30" cy="44" r="4" fill="#EA9430" opacity=".8"/><circle cx="210" cy="44" r="4" fill="#EA9430" opacity=".8"/>
+                  <circle cx="84" cy="128" r="5" fill="#EA9430" opacity=".9"/><circle cx="156" cy="128" r="5" fill="#EA9430" opacity=".9"/>
+                  <circle cx="68" cy="208" r="4.5" fill="#EA9430" opacity=".85"/><circle cx="172" cy="208" r="4.5" fill="#EA9430" opacity=".85"/>
+                </svg>
+              </div>
+              <div class="card-vignette"></div>
+              <!-- OLD: no PR badge shown (bug) -->
+              <div class="card-stats">
+                <div class="cs-exercise">BENCH PRESS</div>
+                <div class="cs-weight" style="color:#EA9430">225 lbs × 8</div>
+                <div class="cs-1rm">est. 1RM · 285 lbs</div>
+                <!-- No PR pill — isPR always false bug -->
+                <div style="font-size:9px;color:rgba(255,255,255,0.2);font-style:italic;">PR badge missing (bug)</div>
+              </div>
+              <div class="card-brand">TheLogger</div>
+            </div>
+            <!-- Old floating camera icon (requires confirmation dialog) -->
+            <div style="position:absolute;top:18px;right:66px;width:28px;height:28px;border-radius:50%;background:rgba(60,60,80,.75);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:12px;z-index:20;">📷</div>
+          </div>
+          <!-- old: no photo swap row -->
+          <div style="padding:8px 14px 0;flex-shrink:0;">
+            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.28);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">FILTER</div>
+            <div style="display:flex;gap:7px;overflow:hidden;">
+              <div class="ft"><div class="ft-thumb fts-cin ft-thumb--sel"><div class="ft-skel"><svg width="18" height="32" viewBox="0 0 240 290" fill="none" opacity=".7"><circle cx="120" cy="42" r="22" stroke="#EA9430" stroke-width="8"/><line x1="54" y1="92" x2="186" y2="92" stroke="#EA9430" stroke-width="8"/><line x1="120" y1="64" x2="120" y2="180" stroke="#EA9430" stroke-width="8"/></svg></div></div><span class="ft-name ft-name--sel">CIN</span></div>
+              <div class="ft"><div class="ft-thumb fts-por"></div><span class="ft-name">POR</span></div>
+              <div class="ft"><div class="ft-thumb fts-ble"></div><span class="ft-name">BLE</span></div>
+              <div class="ft"><div class="ft-thumb fts-chr"></div><span class="ft-name">CHR</span></div>
+              <div class="ft"><div class="ft-thumb fts-moo"></div><span class="ft-name">MOO</span></div>
+              <div class="ft"><div class="ft-thumb fts-gol"></div><span class="ft-name">GOL</span></div>
+              <div class="ft"><div class="ft-thumb fts-gri"></div><span class="ft-name">GRI</span></div>
+              <div class="ft"><div class="ft-thumb fts-vel"></div><span class="ft-name">VEL</span></div>
+            </div>
+          </div>
+          <!-- bg picker -->
+          <div style="padding:6px 14px 0;flex-shrink:0;">
+            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.28);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">BACKGROUND</div>
+            <div style="display:flex;gap:7px;">
+              <div class="bg-item"><div class="bg-swatch bgs-dark bg-swatch--sel"></div><span class="bg-lbl bg-lbl--sel">Dark</span></div>
+              <div class="bg-item"><div class="bg-swatch bgs-light"></div><span class="bg-lbl">Light</span></div>
+              <div class="bg-item"><div class="bg-swatch bgs-blur"></div><span class="bg-lbl">Blur</span></div>
+              <div class="bg-item"><div class="bg-swatch bgs-glow"></div><span class="bg-lbl">Glow</span></div>
+            </div>
+          </div>
+          <!-- chips -->
+          <div style="padding:6px 14px 0;flex-shrink:0;display:flex;gap:5px;">
+            <div class="chip chip--on"><span class="chip-chk">✓</span> Exercise</div>
+            <div class="chip chip--on"><span class="chip-chk">✓</span> Wt × Reps</div>
+            <div class="chip chip--on"><span class="chip-chk">✓</span> 1RM</div>
+            <div class="chip chip--off">Date</div>
+          </div>
+          <!-- OLD: 2-button CTA -->
+          <div style="display:flex;gap:8px;padding:8px 14px 20px;flex-shrink:0;">
+            <div class="btn-skip">Skip</div>
+            <div class="btn-share" style="flex:2;">↑ Share</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ AFTER: Improved editor — default state ══ -->
+  <div class="phone-wrap">
+    <div style="margin-bottom:4px">
+      <span class="improvement-tag tag--fix">Bug fix · isPR</span>
+      <span class="improvement-tag tag--ux" style="margin-left:4px">Inline photo swap</span>
+      <span class="improvement-tag tag--new" style="margin-left:4px">Save + 3-btn CTA</span>
+    </div>
+    <div class="phone-label">After — PR badge, photo row,<br>Skip · Save · Share</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div style="flex:1;display:flex;flex-direction:column;background:#1C1C1E;border-radius:16px 16px 0 0;margin-top:4px;overflow:hidden;">
+        <div class="sheet-grab"></div>
+        <!-- IMPROVED NAV: two-line title + remaining badge (improvement 3) -->
+        <div class="sheet-nav">
+          <div class="nav-title-stack">
+            <span class="nav-title">Share Your Set</span>
+            <span class="nav-sub nav-sub--normal">2 cards left this month</span>
+          </div>
+        </div>
+        <div class="sheet-scroll">
+          <!-- Card preview — NO floating camera button overlay anymore -->
+          <div class="card-preview-wrap">
+            <div class="share-card">
+              <div class="card-bg" style="background:linear-gradient(165deg,#12181C,#080A0C);">
+                <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 38%,rgba(200,90,30,.12) 0%,transparent 65%);"></div>
+              </div>
+              <div class="card-grain"></div>
+              <div class="card-skel">
+                <svg width="170" height="200" viewBox="0 0 240 290" fill="none" style="opacity:.58;filter:drop-shadow(0 0 10px rgba(234,147,48,.55))">
+                  <circle cx="120" cy="42" r="22" stroke="#EA9430" stroke-width="2.5"/>
+                  <line x1="120" y1="64" x2="120" y2="128" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="54" y1="92" x2="186" y2="92" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="54" y1="92" x2="30" y2="44" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="30" y1="44" x2="22" y2="24" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="186" y1="92" x2="210" y2="44" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="210" y1="44" x2="218" y2="24" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="84" y1="128" x2="156" y2="128" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="84" y1="128" x2="68" y2="208" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="68" y1="208" x2="54" y2="256" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="156" y1="128" x2="172" y2="208" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="172" y1="208" x2="186" y2="256" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="0" y1="22" x2="240" y2="22" stroke="rgba(234,147,48,.45)" stroke-width="4" stroke-linecap="round"/>
+                  <rect x="4" y="10" width="14" height="24" rx="3" stroke="rgba(234,147,48,.38)" stroke-width="2" fill="none"/>
+                  <rect x="222" y="10" width="14" height="24" rx="3" stroke="rgba(234,147,48,.38)" stroke-width="2" fill="none"/>
+                  <circle cx="54" cy="92" r="5" fill="#EA9430" opacity=".9"/><circle cx="186" cy="92" r="5" fill="#EA9430" opacity=".9"/>
+                  <circle cx="30" cy="44" r="4" fill="#EA9430" opacity=".8"/><circle cx="210" cy="44" r="4" fill="#EA9430" opacity=".8"/>
+                  <circle cx="84" cy="128" r="5" fill="#EA9430" opacity=".9"/><circle cx="156" cy="128" r="5" fill="#EA9430" opacity=".9"/>
+                  <circle cx="68" cy="208" r="4.5" fill="#EA9430" opacity=".85"/><circle cx="172" cy="208" r="4.5" fill="#EA9430" opacity=".85"/>
+                </svg>
+              </div>
+              <div class="card-vignette"></div>
+              <!-- FIXED: PR badge now shows when isPR = true -->
+              <div class="card-stats">
+                <div class="cs-exercise">BENCH PRESS</div>
+                <div class="cs-weight" style="color:#EA9430">225 lbs × 8</div>
+                <div class="cs-1rm">est. 1RM · 285 lbs</div>
+                <div class="cs-pr-pill" style="background:#EA9430;color:#120F0C">🏆 NEW PR</div>
+              </div>
+              <div class="card-brand">TheLogger</div>
+            </div>
+          </div>
+
+          <!-- IMPROVED: Inline photo swap row (improvement 2) -->
+          <div class="photo-swap-row">
+            <div class="swap-btn">
+              <span class="swap-btn-icon">📷</span>
+              <span class="swap-btn-label">Camera</span>
+            </div>
+            <div class="swap-divider"></div>
+            <div class="swap-btn">
+              <span class="swap-btn-icon">🤳</span>
+              <span class="swap-btn-label">Selfie</span>
+            </div>
+            <div class="swap-divider"></div>
+            <div class="swap-btn">
+              <span class="swap-btn-icon">🖼</span>
+              <span class="swap-btn-label">Library</span>
+            </div>
+            <div class="swap-reset">Reset</div>
+          </div>
+
+          <!-- Filter strip -->
+          <div class="strip-label">Filter</div>
+          <div class="filter-strip">
+            <div class="ft"><div class="ft-thumb fts-cin ft-thumb--sel"><div class="ft-skel"><svg width="18" height="32" viewBox="0 0 240 290" fill="none" opacity=".7"><circle cx="120" cy="42" r="22" stroke="#EA9430" stroke-width="8"/><line x1="54" y1="92" x2="186" y2="92" stroke="#EA9430" stroke-width="8"/><line x1="120" y1="64" x2="120" y2="180" stroke="#EA9430" stroke-width="8"/></svg></div></div><span class="ft-name ft-name--sel">CIN</span></div>
+            <div class="ft"><div class="ft-thumb fts-por"></div><span class="ft-name">POR</span></div>
+            <div class="ft"><div class="ft-thumb fts-ble"></div><span class="ft-name">BLE</span></div>
+            <div class="ft"><div class="ft-thumb fts-chr"></div><span class="ft-name">CHR</span></div>
+            <div class="ft"><div class="ft-thumb fts-moo"></div><span class="ft-name">MOO</span></div>
+            <div class="ft"><div class="ft-thumb fts-gol"></div><span class="ft-name">GOL</span></div>
+            <div class="ft"><div class="ft-thumb fts-gri"></div><span class="ft-name">GRI</span></div>
+            <div class="ft"><div class="ft-thumb fts-vel"></div><span class="ft-name">VEL</span></div>
+          </div>
+
+          <!-- Background picker -->
+          <div class="strip-label">Background</div>
+          <div class="bg-strip">
+            <div class="bg-item"><div class="bg-swatch bgs-dark bg-swatch--sel"></div><span class="bg-lbl bg-lbl--sel">Dark</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-light"></div><span class="bg-lbl">Light</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-blur"></div><span class="bg-lbl">Blur</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-glow"></div><span class="bg-lbl">Glow</span></div>
+          </div>
+
+          <!-- Stat chips -->
+          <div class="strip-label">Stats</div>
+          <div class="chips-row">
+            <div class="chip chip--on"><span class="chip-chk">✓</span> Exercise</div>
+            <div class="chip chip--on"><span class="chip-chk">✓</span> Wt × Reps</div>
+            <div class="chip chip--on"><span class="chip-chk">✓</span> 1RM</div>
+            <div class="chip chip--off">Date</div>
+          </div>
+
+          <!-- IMPROVED: Skip · Save · Share (improvement 5) -->
+          <div class="cta-row">
+            <div class="btn-skip">Skip</div>
+            <div class="btn-save"><span style="font-size:12px;">↓</span> Save</div>
+            <div class="btn-share"><span style="font-size:12px;">↑</span> Share</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Rendering / loading state (improvement 4) ══ -->
+  <div class="phone-wrap">
+    <div style="margin-bottom:4px"><span class="improvement-tag tag--ux">Async render · spinner</span></div>
+    <div class="phone-label">While rendering card<br>(Share tapped, 200–400ms)</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div style="flex:1;display:flex;flex-direction:column;background:#1C1C1E;border-radius:16px 16px 0 0;margin-top:4px;overflow:hidden;">
+        <div class="sheet-grab"></div>
+        <div class="sheet-nav">
+          <div class="nav-title-stack">
+            <span class="nav-title">Share Your Set</span>
+            <span class="nav-sub nav-sub--normal">2 cards left this month</span>
+          </div>
+        </div>
+        <div class="sheet-scroll">
+          <div class="card-preview-wrap">
+            <div class="share-card">
+              <div class="card-bg" style="background:linear-gradient(165deg,#12181C,#080A0C);"></div>
+              <div class="card-grain"></div>
+              <div class="card-skel">
+                <svg width="170" height="200" viewBox="0 0 240 290" fill="none" style="opacity:.55;filter:drop-shadow(0 0 10px rgba(234,147,48,.5))">
+                  <circle cx="120" cy="42" r="22" stroke="#EA9430" stroke-width="2.5"/>
+                  <line x1="120" y1="64" x2="120" y2="128" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="54" y1="92" x2="186" y2="92" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="54" y1="92" x2="30" y2="44" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="30" y1="44" x2="22" y2="24" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="186" y1="92" x2="210" y2="44" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="210" y1="44" x2="218" y2="24" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="84" y1="128" x2="156" y2="128" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="84" y1="128" x2="68" y2="208" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="68" y1="208" x2="54" y2="256" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="156" y1="128" x2="172" y2="208" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="172" y1="208" x2="186" y2="256" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="0" y1="22" x2="240" y2="22" stroke="rgba(234,147,48,.45)" stroke-width="4" stroke-linecap="round"/>
+                  <rect x="4" y="10" width="14" height="24" rx="3" stroke="rgba(234,147,48,.38)" stroke-width="2" fill="none"/>
+                  <rect x="222" y="10" width="14" height="24" rx="3" stroke="rgba(234,147,48,.38)" stroke-width="2" fill="none"/>
+                  <circle cx="54" cy="92" r="5" fill="#EA9430" opacity=".9"/><circle cx="186" cy="92" r="5" fill="#EA9430" opacity=".9"/>
+                  <circle cx="84" cy="128" r="5" fill="#EA9430" opacity=".9"/><circle cx="156" cy="128" r="5" fill="#EA9430" opacity=".9"/>
+                  <circle cx="68" cy="208" r="4.5" fill="#EA9430" opacity=".85"/><circle cx="172" cy="208" r="4.5" fill="#EA9430" opacity=".85"/>
+                </svg>
+              </div>
+              <div class="card-vignette"></div>
+              <div class="card-stats">
+                <div class="cs-exercise">BENCH PRESS</div>
+                <div class="cs-weight" style="color:#EA9430">225 lbs × 8</div>
+                <div class="cs-1rm">est. 1RM · 285 lbs</div>
+                <div class="cs-pr-pill" style="background:#EA9430;color:#120F0C">🏆 NEW PR</div>
+              </div>
+              <div class="card-brand">TheLogger</div>
+            </div>
+          </div>
+          <div class="photo-swap-row">
+            <div class="swap-btn"><span class="swap-btn-icon">📷</span><span class="swap-btn-label">Camera</span></div>
+            <div class="swap-divider"></div>
+            <div class="swap-btn"><span class="swap-btn-icon">🤳</span><span class="swap-btn-label">Selfie</span></div>
+            <div class="swap-divider"></div>
+            <div class="swap-btn"><span class="swap-btn-icon">🖼</span><span class="swap-btn-label">Library</span></div>
+            <div class="swap-reset">Reset</div>
+          </div>
+          <div class="strip-label">Filter</div>
+          <div class="filter-strip">
+            <div class="ft"><div class="ft-thumb fts-cin ft-thumb--sel"><div class="ft-skel"><svg width="18" height="32" viewBox="0 0 240 290" fill="none" opacity=".7"><circle cx="120" cy="42" r="22" stroke="#EA9430" stroke-width="8"/><line x1="54" y1="92" x2="186" y2="92" stroke="#EA9430" stroke-width="8"/><line x1="120" y1="64" x2="120" y2="180" stroke="#EA9430" stroke-width="8"/></svg></div></div><span class="ft-name ft-name--sel">CIN</span></div>
+            <div class="ft"><div class="ft-thumb fts-por"></div><span class="ft-name">POR</span></div>
+            <div class="ft"><div class="ft-thumb fts-ble"></div><span class="ft-name">BLE</span></div>
+            <div class="ft"><div class="ft-thumb fts-chr"></div><span class="ft-name">CHR</span></div>
+            <div class="ft"><div class="ft-thumb fts-moo"></div><span class="ft-name">MOO</span></div>
+            <div class="ft"><div class="ft-thumb fts-gol"></div><span class="ft-name">GOL</span></div>
+            <div class="ft"><div class="ft-thumb fts-gri"></div><span class="ft-name">GRI</span></div>
+            <div class="ft"><div class="ft-thumb fts-vel"></div><span class="ft-name">VEL</span></div>
+          </div>
+          <div class="strip-label">Background</div>
+          <div class="bg-strip">
+            <div class="bg-item"><div class="bg-swatch bgs-dark bg-swatch--sel"></div><span class="bg-lbl bg-lbl--sel">Dark</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-light"></div><span class="bg-lbl">Light</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-blur"></div><span class="bg-lbl">Blur</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-glow"></div><span class="bg-lbl">Glow</span></div>
+          </div>
+          <div class="strip-label">Stats</div>
+          <div class="chips-row">
+            <div class="chip chip--on"><span class="chip-chk">✓</span> Exercise</div>
+            <div class="chip chip--on"><span class="chip-chk">✓</span> Wt × Reps</div>
+            <div class="chip chip--on"><span class="chip-chk">✓</span> 1RM</div>
+            <div class="chip chip--off">Date</div>
+          </div>
+          <!-- Loading state: Share shows spinner, Skip & Save disabled -->
+          <div class="cta-row">
+            <div class="btn-skip" style="opacity:0.4;">Skip</div>
+            <div class="btn-save btn-save--loading">
+              <div class="spinner spinner--accent"></div> Save
+            </div>
+            <div class="btn-share btn-share--loading">
+              <div class="spinner"></div> Share
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Saved toast state (improvement 5) ══ -->
+  <div class="phone-wrap">
+    <div style="margin-bottom:4px">
+      <span class="improvement-tag tag--new">Save to Photos toast</span>
+      <span class="improvement-tag tag--ux" style="margin-left:4px">Low cards · red badge</span>
+    </div>
+    <div class="phone-label">After tapping Save · 1 card left<br>(red urgency badge)</div>
+    <div class="iphone">
+      <div class="di"></div>
+      <div style="flex:1;display:flex;flex-direction:column;background:#1C1C1E;border-radius:16px 16px 0 0;margin-top:4px;overflow:hidden;position:relative;">
+        <div class="sheet-grab"></div>
+        <!-- RED badge: 1 card left -->
+        <div class="sheet-nav">
+          <div class="nav-title-stack">
+            <span class="nav-title">Share Your Set</span>
+            <span class="nav-sub nav-sub--warn">1 card left this month</span>
+          </div>
+        </div>
+        <div class="sheet-scroll">
+          <div class="card-preview-wrap">
+            <div class="share-card">
+              <div class="card-bg" style="background:linear-gradient(165deg,#12181C,#080A0C);"></div>
+              <div class="card-grain"></div>
+              <div class="card-skel">
+                <svg width="170" height="200" viewBox="0 0 240 290" fill="none" style="opacity:.58;filter:drop-shadow(0 0 10px rgba(234,147,48,.55))">
+                  <circle cx="120" cy="42" r="22" stroke="#EA9430" stroke-width="2.5"/>
+                  <line x1="120" y1="64" x2="120" y2="128" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="54" y1="92" x2="186" y2="92" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="54" y1="92" x2="30" y2="44" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="30" y1="44" x2="22" y2="24" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="186" y1="92" x2="210" y2="44" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="210" y1="44" x2="218" y2="24" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="84" y1="128" x2="156" y2="128" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="84" y1="128" x2="68" y2="208" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="68" y1="208" x2="54" y2="256" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="156" y1="128" x2="172" y2="208" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="172" y1="208" x2="186" y2="256" stroke="#EA9430" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="0" y1="22" x2="240" y2="22" stroke="rgba(234,147,48,.45)" stroke-width="4" stroke-linecap="round"/>
+                  <rect x="4" y="10" width="14" height="24" rx="3" stroke="rgba(234,147,48,.38)" stroke-width="2" fill="none"/>
+                  <rect x="222" y="10" width="14" height="24" rx="3" stroke="rgba(234,147,48,.38)" stroke-width="2" fill="none"/>
+                  <circle cx="54" cy="92" r="5" fill="#EA9430" opacity=".9"/><circle cx="186" cy="92" r="5" fill="#EA9430" opacity=".9"/>
+                  <circle cx="84" cy="128" r="5" fill="#EA9430" opacity=".9"/><circle cx="156" cy="128" r="5" fill="#EA9430" opacity=".9"/>
+                  <circle cx="68" cy="208" r="4.5" fill="#EA9430" opacity=".85"/><circle cx="172" cy="208" r="4.5" fill="#EA9430" opacity=".85"/>
+                </svg>
+              </div>
+              <div class="card-vignette"></div>
+              <div class="card-stats">
+                <div class="cs-exercise">BENCH PRESS</div>
+                <div class="cs-weight" style="color:#EA9430">225 lbs × 8</div>
+                <div class="cs-1rm">est. 1RM · 285 lbs</div>
+                <div class="cs-pr-pill" style="background:#EA9430;color:#120F0C">🏆 NEW PR</div>
+              </div>
+              <div class="card-brand">TheLogger</div>
+            </div>
+          </div>
+          <div class="photo-swap-row">
+            <div class="swap-btn"><span class="swap-btn-icon">📷</span><span class="swap-btn-label">Camera</span></div>
+            <div class="swap-divider"></div>
+            <div class="swap-btn"><span class="swap-btn-icon">🤳</span><span class="swap-btn-label">Selfie</span></div>
+            <div class="swap-divider"></div>
+            <div class="swap-btn"><span class="swap-btn-icon">🖼</span><span class="swap-btn-label">Library</span></div>
+            <div class="swap-reset">Reset</div>
+          </div>
+          <div class="strip-label">Filter</div>
+          <div class="filter-strip">
+            <div class="ft"><div class="ft-thumb fts-cin ft-thumb--sel"><div class="ft-skel"><svg width="18" height="32" viewBox="0 0 240 290" fill="none" opacity=".7"><circle cx="120" cy="42" r="22" stroke="#EA9430" stroke-width="8"/><line x1="54" y1="92" x2="186" y2="92" stroke="#EA9430" stroke-width="8"/><line x1="120" y1="64" x2="120" y2="180" stroke="#EA9430" stroke-width="8"/></svg></div></div><span class="ft-name ft-name--sel">CIN</span></div>
+            <div class="ft"><div class="ft-thumb fts-por"></div><span class="ft-name">POR</span></div>
+            <div class="ft"><div class="ft-thumb fts-ble"></div><span class="ft-name">BLE</span></div>
+            <div class="ft"><div class="ft-thumb fts-chr"></div><span class="ft-name">CHR</span></div>
+            <div class="ft"><div class="ft-thumb fts-moo"></div><span class="ft-name">MOO</span></div>
+            <div class="ft"><div class="ft-thumb fts-gol"></div><span class="ft-name">GOL</span></div>
+            <div class="ft"><div class="ft-thumb fts-gri"></div><span class="ft-name">GRI</span></div>
+            <div class="ft"><div class="ft-thumb fts-vel"></div><span class="ft-name">VEL</span></div>
+          </div>
+          <div class="strip-label">Background</div>
+          <div class="bg-strip">
+            <div class="bg-item"><div class="bg-swatch bgs-dark bg-swatch--sel"></div><span class="bg-lbl bg-lbl--sel">Dark</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-light"></div><span class="bg-lbl">Light</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-blur"></div><span class="bg-lbl">Blur</span></div>
+            <div class="bg-item"><div class="bg-swatch bgs-glow"></div><span class="bg-lbl">Glow</span></div>
+          </div>
+          <div class="strip-label">Stats</div>
+          <div class="chips-row">
+            <div class="chip chip--on"><span class="chip-chk">✓</span> Exercise</div>
+            <div class="chip chip--on"><span class="chip-chk">✓</span> Wt × Reps</div>
+            <div class="chip chip--on"><span class="chip-chk">✓</span> 1RM</div>
+            <div class="chip chip--off">Date</div>
+          </div>
+          <div class="cta-row">
+            <div class="btn-skip">Skip</div>
+            <div class="btn-save">↓ Save</div>
+            <div class="btn-share">↑ Share</div>
+          </div>
+        </div>
+
+        <!-- Toast overlay: "Saved to Photos ✓" -->
+        <div class="toast-overlay">
+          <div class="toast">
+            <span class="toast-check">✓</span>
+            <span>Saved to Photos</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /phones-row -->
+
+</body>
+</html>

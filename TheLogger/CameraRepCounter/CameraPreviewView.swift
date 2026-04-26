@@ -178,30 +178,152 @@ final class CameraViewController: UIViewController {
     private let motionManager = CMMotionManager()
     private var deviceIsTooFlat = false
 
+    // MARK: - Simulator Video Feed
+
+    #if targetEnvironment(simulator)
+    private var videoPlayer: AVPlayer?
+    private var videoPlayerLayer: AVPlayerLayer?
+    private var videoDisplayLink: CADisplayLink?
+    private var videoOutput: AVPlayerItemVideoOutput?
+
+    private func setupVideoFeed() {
+        guard let url = Bundle.main.url(forResource: "test_camera_feed", withExtension: "mp4")
+                ?? Bundle.main.url(forResource: "test_camera_feed", withExtension: "MP4") else {
+            debugLog("[CameraVC] No test_camera_feed.mp4 found in bundle — simulator camera won't work")
+            return
+        }
+
+        let outputSettings: [String: Any] = [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+        ]
+        let output = AVPlayerItemVideoOutput(pixelBufferAttributes: outputSettings)
+        self.videoOutput = output
+
+        let item = AVPlayerItem(url: url)
+        item.add(output)
+
+        let player = AVPlayer(playerItem: item)
+        self.videoPlayer = player
+
+        let playerLayer = AVPlayerLayer(player: player)
+        playerLayer.videoGravity = .resizeAspectFill
+        playerLayer.frame = view.bounds
+        view.layer.addSublayer(playerLayer)
+        self.videoPlayerLayer = playerLayer
+
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
+        ) { [weak self] _ in
+            self?.videoPlayer?.seek(to: .zero)
+            self?.videoPlayer?.play()
+        }
+    }
+
+    private func startVideoFeed() {
+        videoPlayer?.play()
+        let link = CADisplayLink(target: self, selector: #selector(readVideoFrame))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 24, maximum: 30)
+        link.add(to: .main, forMode: .common)
+        self.videoDisplayLink = link
+    }
+
+    private func stopVideoFeed() {
+        videoDisplayLink?.invalidate()
+        videoDisplayLink = nil
+        videoPlayer?.pause()
+    }
+
+    /// Simulates squat rep angles since Vision pose detection model is missing on simulator.
+    /// Oscillates between 160° (standing) and 70° (bottom) on a ~3-second cycle.
+    private var simStartTime: Date?
+
+    @objc private func readVideoFrame() {
+        guard let output = videoOutput else { return }
+        let time = videoPlayer?.currentTime() ?? .zero
+        guard output.hasNewPixelBuffer(forItemTime: time) else { return }
+        guard let pixelBuffer = output.copyPixelBuffer(forItemTime: time, itemTimeForDisplay: nil) else { return }
+
+        // Cache pixel buffer for peak contraction snapshot
+        pixelBufferLock.lock()
+        latestPixelBuffer = pixelBuffer
+        pixelBufferLock.unlock()
+
+        // Simulate pose detection with synthetic angle data (Vision model unavailable on simulator)
+        if simStartTime == nil { simStartTime = Date() }
+        let elapsed = Date().timeIntervalSince(simStartTime!)
+
+        // Sine wave: 3-second rep cycle. Standing=160°, bottom=70°.
+        let mid = 115.0
+        let amp = 45.0
+        let angle = mid + amp * cos(elapsed * 2.0 * .pi / 3.0)
+        let confidence = 0.85
+
+        // Build a fake pose for the overlay (center of frame)
+        let fakePose = DetectedPose(
+            joints: [
+                .nose: CGPoint(x: 0.5, y: 0.15),
+                .neck: CGPoint(x: 0.5, y: 0.22),
+                .leftShoulder: CGPoint(x: 0.42, y: 0.25),
+                .rightShoulder: CGPoint(x: 0.58, y: 0.25),
+                .leftHip: CGPoint(x: 0.44, y: 0.48),
+                .rightHip: CGPoint(x: 0.56, y: 0.48),
+                .leftKnee: CGPoint(x: 0.43, y: 0.68),
+                .rightKnee: CGPoint(x: 0.57, y: 0.68),
+                .leftAnkle: CGPoint(x: 0.43, y: 0.88),
+                .rightAnkle: CGPoint(x: 0.57, y: 0.88),
+            ],
+            confidence: Float(confidence)
+        )
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.poseOverlayView?.pose = fakePose
+            self.delegate?.cameraViewController(self, didDetectPose: fakePose)
+            self.delegate?.cameraViewController(self, didDetectAngle: angle, confidence: confidence)
+        }
+    }
+    #endif
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
+        #if targetEnvironment(simulator)
+        setupVideoFeed()
+        #else
         setupCamera()
+        #endif
         setupOverlay()
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        #if targetEnvironment(simulator)
+        startVideoFeed()
+        #else
         startSession()
         startMotionUpdates()
+        #endif
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        #if targetEnvironment(simulator)
+        stopVideoFeed()
+        #else
         stopSession()
         motionManager.stopDeviceMotionUpdates()
+        #endif
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        #if targetEnvironment(simulator)
+        videoPlayerLayer?.frame = view.bounds
+        #else
         previewLayer?.frame = view.bounds
+        #endif
         poseOverlayView?.frame = view.bounds
     }
 

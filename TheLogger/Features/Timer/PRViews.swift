@@ -16,48 +16,49 @@ struct PRHomeWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "medal.fill")
-                    .font(.system(.subheadline, weight: .semibold))
-                    .foregroundStyle(.yellow)
-
-                Text("Recent PRs")
-                    .font(.system(.title3, weight: .bold))
-                    .foregroundStyle(.primary)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
+                        Text("🏆")
+                            .font(.system(size: 14))
+                        Text("Personal Records")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(AppColors.accentGold.opacity(0.9))
+                    }
+                    if !recentPRs.isEmpty {
+                        Text("\(recentPRs.count) PR\(recentPRs.count == 1 ? "" : "s") tracked")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.30))
+                    }
+                }
 
                 Spacer()
 
                 NavigationLink {
                     PRTimelineView()
                 } label: {
-                    HStack(spacing: 4) {
-                        Text("All")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(AppColors.accent)
-                    }
+                    Text("All →")
+                        .font(.system(.caption, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.28))
                 }
                 .fixedSize(horizontal: true, vertical: false)
+                .padding(.top, 2)
             }
             .padding(.horizontal, 16)
 
             if recentPRs.isEmpty {
                 // Empty state
-                VStack(spacing: 12) {
-                    Image(systemName: "medal")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.secondary.opacity(0.5))
-
-                    Text("No PRs Yet")
-                        .font(.system(.headline, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    Text("Complete your first workout to start tracking PRs!")
-                        .font(.system(.subheadline))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                HStack(spacing: 10) {
+                    Image(systemName: "trophy")
+                        .font(.system(.body))
+                        .foregroundStyle(AppColors.accentGold.opacity(0.4))
+                    Text("Complete a workout to start tracking PRs")
+                        .font(.system(.caption, weight: .regular))
+                        .foregroundStyle(Color.white.opacity(0.30))
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 4)
             } else {
                 VStack(spacing: 8) {
                     ForEach(recentPRs.prefix(3)) { pr in
@@ -69,8 +70,17 @@ struct PRHomeWidgetView: View {
         }
         .padding(.vertical, 16)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.06))
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(AppColors.accentGold.opacity(0.05))
+                Circle()
+                    .fill(AppColors.accentGold.opacity(0.12))
+                    .frame(width: 120, height: 120)
+                    .blur(radius: 30)
+                    .offset(x: 10, y: -30)
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(AppColors.accentGold.opacity(0.14), lineWidth: 1)
+            }
         )
         .onAppear {
             loadRecentPRs()
@@ -91,66 +101,39 @@ struct PRCompactCard: View {
     let pr: PREntry
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Trophy icon
-            Image(systemName: "medal.fill")
-                .font(.system(.body))
-                .foregroundStyle(.yellow)
-                .frame(width: 24)
-
-            // Exercise info
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .center, spacing: 12) {
+            // Left: exercise name + date
+            VStack(alignment: .leading, spacing: 3) {
                 Text(pr.displayName)
-                    .font(.system(.subheadline, weight: .medium))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.85))
+                    .lineLimit(1)
 
-                HStack(spacing: 6) {
-                    if pr.isBodyweight {
-                        Text("BW × \(pr.reps)")
-                            .font(.system(.caption, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(UnitFormatter.formatWeightCompact(pr.weight, showUnit: true))
-                            .font(.system(.caption, weight: .medium))
-                            .foregroundStyle(.secondary)
-
-                        Text("×")
-                            .font(.system(.caption))
-                            .foregroundStyle(.tertiary)
-
-                        Text("\(pr.reps)")
-                            .font(.system(.caption, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Text("•")
-                        .font(.system(.caption))
-                        .foregroundStyle(.tertiary)
-
-                    Text(pr.relativeTimeString)
-                        .font(.system(.caption))
-                        .foregroundStyle(.tertiary)
-                }
+                Text(pr.relativeTimeString)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.28))
             }
 
             Spacer()
 
-            if pr.isStale {
-                Image(systemName: "clock")
-                    .font(.caption)
-                    .foregroundStyle(AppColors.accent)
+            // Right: weight in gold + reps below
+            VStack(alignment: .trailing, spacing: 3) {
+                if pr.isBodyweight {
+                    Text("BW")
+                        .font(.system(size: 15, weight: .heavy))
+                        .foregroundStyle(AppColors.accentGold.opacity(0.9))
+                } else {
+                    Text(UnitFormatter.formatWeightCompact(pr.weight, showUnit: true))
+                        .font(.system(size: 15, weight: .heavy))
+                        .foregroundStyle(AppColors.accentGold.opacity(0.9))
+                }
+
+                Text("× \(pr.reps)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppColors.accentGold.opacity(0.55))
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.systemGray6).opacity(0.3))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(.systemGray4).opacity(0.35), lineWidth: 1)
-                )
-        )
+        .padding(.vertical, 2)
     }
 }
 
@@ -306,12 +289,12 @@ struct PRCard: View {
             // Trophy icon
             ZStack {
                 Circle()
-                    .fill(Color.yellow.opacity(0.2))
+                    .fill(AppColors.accentGold.opacity(0.15))
                     .frame(width: 48, height: 48)
 
                 Image(systemName: "medal.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(AppColors.accentGold)
             }
 
             // Content
@@ -379,13 +362,12 @@ struct PRCard: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.06))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+            RoundedRectangle(cornerRadius: 18)
+                .fill(AppColors.accentGold.opacity(0.05))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(AppColors.accent.opacity(0.25), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(AppColors.accentGold.opacity(0.18), lineWidth: 1)
         )
     }
 }
